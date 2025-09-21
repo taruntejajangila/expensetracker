@@ -1,11 +1,9 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth';
-import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
 
 const router = express.Router();
-const pool = getPool();
 
 // Validation middleware for creating accounts
 const validateAccountInput = [
@@ -48,7 +46,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
       ORDER BY created_at DESC
     `;
     
-    const result = await pool.query(query, [userId]);
+    const result = await req.app.locals.db.query(query, [userId]);
     
     logger.info(`Retrieved ${result.rows.length} accounts for user ${userId}`);
     
@@ -97,7 +95,7 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
       WHERE id = $1 AND user_id = $2
     `;
     
-    const result = await pool.query(query, [accountId, userId]);
+    const result = await req.app.locals.db.query(query, [accountId, userId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -169,17 +167,17 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     `;
     
     const duplicateCheckValues = [userId, accountNumber, name, bankName];
-    const duplicateResult = await pool.query(duplicateCheckQuery, duplicateCheckValues);
+    const duplicateResult = await req.app.locals.db.query(duplicateCheckQuery, duplicateCheckValues);
     
     if (duplicateResult.rows.length > 0) {
       const duplicates = duplicateResult.rows;
       let errorMessage = 'Account already exists: ';
       
-      if (duplicates.some(d => d.account_number === accountNumber && d.account_number !== '')) {
+      if (duplicates.some((d: any) => d.account_number === accountNumber && d.account_number !== '')) {
         errorMessage += `Account number ${accountNumber} is already in use`;
-      } else if (duplicates.some(d => d.name === name)) {
+      } else if (duplicates.some((d: any) => d.name === name)) {
         errorMessage += `Account nickname "${name}" is already in use`;
-      } else if (duplicates.some(d => d.bank_name === bankName && d.account_number === accountNumber)) {
+      } else if (duplicates.some((d: any) => d.bank_name === bankName && d.account_number === accountNumber)) {
         errorMessage += `Account with bank ${bankName} and number ${accountNumber} already exists`;
       }
       
@@ -204,7 +202,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       accountNumber, accountHolderName, true
     ];
     
-    const result = await pool.query(query, values);
+    const result = await req.app.locals.db.query(query, values);
     const newAccount = result.rows[0];
     
     logger.info(`Created new bank account ${newAccount.id} for user ${userId}`);
@@ -261,7 +259,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
     
          // Check if account exists and belongs to user
      const checkQuery = 'SELECT id FROM bank_accounts WHERE id = $1 AND user_id = $2';
-     const checkResult = await pool.query(checkQuery, [accountId, userId]);
+     const checkResult = await req.app.locals.db.query(checkQuery, [accountId, userId]);
      
      if (checkResult.rows.length === 0) {
        return res.status(404).json({
@@ -292,17 +290,17 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          bankName || checkResult.rows[0].bank_name
        ];
        
-       const duplicateResult = await pool.query(duplicateCheckQuery, duplicateCheckValues);
+       const duplicateResult = await req.app.locals.db.query(duplicateCheckQuery, duplicateCheckValues);
        
        if (duplicateResult.rows.length > 0) {
          const duplicates = duplicateResult.rows;
          let errorMessage = 'Account already exists: ';
          
-         if (duplicates.some(d => d.account_number === (accountNumber || checkResult.rows[0].account_number) && (accountNumber || checkResult.rows[0].account_number) !== '')) {
+         if (duplicates.some((d: any) => d.account_number === (accountNumber || checkResult.rows[0].account_number) && (accountNumber || checkResult.rows[0].account_number) !== '')) {
            errorMessage += `Account number ${accountNumber || checkResult.rows[0].account_number} is already in use`;
-         } else if (duplicates.some(d => d.name === (name || checkResult.rows[0].name))) {
+         } else if (duplicates.some((d: any) => d.name === (name || checkResult.rows[0].name))) {
            errorMessage += `Account nickname "${name || checkResult.rows[0].name}" is already in use`;
-         } else if (duplicates.some(d => d.bank_name === (bankName || checkResult.rows[0].bank_name) && d.account_number === (accountNumber || checkResult.rows[0].account_number))) {
+         } else if (duplicates.some((d: any) => d.bank_name === (bankName || checkResult.rows[0].bank_name) && d.account_number === (accountNumber || checkResult.rows[0].account_number))) {
            errorMessage += `Account with bank ${bankName || checkResult.rows[0].bank_name} and number ${accountNumber || checkResult.rows[0].account_number} already exists`;
          }
          
@@ -355,7 +353,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
      if (updateFields.length === 1) {
        // Only updated_at field, return current account
        const currentAccountQuery = 'SELECT * FROM bank_accounts WHERE id = $1 AND user_id = $2';
-       const currentResult = await pool.query(currentAccountQuery, [accountId, userId]);
+       const currentResult = await req.app.locals.db.query(currentAccountQuery, [accountId, userId]);
        const currentAccount = currentResult.rows[0];
        
        res.json({
@@ -390,32 +388,34 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
      `;
      
      const values = [...updateValues, accountId, userId];
-    
-    const result = await pool.query(query, values);
+     
+    const result = await req.app.locals.db.query(query, values);
     const updatedAccount = result.rows[0];
     
     logger.info(`Updated bank account ${accountId} for user ${userId}`);
     
+    const responseData = {
+      id: updatedAccount.id,
+      name: updatedAccount.name,
+      bankName: updatedAccount.bank_name,
+      accountHolderName: updatedAccount.account_holder_name || updatedAccount.name, // Use account_holder_name if available, fallback to name
+      type: updatedAccount.account_type === 'wallet' ? 'cash' : 'bank',
+      balance: parseFloat(updatedAccount.balance),
+      currency: updatedAccount.currency || 'INR',
+      icon: updatedAccount.account_type === 'wallet' ? 'wallet' : 'card', // Default icons
+      color: updatedAccount.account_type === 'wallet' ? '#10B981' : '#3B82F6', // Default colors
+      accountType: updatedAccount.account_type,
+      accountNumber: updatedAccount.account_number || '',
+      status: updatedAccount.is_active ? 'Active' : 'Inactive',
+      lastUpdated: updatedAccount.updated_at,
+      createdAt: updatedAccount.created_at,
+      updatedAt: updatedAccount.updated_at,
+    };
+    
     res.json({
       success: true,
       message: 'Bank account updated successfully',
-             data: {
-         id: updatedAccount.id,
-         name: updatedAccount.name,
-         bankName: updatedAccount.bank_name,
-         accountHolderName: updatedAccount.account_holder_name || updatedAccount.name, // Use account_holder_name if available, fallback to name
-         type: updatedAccount.account_type === 'wallet' ? 'cash' : 'bank',
-         balance: parseFloat(updatedAccount.balance),
-         currency: updatedAccount.currency || 'INR',
-         icon: updatedAccount.account_type === 'wallet' ? 'wallet' : 'card', // Default icons
-         color: updatedAccount.account_type === 'wallet' ? '#10B981' : '#3B82F6', // Default colors
-         accountType: updatedAccount.account_type,
-         accountNumber: updatedAccount.account_number || '',
-         status: updatedAccount.is_active ? 'Active' : 'Inactive',
-         lastUpdated: updatedAccount.updated_at,
-         createdAt: updatedAccount.created_at,
-         updatedAt: updatedAccount.updated_at,
-       }
+      data: responseData
     });
   } catch (error: any) {
     logger.error('Error updating bank account:', error);
@@ -435,7 +435,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: any) => {
     
          // Check if account exists and belongs to user
      const checkQuery = 'SELECT id FROM bank_accounts WHERE id = $1 AND user_id = $2';
-     const checkResult = await pool.query(checkQuery, [accountId, userId]);
+     const checkResult = await req.app.locals.db.query(checkQuery, [accountId, userId]);
      
      if (checkResult.rows.length === 0) {
        return res.status(404).json({
@@ -446,7 +446,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: any) => {
      
      // Check if account has transactions (prevent deletion if in use)
      const transactionQuery = 'SELECT id FROM transactions WHERE to_account = $1 OR from_account = $1 LIMIT 1';
-     const transactionResult = await pool.query(transactionQuery, [accountId]);
+     const transactionResult = await req.app.locals.db.query(transactionQuery, [accountId]);
      
      if (transactionResult.rows.length > 0) {
        return res.status(400).json({
@@ -457,7 +457,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: any) => {
      
      // Delete the account
      const deleteQuery = 'DELETE FROM bank_accounts WHERE id = $1 AND user_id = $2';
-    await pool.query(deleteQuery, [accountId, userId]);
+    await req.app.locals.db.query(deleteQuery, [accountId, userId]);
     
     logger.info(`Deleted bank account ${accountId} for user ${userId}`);
     
@@ -489,7 +489,7 @@ router.get('/test/sync', async (req: any, res: any) => {
       ORDER BY created_at DESC
     `;
     
-    const result = await pool.query(query, ['0041a7fa-a4cf-408a-a106-4bc3e3744fbb']);
+    const result = await req.app.locals.db.query(query, ['0041a7fa-a4cf-408a-a106-4bc3e3744fbb']);
     
     logger.info(`Test endpoint: Retrieved ${result.rows.length} accounts`);
     

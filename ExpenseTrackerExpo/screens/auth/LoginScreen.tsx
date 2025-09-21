@@ -297,12 +297,6 @@ const LoginScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText} allowFontScaling={false}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
             <View style={styles.footer}>
               <Text style={styles.registerText} allowFontScaling={false}>
                 Don't have an account?{' '}

@@ -129,28 +129,36 @@ const AddAccountScreen: React.FC = () => {
     
     try {
       if (isEdit && editingAccount?.id) {
-        const updatedAccount = await AccountService.updateAccount(editingAccount.id, {
-          nickname: formData.nickname,
+        const updateData = {
+          name: formData.nickname, // Backend expects 'name', not 'nickname'
           bankName: formData.bankName,
           accountHolderName: formData.accountHolderName,
           accountNumber: formData.accountNumber,
           accountType: formData.accountType,
-        });
+        };
         
-        // Pass updated account data back for immediate refresh
-        if (updatedAccount) {
-          (navigation as any).navigate('BankAccountDetail', { 
-            account: updatedAccount,
-            refresh: true 
-          });
-        }
+        
+        const updatedAccount = await AccountService.updateAccount(editingAccount.id, updateData);
         
         Alert.alert('Success', 'Account updated successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Navigate to BankAccountDetail with updated data instead of going back
+              if (updatedAccount) {
+                (navigation as any).navigate('BankAccountDetail', { 
+                  account: updatedAccount.data, // Use the actual account data from response
+                  refresh: true 
+                });
+              } else {
+                navigation.goBack();
+              }
+            }
+          }
         ]);
       } else {
         await AccountService.addAccount({
-          nickname: formData.nickname,
+          name: formData.nickname, // Backend expects 'name', not 'nickname'
           bankName: formData.bankName,
           accountHolderName: formData.accountHolderName,
           accountNumber: formData.accountNumber,
@@ -465,12 +473,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     marginTop: 2,
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,

@@ -77,7 +77,7 @@ const AddCreditCardScreen: React.FC = () => {
           dueDay: parseInt(formData.dueDay)
         };
 
-        await creditCardAPI.create(creditCardData);
+        await CreditCardService.addCreditCard(creditCardData);
         
         Alert.alert(
           'Success!',
@@ -179,7 +179,7 @@ const AddCreditCardScreen: React.FC = () => {
           
           <View style={styles.headerRight}>
             <TouchableOpacity 
-              style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
+              style={[styles.headerSaveButton, !isValid && styles.headerSaveButtonDisabled]}
               onPress={handleSave}
               disabled={!isValid}
               activeOpacity={0.7}
@@ -201,28 +201,35 @@ const AddCreditCardScreen: React.FC = () => {
 
     try {
       const creditCardData = {
-        name: formData.cardName,
-        bankName: formData.issuer,
-        creditLimit: Number(formData.creditLimit),
-        currentBalance: Number(formData.currentBalance),
-        availableCredit: Number(formData.creditLimit) - Number(formData.currentBalance),
-        interestRate: 18.99, // Default interest rate
-        minimumPayment: Math.max(25, Number(formData.currentBalance) * 0.02),
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        color: '#007AFF',
-        icon: 'card',
-        type: (formData.cardType || 'credit').toLowerCase(),
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        cardName: formData.cardName.trim(),
+        cardType: formData.cardType.trim(),
+        issuer: formData.issuer.trim(),
+        lastFourDigits: formData.lastFourDigits.trim(),
+        creditLimit: parseFloat(formData.creditLimit),
+        currentBalance: parseFloat(formData.currentBalance),
+        statementDay: parseInt(formData.statementDay),
+        dueDay: parseInt(formData.dueDay) 
       };
 
       await CreditCardService.addCreditCard(creditCardData);
-      Alert.alert('Success', 'Credit card added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add credit card. Please try again.');
+      
+      Alert.alert(
+        'Success!',
+        'Credit card added successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => (navigation as any).goBack()
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error creating credit card:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.error || 'Failed to add credit card. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -253,7 +260,7 @@ const AddCreditCardScreen: React.FC = () => {
               cardType={formData.cardType || 'CARD'}
               issuer={formData.issuer || 'BANK'}
               creditLimit={formData.creditLimit ? parseFloat(formData.creditLimit) : 100000}
-              currentBalance={formData.currentBalance ? parseFloat(formData.currentBalance) : 25000}
+              currentBalance={formData.currentBalance ? parseFloat(formData.currentBalance) : 0}
             />
           </View>
 
@@ -334,11 +341,11 @@ const AddCreditCardScreen: React.FC = () => {
               <Text style={styles.helperText} allowFontScaling={false}>Total credit available</Text>
             </View>
             <View style={[styles.formGroup, styles.rowItem]}> 
-              <Text style={styles.label} allowFontScaling={false}>Current Balance<Text style={styles.required} allowFontScaling={false}>*</Text></Text>
+              <Text style={styles.label} allowFontScaling={false}>Outstanding Balance<Text style={styles.required} allowFontScaling={false}>*</Text></Text>
               <View style={styles.inputWithAdornment}>
                 <Text style={styles.adornment} allowFontScaling={false}>₹</Text>
                 <TextInput style={[styles.input, styles.inputFlex]}
-                  placeholder="e.g. 25000"
+                  placeholder="e.g. 0 (if no debt)"
                   keyboardType="numeric"
                   placeholderTextColor="#9CA3AF"
                   value={formData.currentBalance}
@@ -348,7 +355,7 @@ const AddCreditCardScreen: React.FC = () => {
                   allowFontScaling={false}
                 />
               </View>
-              <Text style={styles.helperText} allowFontScaling={false}>Current outstanding amount</Text>
+              <Text style={styles.helperText} allowFontScaling={false}>Amount you currently owe (outstanding debt)</Text>
             </View>
           </View>
 
@@ -486,7 +493,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     opacity: 0.8,
     marginTop: 2,
   },
-  saveButton: {
+  headerSaveButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
@@ -502,7 +509,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  saveButtonDisabled: {
+  headerSaveButtonDisabled: {
     backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,

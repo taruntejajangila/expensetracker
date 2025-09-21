@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,11 @@ import { useNotifications } from '../context/NotificationContext';
 
 import TransactionService from '../services/transactionService';
 import AccountService from '../services/AccountService';
+import DailyReminderService from '../services/DailyReminderService';
 import { BannerAd, showInterstitialAd } from '../components/AdMobComponents';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -48,11 +50,21 @@ const HomeScreen: React.FC = () => {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+  // Credit card expenses hidden for v1 release
+  // const [totalCreditCardExpenses, setTotalCreditCardExpenses] = useState(0);
 
   // Carousel banner state
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const bannerFlatListRef = useRef<FlatList>(null);
   const [banners, setBanners] = useState<any[]>([]);
+  
+  // Cache and debouncing state
+  const [lastDataLoad, setLastDataLoad] = useState<number>(0);
+  const [isDataStale, setIsDataStale] = useState(true);
+  const [appInitialized, setAppInitialized] = useState(false);
+  const loadDataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const CACHE_DURATION = 30000; // 30 seconds cache
+  const DEBOUNCE_DELAY = 1000; // 1 second debounce
   
   
   const loadAds = async () => {
@@ -74,10 +86,9 @@ const HomeScreen: React.FC = () => {
         } else {
           throw new Error('Invalid banner response format');
         }
-      } else {
-        console.log('🔍 HomeScreen: No banners available from API');
-        setBanners([]);
-      }
+        } else {
+          setBanners([]);
+        }
     } catch (e) {
       console.error('❌ HomeScreen: Error loading banners:', e);
       setBanners([]);
@@ -136,129 +147,151 @@ const HomeScreen: React.FC = () => {
 
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { registerForPushNotifications } = useNotifications();
 
-  // Load transaction data
-  const loadTransactionData = async () => {
+  // Load transaction data with caching and debouncing
+  const loadTransactionData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Check if data is fresh and not forcing refresh
+    if (!forceRefresh && !isDataStale && (now - lastDataLoad) < CACHE_DURATION) {
+      return;
+    }
+    
+    // Prevent multiple concurrent calls
+    if (loading && !forceRefresh) {
+      return;
+    }
+    
     try {
       // Only set loading if not already loading
       if (!loading) {
         setLoading(true);
       }
       
-      // Debug: Check if TransactionService is defined
-      console.log('TransactionService:', TransactionService);
-      
       // Load recent transactions
-      console.log('About to call getRecentTransactions...');
       const recentTransactionData = await TransactionService.getRecentTransactions(10);
-      console.log('getRecentTransactions called successfully');
-      console.log('🔍 HomeScreen: Recent transactions data:', recentTransactionData);
-      console.log('🔍 HomeScreen: Recent transactions length:', recentTransactionData?.length || 0);
-      console.log('🔍 HomeScreen: Transaction IDs:', recentTransactionData?.map(t => ({ id: t.id, title: t.description || t.title })));
+      
       setRecentTransactions(recentTransactionData);
       
-      // Load financial summary
-      // Create financial summary using available methods
-      console.log('About to call getTransactions...');
-    const transactions = await TransactionService.getTransactions();
-    console.log('getTransactions called successfully');
-    const totalIncome = (transactions || [])
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
-    const totalExpenses = (transactions || [])
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
-    const currentBalance = totalIncome - totalExpenses;
-    
-    const financialSummary = {
-      currentBalance,
-      totalIncome,
-      totalExpense: totalExpenses,
-      transactionCount: transactions.length
-    };
-      setCurrentBalance(financialSummary.currentBalance);
-      setTotalIncome(financialSummary.totalIncome);
-      setTotalExpense(financialSummary.totalExpense);
+      // Load financial summary with force refresh if needed
+      const transactions = await TransactionService.getTransactions(forceRefresh);
       
+      // Separate transactions by type
+      const incomeTransactions = (transactions || []).filter(t => t.type === 'income');
+      const expenseTransactions = (transactions || []).filter(t => t.type === 'expense');
+      const transferTransactions = (transactions || []).filter(t => t.type === 'transfer');
+      
+      const totalIncome = incomeTransactions
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // For v1 release, all expenses are treated as cash expenses
+      // Credit card functionality is hidden
+      const totalCashExpenses = expenseTransactions
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // Credit card expenses hidden for v1 release
+      // const isCreditCardTransaction = (transaction: any) => {
+      //   const accountType = transaction.accountType;
+      //   const isCreditCardBillPayment = transaction.description && 
+      //     (transaction.description.toLowerCase().includes('credit card') || 
+      //      transaction.description.toLowerCase().includes('bill payment') ||
+      //      transaction.description.toLowerCase().includes('card payment'));
+      //   if (isCreditCardBillPayment) {
+      //     return false;
+      //   }
+      //   return accountType === 'credit_card';
+      // };
+      // const cashExpenses = expenseTransactions.filter(t => !isCreditCardTransaction(t));
+      // const creditCardExpenses = expenseTransactions.filter(t => isCreditCardTransaction(t));
+      // const totalCreditCardExpenses = creditCardExpenses
+      //   .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // Debug logging for transactions (v1 - no credit cards)
+      console.log('🔍 HomeScreen: Transaction categorization:', {
+        totalExpenseTransactions: expenseTransactions.length,
+        totalCashExpenses,
+        // Credit card expenses hidden for v1 release
+      });
+      
+      // For v1 release, transfers are not handled (credit cards hidden)
+      // All expenses are cash expenses
+      const currentBalance = totalIncome - totalCashExpenses;
+      
+      // Debug logging for money manager calculations (v1 - no credit cards)
+      console.log('🔍 HomeScreen: Money Manager Calculations:', {
+        totalIncome,
+        totalCashExpenses,
+        currentBalance,
+        // Credit card functionality hidden for v1 release
+      });
+      
+      setCurrentBalance(currentBalance);
+      setTotalIncome(totalIncome);
+      setTotalExpense(totalCashExpenses);
+      // Credit card expenses hidden for v1 release
+      // setTotalCreditCardExpenses(totalCreditCardExpenses);
+      
+      // Update cache timestamp
+      setLastDataLoad(now);
+      setIsDataStale(false);
       setLoading(false);
       setIsLoading(false);
-      console.log('🔍 HomeScreen: Loading completed, recentTransactions:', recentTransactions);
     } catch (error) {
-      console.error('Error loading transaction data:', error);
+      console.error('❌ HomeScreen: Error loading transaction data:', error);
       setLoading(false);
       setIsLoading(false);
     }
-  };
+  }, []); // Remove dependencies to prevent re-creation
 
-  useEffect(() => {
-    // Add a small delay to ensure auth token is stored after login
-    const timer = setTimeout(() => {
-      loadStats();
-      loadTransactionData();
-      loadAds();
-    }, 1000);
+  const loadStats = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
     
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Banner auto-scroll functionality
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prevIndex) => {
-        if (!banners.length) {
-          return 0;
-        }
-        const nextIndex = (prevIndex + 1) % banners.length;
-        if (bannerFlatListRef.current && banners.length > 0) {
-          try {
-            bannerFlatListRef.current.scrollToIndex({ index: nextIndex, animated: true });
-          } catch (e) {
-            // ignore out of range if list not ready
-          }
-        }
-        return nextIndex;
-      });
-    }, 5000); // 5 seconds
-
-    return () => clearInterval(interval);
-  }, [banners.length]);
-
-  // Reload data when screen comes into focus (after adding a transaction)
-  useFocusEffect(
-    React.useCallback(() => {
-      // Only reload if not already loading and data is stale
-      if (!loading && (!recentTransactions || recentTransactions.length === 0)) {
-        console.log('🔍 HomeScreen: Screen focused, reloading data...');
-        loadTransactionData();
-      } else {
-        console.log('🔍 HomeScreen: Screen focused, data already loaded, skipping reload');
-      }
-    }, [loading, recentTransactions])
-  );
-
-  const loadStats = async () => {
+    // Check if stats are fresh and not forcing refresh
+    if (!forceRefresh && stats && (now - lastDataLoad) < CACHE_DURATION) {
+      return;
+    }
+    
     try {
       // Only set loading if not already loading
       if (!isLoading) {
         setIsLoading(true);
       }
-      console.log('🔍 HomeScreen: Loading stats from cloud database...');
-      
       // Load accounts data
       const accounts = await AccountService.getAccounts();
-      console.log('🔍 HomeScreen: Loaded accounts:', accounts.length);
       
       // Load transactions data
       const transactions = await TransactionService.getTransactions();
-      console.log('🔍 HomeScreen: Loaded transactions:', transactions.length);
       
       // Calculate real stats from cloud data
       const totalIncome = (transactions || [])
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
         
-      const totalExpenses = (transactions || [])
-        .filter(t => t.type === 'expense')
+      const expenseTransactions = (transactions || []).filter(t => t.type === 'expense');
+      
+      // Use the same credit card identification logic as in loadTransactionData
+      const isCreditCardTransaction = (transaction: any) => {
+        // Use the reliable accountType from backend instead of unreliable heuristics
+        const accountType = transaction.accountType;
+        
+        // Check if this is a credit card bill payment transfer
+        // These should be treated as cash expenses, not credit card expenses
+        const isCreditCardBillPayment = transaction.description && 
+          (transaction.description.toLowerCase().includes('credit card') || 
+           transaction.description.toLowerCase().includes('bill payment') ||
+           transaction.description.toLowerCase().includes('card payment'));
+        
+        if (isCreditCardBillPayment) {
+          return false; // Treat as cash expense
+        }
+        
+        // Use reliable account type information from backend
+        return accountType === 'credit_card';
+      };
+      
+      const cashExpenses = expenseTransactions.filter(t => !isCreditCardTransaction(t));
+      const totalExpenses = cashExpenses
         .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
       
       // Calculate monthly average (last 30 days)
@@ -297,7 +330,6 @@ const HomeScreen: React.FC = () => {
         topCategories
       };
       
-      console.log('🔍 HomeScreen: Calculated stats:', realStats);
       setStats(realStats);
       setIsLoading(false);
       
@@ -312,12 +344,143 @@ const HomeScreen: React.FC = () => {
       });
       setIsLoading(false);
     }
-  };
+  }, []); // Remove dependencies to prevent re-creation
+
+  useEffect(() => {
+    // Force refresh when app initializes - only run once
+    if (!appInitialized) {
+      const timer = setTimeout(() => {
+        setAppInitialized(true);
+        setIsDataStale(true); // Force refresh
+        loadStats(true); // Force refresh stats
+        loadTransactionData(true); // Force refresh transactions
+        loadAds();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [appInitialized]); // Add appInitialized as dependency
+
+  // Auto-register for push notifications when user is logged in
+  useEffect(() => {
+    if (user) {
+      registerForPushNotifications().then((token) => {
+        if (token) {
+          // Push notification token registered successfully
+        }
+      }).catch((error) => {
+        console.error('❌ HomeScreen: Error registering for push notifications:', error);
+      });
+    }
+  }, [user, registerForPushNotifications]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (loadDataTimeoutRef.current) {
+        clearTimeout(loadDataTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Banner auto-scroll functionality
+  useEffect(() => {
+    // Only set up interval if we have banners
+    if (banners.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentBannerIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % banners.length;
+        if (bannerFlatListRef.current) {
+          try {
+            bannerFlatListRef.current.scrollToIndex({ index: nextIndex, animated: true });
+          } catch (e) {
+            // ignore out of range if list not ready
+          }
+        }
+        return nextIndex;
+      });
+    }, 5000); // 5 seconds
+
+    return () => clearInterval(interval);
+  }, [banners.length]);
+
+  // Reload data when screen comes into focus (after adding a transaction)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Clear any existing timeout
+      if (loadDataTimeoutRef.current) {
+        clearTimeout(loadDataTimeoutRef.current);
+      }
+      
+      // Debounce the data loading
+      loadDataTimeoutRef.current = setTimeout(() => {
+        const now = Date.now();
+        
+        // Force refresh on first focus after app initialization
+        // or reload if data is stale or we have no data
+        const shouldReload = !appInitialized || 
+                           isDataStale || 
+                           (now - lastDataLoad) > CACHE_DURATION || 
+                           recentTransactions.length === 0;
+        
+        if (shouldReload && !loading) {
+          setIsDataStale(true);
+          setAppInitialized(true);
+          loadStats(true); // Force refresh stats
+          loadTransactionData(true); // Force refresh transactions
+        }
+      }, DEBOUNCE_DELAY);
+      
+      // Cleanup function
+      return () => {
+        if (loadDataTimeoutRef.current) {
+          clearTimeout(loadDataTimeoutRef.current);
+        }
+      };
+    }, []) // Empty dependency array - only run on focus/blur
+  );
+
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadStats(), loadTransactionData(), loadAds()]);
+    setIsDataStale(true); // Mark data as stale to force refresh
+    await Promise.all([
+      loadStats(true), // Force refresh stats
+      loadTransactionData(true), // Force refresh transactions
+      loadAds()
+    ]);
     setRefreshing(false);
+  };
+
+  // Test function for salary reminder
+  const testSalaryReminder = async () => {
+    try {
+      console.log('🧪 Testing salary reminder...');
+      
+      // Test immediate notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "New Month, New Budget",
+          body: "Salary received? Add it now to plan your expenses.",
+          data: { 
+            type: 'monthly_salary_reminder',
+            reminderType: 'salary',
+            action: 'add_income'
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 3, // Show after 3 seconds
+        },
+      });
+      
+      console.log('✅ Salary reminder test notification scheduled for 3 seconds');
+      alert('Salary reminder test notification will appear in 3 seconds!');
+    } catch (error) {
+      console.error('❌ Error testing salary reminder:', error);
+      alert('Error testing salary reminder: ' + error.message);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -380,20 +543,23 @@ const HomeScreen: React.FC = () => {
     },
     notificationBadge: {
       position: 'absolute',
-      top: 8,
-      right: 8,
+      top: 2,
+      right: 2,
       backgroundColor: '#FF3B30',
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
+      borderRadius: 8,
+      minWidth: 16,
+      height: 16,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 4,
+      paddingHorizontal: 2,
+      borderWidth: 2,
+      borderColor: '#FFFFFF',
     },
     notificationBadgeText: {
       color: '#FFFFFF',
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: 'bold',
+      lineHeight: 12,
     },
     scrollContent: {
       paddingHorizontal: theme.spacing.md,
@@ -894,30 +1060,6 @@ const HomeScreen: React.FC = () => {
       marginTop: theme.spacing.xs,
       textAlign: 'center',
     },
-    testAdButton: {
-      position: 'absolute',
-      right: 20,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#FF6B35',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderRadius: 25,
-      shadowColor: '#000000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 5,
-    },
-    testAdButtonText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '600',
-      marginLeft: 8,
-    },
     floatingActionButton: {
       position: 'absolute',
       right: 20,
@@ -935,6 +1077,31 @@ const HomeScreen: React.FC = () => {
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 8,
+    },
+    salaryTestButton: {
+      position: 'absolute',
+      right: 20,
+      width: 80,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#FF6B35',
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    salaryTestButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 4,
     },
 
     adContainer: {
@@ -1048,7 +1215,7 @@ const HomeScreen: React.FC = () => {
             <View style={styles.cardRow}>
               <View style={styles.cardLeftSection}>
                 <Ionicons name="arrow-up" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
-                <Text style={styles.cardLeftText} allowFontScaling={false}>Expense</Text>
+                <Text style={styles.cardLeftText} allowFontScaling={false}>Cash Expense</Text>
               </View>
               <View style={styles.cardRightSection}>
                 <Ionicons name="arrow-down" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
@@ -1067,6 +1234,25 @@ const HomeScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
+            {/* Credit Card Expenses Row - Hidden for v1 release */}
+            {/* {totalCreditCardExpenses > 0 && (
+              <>
+                <View style={[styles.cardRow, { justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }]}>
+                  <View style={styles.cardLeftSection}>
+                    <Ionicons name="arrow-up" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
+                    <Text style={styles.cardLeftText} allowFontScaling={false}>Credit Expense</Text>
+                  </View>
+                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={[styles.cardLeftAmount, { textAlign: 'center', marginTop: 4 }]} allowFontScaling={false}>
+                      {loading ? '--' : `₹${totalCreditCardExpenses.toLocaleString()}`}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: 'red', textAlign: 'center', marginTop: 2 }} allowFontScaling={false}>
+                      (Credit Card Utilized)
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )} */}
             <View style={styles.cardBottomSpacer} />
           </View>
         </TouchableOpacity>
@@ -1085,12 +1271,13 @@ const HomeScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.floatingCardsList}
             >
-              {recentTransactions.slice(0, 5).map((transaction, index) => (
-                <TouchableOpacity 
-                  key={transaction.id || `transaction-${index}`} 
-                  style={styles.floatingCard}
-                  onPress={() => (navigation as any).navigate('TransactionDetail', { transactionId: transaction.id })}
-                >
+              {recentTransactions.slice(0, 5).map((transaction, index) => {
+                return (
+                  <TouchableOpacity 
+                    key={transaction.id || `transaction-${index}`} 
+                    style={styles.floatingCard}
+                    onPress={() => (navigation as any).navigate('TransactionDetail', { transactionId: transaction.id })}
+                  >
                   <View style={styles.floatingCardContent}>
                     <View style={styles.floatingCardHeader}>
                       <View style={styles.floatingCardHeaderLeft}>
@@ -1128,7 +1315,8 @@ const HomeScreen: React.FC = () => {
                     </View>
                   </View>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
               {recentTransactions.length > 5 && (
                 <TouchableOpacity 
                   style={styles.viewAllCard}
@@ -1172,8 +1360,8 @@ const HomeScreen: React.FC = () => {
           <BannerAd 
             size="smartBannerPortrait"
             position="inline"
-            onAdLoaded={() => console.log('HomeScreen banner ad loaded')}
-            onAdFailed={(error: any) => console.log('HomeScreen banner ad failed:', error)}
+            onAdLoaded={() => {}}
+            onAdFailed={(error: any) => {}}
           />
         </View>
 
@@ -1182,8 +1370,8 @@ const HomeScreen: React.FC = () => {
           <TouchableOpacity 
             style={[styles.quickActionButton, { backgroundColor: '#4CAF50' }]}
             onPress={() => {
-              // Navigate to Savings screen
-              (navigation as any).navigate('MainApp', { screen: 'Savings' });
+              // Navigate to Savings Goals screen
+              (navigation as any).navigate('MainApp', { screen: 'SavingsGoals' });
             }}
           >
             <Ionicons name="wallet-outline" size={20} color="#FFFFFF" />
@@ -1193,8 +1381,8 @@ const HomeScreen: React.FC = () => {
           <TouchableOpacity 
             style={[styles.quickActionButton, { backgroundColor: '#2196F3' }]}
             onPress={() => {
-              // Navigate to Budget screen
-              (navigation as any).navigate('MainApp', { screen: 'Budget' });
+              // Navigate to Budget Planning screen
+              (navigation as any).navigate('MainApp', { screen: 'BudgetPlanning' });
             }}
           >
             <Ionicons name="pie-chart-outline" size={20} color="#FFFFFF" />
@@ -1275,19 +1463,17 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
+        {/* Test Button for Salary Reminder */}
+        <TouchableOpacity 
+          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 140, 160) }]}
+          onPress={testSalaryReminder}
+        >
+          <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Test Salary</Text>
+        </TouchableOpacity>
+
       </ScrollView>
 
-      {/* Test Ad Button */}
-      <TouchableOpacity 
-        style={[styles.testAdButton, { bottom: Math.max(insets.bottom + 140, 160) }]}
-        onPress={async () => {
-          // Show test interstitial ad
-          await showInterstitialAd();
-        }}
-      >
-        <Ionicons name="tv-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.testAdButtonText} allowFontScaling={false}>Test Ad</Text>
-      </TouchableOpacity>
 
       {/* Floating Action Button */}
       <TouchableOpacity 

@@ -23,7 +23,7 @@ const getAuthToken = async (): Promise<string> => {
     } else {
       console.log('🔍 CategoryService: No auth token found, using test token');
       // Fallback to test token for development
-      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NDRmMGExZi1kOTY4LTRmYzUtOGY0Yi01YmMxYTUyN2UxOTEiLCJlbWFpbCI6InNhbWVlcmF0ZXN0aW5nQGdtYWlsLmNvbSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzU3ODM3NTY1LCJleHAiOjE3NTc5MjM5NjV9.Eced8RqQigeji6jo6QjrvimI4w4AAyv50IMLunADD3Q';
+      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NDRmMGExZi1kOTY4LTRmYzUtOGY0Yi01YmMxYTUyN2UxOTEiLCJlbWFpbCI6InNhbWVlcmF0ZXN0aW5nQGdtYWlsLmNvbSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzU4MzY1MTIzLCJleHAiOjE3NjA5NTcxMjN9.YgESmlfSXtL5qX6Gl3gsa4orrytp4GQAQMcVwnhNOno';
     }
   } catch (error) {
     console.error('🔍 CategoryService: Error retrieving auth token:', error);
@@ -54,7 +54,6 @@ export const categoryService = {
       }
 
       const result = await response.json();
-      console.log('🔍 CategoryService: Response data:', result);
 
       if (result.success) {
         console.log('🔍 CategoryService: Successfully fetched categories:', result.data.length);

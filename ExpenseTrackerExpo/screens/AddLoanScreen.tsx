@@ -434,7 +434,7 @@ const AddLoanScreen: React.FC = () => {
                         tenureMonths: n,
                     };
                     if (editLoan?.id) {
-                        await LoanService.updateLoan(editLoan.id, () => ({ ...payload }));
+                        await LoanService.updateLoan(editLoan.id, payload);
                     } else {
                         await LoanService.addLoan(payload);
                     }

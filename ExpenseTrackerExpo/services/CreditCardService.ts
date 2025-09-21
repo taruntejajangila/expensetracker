@@ -42,7 +42,6 @@ export default {
       }
 
       const result = await response.json();
-      console.log('🔍 CreditCardService: Response data:', result);
       
       if (result.success) {
         console.log('🔍 CreditCardService: Successfully fetched credit cards:', result.data.length);
@@ -146,7 +145,6 @@ export default {
       }
 
       const result = await response.json();
-      console.log('🔍 CreditCardService: Response data:', result);
       
       if (result.success) {
         console.log('🔍 CreditCardService: Successfully fetched credit card:', result.data);
@@ -194,20 +192,47 @@ export default {
     try {
       const token = await getAuthToken();
       
+      // Map mobile app fields to backend API expected format
+      const cardData = {
+        name: card.cardName || card.name,
+        cardNumber: card.lastFourDigits || card.cardNumber || `000000000000${Math.random().toString().slice(2, 6)}`,
+        cardType: card.cardType,
+        issuer: card.issuer,
+        creditLimit: card.creditLimit,
+        balance: card.currentBalance || card.balance || 0,
+        dueDate: (() => {
+          const dueDay = card.dueDay ? parseInt(card.dueDay) : 15;
+          const validDueDay = Math.max(1, Math.min(31, dueDay)); // Ensure day is between 1-31
+          return `2024-01-${String(validDueDay).padStart(2, '0')}`;
+        })(), // Convert day to full date with validation
+        minPayment: card.minPayment || Math.round((card.currentBalance || 0) * 0.05), // 5% of balance
+        statementDay: card.statementDay || 1,
+        paymentDueDay: card.dueDay || 15,
+        color: card.color || '#007AFF',
+        icon: card.icon || 'card'
+      };
+      
+      console.log('🔍 CreditCardService: Sending card data:', cardData);
+      
       const response = await fetch(`${API_BASE_URL}/credit-cards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(card),
+        body: JSON.stringify(cardData),
       });
 
+      console.log('🔍 CreditCardService: Add card response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🔍 CreditCardService: Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('🔍 CreditCardService: Add card response:', result);
       
       if (result.success) {
         return result;

@@ -35,6 +35,7 @@
       "androidCollapsedTitle": "#{unread_notifications} new interactions"
     },
     "plugins": [
+      "expo-dev-client",
       [
         "expo-notifications",
         {

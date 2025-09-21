@@ -181,22 +181,18 @@ const EditLoanScreen: React.FC = () => {
     const handleSubmit = async () => {
         if (isValid && loan) {
             try {
-                const updatedLoan = await LoanService.updateLoan(loanId, (prevLoan) => {
-                    const updatedLoan = {
-                        ...prevLoan,
-                        name: name.trim(),
-                        type: type.trim(),
-                        lender: lender.trim(),
-                        principal: Number(principal),
-                        interestRate: Number(interestRate),
-                        term: tenureUnit === 'Years' ? Number(termYears) : Number(termYears) / 12,
-                        tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
-                        emiStartDate: emiStartDate,
-                        monthlyPayment: monthlyAmount || 0,
-                        isInterestOnly: isInterestOnly
-                    };
-                    return updatedLoan;
-                });
+                const updateData = {
+                    name: name.trim(),
+                    type: type.trim(),
+                    lender: lender.trim(),
+                    principal: Number(principal),
+                    interestRate: Number(interestRate),
+                    tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
+                    emiStartDate: emiStartDate,
+                    monthlyPayment: monthlyAmount || 0,
+                };
+                
+                await LoanService.updateLoan(loanId, updateData);
                 
                 // Replace current screen with loans list to clear the stack
                 (navigation as any).replace('Loans');
@@ -293,24 +289,19 @@ const EditLoanScreen: React.FC = () => {
         if (!isValid) return;
 
         try {
-            const loanData = {
+            const updateData = {
                 name: name.trim(),
                 type: type,
                 lender: lender.trim(),
                 principal: Number(principal),
                 interestRate: Number(interestRate),
-                term: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
-                termYears: Number(termYears),
-                termUnit: tenureUnit,
+                tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
                 emiStartDate: emiStartDate,
-                emiDate: emiDate,
                 monthlyPayment: calculateEMI(),
-                remainingTerm: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
-                currentBalance: Number(principal),
-                gradientColors: ['#667eea', '#764ba2'],
+                remainingBalance: Number(principal), // Map currentBalance to remainingBalance
             };
 
-            await LoanService.updateLoan(loanId, loanData);
+            await LoanService.updateLoan(loanId, updateData);
             
             // Navigate back with refresh flag
             (navigation as any).navigate('LoanAccount', { 

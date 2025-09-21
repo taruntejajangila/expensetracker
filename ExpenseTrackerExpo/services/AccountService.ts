@@ -40,7 +40,6 @@ export default {
       }
 
       const result = await response.json();
-      console.log('🔍 AccountService: Response data:', result);
       
       if (result.success) {
         console.log('🔍 AccountService: Successfully fetched accounts:', result.data.length);
@@ -85,20 +84,34 @@ export default {
     try {
       const token = await getAuthToken();
       
+      // Add required fields that backend expects
+      const accountData = {
+        ...account,
+        balance: account.balance || 0, // Default balance to 0
+        currency: account.currency || 'INR', // Default currency to INR
+      };
+      
+      console.log('🔍 AccountService: Sending account data:', accountData);
+      
       const response = await fetch(`${API_BASE_URL}/bank-accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(account),
+        body: JSON.stringify(accountData),
       });
 
+      console.log('🔍 AccountService: Add account response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🔍 AccountService: Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('🔍 AccountService: Add account response:', result);
       
       if (result.success) {
         return result;
@@ -174,24 +187,69 @@ export default {
     try {
       const token = await getAuthToken();
       
-      const response = await fetch(`${API_BASE_URL}/bank-accounts/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Check if this is a credit card ID (prefixed with 'credit-')
+      if (id.startsWith('credit-')) {
+        // For credit cards, use the credit cards endpoint
+        const creditCardId = id.replace('credit-', '');
+        const response = await fetch(`${API_BASE_URL}/credit-cards/${creditCardId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        return result.data;
+        const result = await response.json();
+        
+        if (result.success) {
+          // Transform credit card data to match account format
+          const creditCard = result.data;
+          return {
+            id: `credit-${creditCard.id}`,
+            name: creditCard.name,
+            bankName: creditCard.issuer,
+            accountHolderName: creditCard.name,
+            type: 'credit',
+            balance: parseFloat(creditCard.balance),
+            creditLimit: parseFloat(creditCard.credit_limit),
+            currency: 'INR',
+            icon: 'card',
+            color: creditCard.color || '#8B5CF6',
+            accountType: 'credit',
+            accountNumber: creditCard.card_number || '',
+            status: creditCard.is_active,
+            lastUpdated: creditCard.updated_at,
+            createdAt: creditCard.created_at,
+            updatedAt: creditCard.updated_at,
+          };
+        } else {
+          throw new Error(result.message || 'Failed to fetch credit card');
+        }
       } else {
-        throw new Error(result.message || 'Failed to fetch account');
+        // For regular bank accounts, use the bank accounts endpoint
+        const response = await fetch(`${API_BASE_URL}/bank-accounts/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+          return result.data;
+        } else {
+          throw new Error(result.message || 'Failed to fetch account');
+        }
       }
     } catch (error) {
       console.error('Error fetching account:', error);

@@ -27,6 +27,72 @@ const BankCard: React.FC<BankCardProps> = ({
   cardColor,
   accountNickname
 }) => {
+  // Convert currency code to symbol
+  const getCurrencySymbol = (currencyCode: string) => {
+    const currencyMap: { [key: string]: string } = {
+      'INR': '₹',
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'AUD': 'A$',
+      'CAD': 'C$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'SEK': 'kr',
+      'NOK': 'kr',
+      'DKK': 'kr',
+      'PLN': 'zł',
+      'CZK': 'Kč',
+      'HUF': 'Ft',
+      'RUB': '₽',
+      'BRL': 'R$',
+      'MXN': '$',
+      'ZAR': 'R',
+      'KRW': '₩',
+      'SGD': 'S$',
+      'HKD': 'HK$',
+      'NZD': 'NZ$',
+      'TRY': '₺',
+      'THB': '฿',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'IDR': 'Rp',
+      'VND': '₫',
+      'BDT': '৳',
+      'PKR': '₨',
+      'LKR': '₨',
+      'NPR': '₨',
+      'AFN': '؋',
+      'IRR': '﷼',
+      'SAR': '﷼',
+      'AED': 'د.إ',
+      'QAR': 'ر.ق',
+      'KWD': 'د.ك',
+      'BHD': 'د.ب',
+      'OMR': 'ر.ع.',
+      'JOD': 'د.ا',
+      'LBP': 'ل.ل',
+      'EGP': '£',
+      'MAD': 'د.م.',
+      'TND': 'د.ت',
+      'DZD': 'د.ج',
+      'LYD': 'ل.د',
+      'ETB': 'Br',
+      'KES': 'KSh',
+      'UGX': 'USh',
+      'TZS': 'TSh',
+      'ZMW': 'ZK',
+      'GHS': '₵',
+      'NGN': '₦',
+      'XOF': 'CFA',
+      'XAF': 'FCFA',
+    };
+    
+    return currencyMap[currencyCode.toUpperCase()] || currencyCode || '₹';
+  };
+
+  const currencySymbol = getCurrencySymbol(currency);
   // Generate card color based on bank name if no specific color provided
   const getCardColor = () => {
     // Always use bank-specific colors for consistency
@@ -250,7 +316,7 @@ const BankCard: React.FC<BankCardProps> = ({
         <View style={styles.balanceSection}>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel} allowFontScaling={false}>Available Balance</Text>
-            <Text style={styles.balanceValue} allowFontScaling={false}>{currency}{balance?.toLocaleString()}</Text>
+            <Text style={styles.balanceValue} allowFontScaling={false}>{currencySymbol}{balance?.toLocaleString()}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel} allowFontScaling={false}>Account Type</Text>

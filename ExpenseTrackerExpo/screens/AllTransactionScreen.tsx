@@ -379,14 +379,12 @@ const TransactionsTab: React.FC<{
     loadTransactions();
   }, []);
 
-  // Reload when tab comes into focus (only if needed)
+  // Force refresh when tab comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // Only reload if transactions array is empty to avoid rate limiting
-      if (transactions.length === 0) {
-        loadTransactions();
-      }
-    }, [transactions.length])
+      console.log('🔍 AllTransactionScreen: Force refreshing transactions on focus');
+      loadTransactions();
+    }, [])
   );
 
   // Parse month year from selectedMonth string and filter transactions
@@ -490,7 +488,7 @@ const TransactionsTab: React.FC<{
                     styles.transactionAmount,
                     { color: transaction.type === 'expense' ? '#FF3B30' : '#34C759' }
                   ]} allowFontScaling={false}>
-                    ₹{parseFloat(transaction.amount || 0).toFixed(2)}
+                    ₹{transaction.amount ? parseFloat(transaction.amount).toFixed(2) : '0.00'}
                   </Text>
                 </View>
                 <Text style={styles.transactionDate} allowFontScaling={false}>{formatTransactionDate(transaction.date)}</Text>
@@ -569,14 +567,12 @@ const CategoriesTab: React.FC<{
     loadTransactions();
   }, []);
 
-  // Reload when tab comes into focus (only if needed)
+  // Force refresh when tab comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // Only reload if transactions array is empty to avoid rate limiting
-      if (transactions.length === 0) {
-        loadTransactions();
-      }
-    }, [transactions.length])
+      console.log('🔍 AllTransactionScreen: Force refreshing transactions on focus');
+      loadTransactions();
+    }, [])
   );
 
   // Parse month year from selectedMonth string and filter transactions
@@ -678,7 +674,7 @@ const CategoriesTab: React.FC<{
                 </View>
               </View>
               <View style={styles.categoryRight}>
-                <Text style={styles.categoryAmount} allowFontScaling={false}>₹{category.amount.toFixed(2)}</Text>
+                <Text style={styles.categoryAmount} allowFontScaling={false}>₹{category.amount ? category.amount.toFixed(2) : '0.00'}</Text>
                 <Text style={styles.categoryPercentage} allowFontScaling={false}>
                   {getPercentage(category.amount).toFixed(1)}%
                 </Text>

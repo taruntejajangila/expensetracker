@@ -12,8 +12,10 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import TransactionService from '../services/transactionService';
+import TransactionService, { Transaction } from '../services/transactionService';
 import AccountService from '../services/AccountService';
+// Credit card functionality hidden for v1 release
+// import CreditCardService from '../services/CreditCardService';
 
 import { InterstitialAdModal } from '../components/InterstitialAdModal';
 import { BannerAd } from '../components/AdMobComponents';
@@ -39,7 +41,7 @@ const AddTransactionScreen = () => {
   
   // Route params for transaction editing
   
-  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -49,18 +51,60 @@ const AddTransactionScreen = () => {
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedToAccountId, setSelectedToAccountId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
+  // Credit card functionality hidden for v1 release
+  // const [creditCards, setCreditCards] = useState<any[]>([]);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [showToAccountDropdown, setShowToAccountDropdown] = useState(false);
   const [transactionsUntilAd, setTransactionsUntilAd] = useState<number>(5);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-  // Load accounts for selection and ensure default wallet exists
+  // For v1 release, only bank accounts are available (credit cards hidden)
+  const getAllAccounts = () => {
+    const bankAccounts = accounts.map(acc => ({
+      ...acc,
+      accountType: 'bank',
+      displayName: acc.name,
+      displayBank: acc.bankName
+    }));
+    
+    // Credit card functionality hidden for v1 release
+    // const creditCardAccounts = creditCards.map(card => ({
+    //   ...card,
+    //   id: `credit-${card.id}`,
+    //   accountType: 'credit',
+    //   displayName: card.name,
+    //   displayBank: card.issuer,
+    //   balance: card.currentBalance,
+    //   availableBalance: card.availableCredit
+    // }));
+    
+    // For v1 release, only bank accounts are shown
+    return bankAccounts;
+  };
+
+  // Get filtered accounts for "From Account" dropdown (v1 - only bank accounts)
+  const getFromAccounts = () => {
+    const allAccounts = getAllAccounts();
+    // For v1 release, only bank accounts are available
+    return allAccounts;
+  };
+
+  // Get filtered accounts for "To Account" dropdown (v1 - only bank accounts)
+  const getToAccounts = () => {
+    const allAccounts = getAllAccounts();
+    // For v1 release, only bank accounts are available
+    return allAccounts;
+  };
+
+  // Load accounts for selection (v1 - only bank accounts)
   useEffect(() => {
     (async () => {
       try {
-        // Use AccountService to get accounts and ensure default wallet exists
+        // Load only bank accounts for v1 release
         const allAccounts = await AccountService.getAccounts();
         
         // Ensure default wallet exists
@@ -82,6 +126,12 @@ const AddTransactionScreen = () => {
         });
         
         setAccounts(sorted);
+        // Credit card functionality hidden for v1 release
+        // setCreditCards(allCreditCards);
+        
+        // Log loaded data for debugging
+        console.log('🔍 AddTransactionScreen: Loaded accounts:', sorted.length);
+        // console.log('🔍 AddTransactionScreen: Loaded credit cards:', allCreditCards.length);
         
         // Set selected account to wallet if available, otherwise first account
         if (sorted.length > 0) {
@@ -163,8 +213,9 @@ const AddTransactionScreen = () => {
   // Function to update ad counter
   const updateAdCounter = async () => {
     try {
-      const count = await TransactionAdService.getTransactionsUntilAd();
-      setTransactionsUntilAd(count);
+      // TODO: Implement TransactionAdService
+      // const count = await TransactionAdService.getTransactionsUntilAd();
+      // setTransactionsUntilAd(count);
     } catch (error) {
       // Silent fail for ad counter update
     }
@@ -174,7 +225,7 @@ const AddTransactionScreen = () => {
 
 
 
-  // Refresh accounts when screen gains focus (e.g., after adding a new account)
+  // Refresh accounts, credit cards, and categories when screen gains focus (e.g., after adding a new account)
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
@@ -190,18 +241,49 @@ const AddTransactionScreen = () => {
         setShowAccountDropdown(false);
       }
       (async () => {
-        const list = await AccountService.getAccounts();
-        const sorted = [...list].sort((a, b) => {
-          const aCash = a.type === 'cash' ? 1 : 0;
-          const bCash = b.type === 'cash' ? 1 : 0;
-          return bCash - aCash;
-        });
-        if (isActive) {
-          setAccounts(sorted);
-          if (!selectedAccountId && sorted.length > 0) {
-            const wallet = sorted.find(a => a.type === 'cash');
-            setSelectedAccountId(wallet ? wallet.id : sorted[0].id);
+        try {
+          console.log('🔍 AddTransactionScreen: Force refreshing data on screen focus...');
+          
+          // Load fresh accounts and categories (v1 - no credit cards)
+          const [allAccounts, allCategories] = await Promise.all([
+            AccountService.getAccounts(),
+            categoryService.getCategories()
+          ]);
+          
+          // Ensure default wallet exists
+          let accountsWithWallet = [...allAccounts];
+          const hasWallet = allAccounts.some(acc => acc.type === 'cash');
+          
+          if (!hasWallet) {
+            const defaultWallet = await AccountService.ensureDefaultWallet();
+            if (defaultWallet) {
+              accountsWithWallet = [defaultWallet, ...allAccounts];
+            }
           }
+          
+          // Sort accounts: wallet first, then others
+          const sorted = accountsWithWallet.sort((a, b) => {
+            const aCash = a.type === 'cash' ? 1 : 0;
+            const bCash = b.type === 'cash' ? 0 : 1;
+            return bCash - aCash; // cash first
+          });
+          
+          if (isActive) {
+            setAccounts(sorted);
+            // Credit card functionality hidden for v1 release
+            // setCreditCards(allCreditCards);
+            setCategories(allCategories);
+            setIsLoadingCategories(false);
+            
+            console.log('🔍 AddTransactionScreen: Force refreshed - accounts:', sorted.length, 'categories:', allCategories.length);
+            
+            if (!selectedAccountId && sorted.length > 0) {
+              const wallet = sorted.find(a => a.type === 'cash');
+              setSelectedAccountId(wallet ? wallet.id : sorted[0].id);
+            }
+          }
+        } catch (error) {
+          console.error('❌ AddTransactionScreen: Error refreshing data:', error);
         }
       })();
       return () => {
@@ -223,14 +305,17 @@ const AddTransactionScreen = () => {
   }, [isEditMode, editTransaction]);
 
   // Get categories based on transaction type
-  const getCategoriesByType = (transactionType: 'expense' | 'income') => {
+  const getCategoriesByType = (transactionType: 'expense' | 'income' | 'transfer') => {
     return categories.filter(cat => cat.type === transactionType);
   };
 
   const expenseCategories = getCategoriesByType('expense');
   const incomeCategories = getCategoriesByType('income');
+  const transferCategories = getCategoriesByType('transfer');
 
-  const availableCategories = type === 'expense' ? expenseCategories : incomeCategories;
+  const availableCategories = type === 'expense' ? expenseCategories : 
+                            type === 'income' ? incomeCategories : 
+                            transferCategories;
 
   const selectedCategory = availableCategories.find(cat => cat.name === category);
   const formatCurrency = (amount: number) => {
@@ -262,7 +347,25 @@ const AddTransactionScreen = () => {
 
     if (!selectedAccountId) {
       newErrors.account = 'Please select an account';
+    } else {
+      // Validate that the selected account exists in current data
+      const fromAccounts = getFromAccounts();
+      if (!fromAccounts.find(acc => acc.id === selectedAccountId)) {
+        newErrors.account = 'Selected account is no longer available. Please refresh and try again.';
+      }
     }
+
+    // For transfers, also validate "To Account"
+    if (type === 'transfer' && !selectedToAccountId) {
+      newErrors.toAccount = 'Please select a destination account';
+    } else if (type === 'transfer' && selectedToAccountId) {
+      // Validate that the selected to account exists in current data
+      const toAccounts = getToAccounts();
+      if (!toAccounts.find(acc => acc.id === selectedToAccountId)) {
+        newErrors.toAccount = 'Selected destination account is no longer available. Please refresh and try again.';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -279,15 +382,42 @@ const AddTransactionScreen = () => {
 
     const proceedSave = async () => {
       try {
+        // Handle account ID formatting (v1 - only bank accounts)
+        const getAccountId = (accountId: string | null) => {
+          if (!accountId || accountId === 'undefined' || accountId === 'null' || accountId === 'NaN') return '';
+          return accountId;
+        };
+
+        // Credit card functionality hidden for v1 release
+        // const isCreditCardPayment = selectedAccountId?.startsWith('credit-');
+        // const isCreditCardTransfer = selectedToAccountId?.startsWith('credit-');
+
         const transactionData = {
           type,
           amount: parsedAmount,
           title,
+          description: title, // Title goes to description field for backend (backend doesn't have separate title field)
           category,
           date,
           note,
-          accountId: selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN' ? selectedAccountId : '',
+          tags: note ? [note] : [], // Store notes in tags field
+          accountId: getAccountId(selectedAccountId),
+          // Send account information in the format backend expects
+          toAccount: (type === 'income' && selectedAccountId) || (type === 'transfer' && selectedToAccountId) ? 
+                     getAccountId(type === 'transfer' ? selectedToAccountId : selectedAccountId) : null,
+          fromAccount: (type === 'expense' && selectedAccountId) || (type === 'transfer' && selectedAccountId) ? 
+                      getAccountId(selectedAccountId) : null,
         };
+
+        // Credit card functionality hidden for v1 release
+        // Special handling for credit card payments
+        // if (isCreditCardPayment && type === 'expense') {
+        //   transactionData.fromAccount = getAccountId(selectedAccountId);
+        //   transactionData.toAccount = null;
+        // } else if (isCreditCardTransfer && type === 'transfer') {
+        //   transactionData.toAccount = getAccountId(selectedToAccountId);
+        //   transactionData.fromAccount = getAccountId(selectedAccountId);
+        // }
 
         if (isEditMode && editTransaction) {
           // Update existing transaction
@@ -296,11 +426,7 @@ const AddTransactionScreen = () => {
         } else {
           // Save new transaction
           await TransactionService.saveTransaction(transactionData);
-                  // Adjust account balance
-        const delta = type === 'income' ? parsedAmount : -parsedAmount;
-        if (selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
-          await AccountService.adjustAccountBalance(selectedAccountId, delta);
-        }
+          // Note: Account balance adjustments are now handled by the backend
           
           // Update ad counter after saving new transaction
           updateAdCounter();
@@ -323,15 +449,27 @@ const AddTransactionScreen = () => {
       }
     };
 
-    // Insufficient funds check for expenses
-    if (type === 'expense' && selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
+    // Insufficient funds check for expenses and transfers
+    if ((type === 'expense' || type === 'transfer') && selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
       const acc = await AccountService.getAccountById(selectedAccountId);
-      const currentBalance = acc?.balance || 0;
+      
+      // For v1 release, only bank accounts are supported
+      let currentBalance = acc?.balance || 0;
+      let balanceType = 'balance';
+      
+      // Credit card functionality hidden for v1 release
+      // if (selectedAccountId.startsWith('credit-')) {
+      //   const creditLimit = acc?.creditLimit || 0;
+      //   const outstandingBalance = acc?.balance || 0;
+      //   currentBalance = creditLimit - outstandingBalance;
+      //   balanceType = 'available credit';
+      // }
+      
       if (parsedAmount > currentBalance) {
         const projected = currentBalance - parsedAmount;
         Alert.alert(
           'Insufficient funds',
-          `This will make ${acc?.name || 'the account'} balance ${projected < 0 ? '-' : ''}₹${Math.abs(projected).toLocaleString()}. Continue?`,
+          `This will make ${acc?.name || 'the account'} ${balanceType} ${projected < 0 ? '-' : ''}₹${Math.abs(projected).toLocaleString()}. Continue?`,
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Proceed', style: 'destructive', onPress: () => { void proceedSave(); } },
@@ -375,15 +513,15 @@ const AddTransactionScreen = () => {
                  <View style={styles.editTypeContainer}>
                    <View style={[
                      styles.editTypeCard,
-                     { backgroundColor: type === 'expense' ? '#FFF5F5' : '#F0F9FF' }
+                     { backgroundColor: type === 'expense' ? '#FFF5F5' : type === 'income' ? '#F0F9FF' : '#F3E8FF' }
                    ]}>
                      <View style={styles.editTypeContent}>
                        <View style={[
                          styles.editTypeIcon,
-                         { backgroundColor: type === 'expense' ? '#FF4C4C' : '#007AFF' }
+                         { backgroundColor: type === 'expense' ? '#FF4C4C' : type === 'income' ? '#007AFF' : '#8B5CF6' }
                        ]}>
                          <Ionicons 
-                           name={type === 'expense' ? 'arrow-up' : 'arrow-down'} 
+                           name={type === 'expense' ? 'arrow-up' : type === 'income' ? 'arrow-down' : 'swap-vertical'} 
                            size={20} 
                            color="#FFFFFF" 
                            style={styles.toggleIcon}
@@ -392,9 +530,9 @@ const AddTransactionScreen = () => {
                        <View style={styles.editTypeInfo}>
                          <Text style={[
                            styles.editTypeValue,
-                           { color: type === 'expense' ? '#FF4C4C' : '#007AFF' }
+                           { color: type === 'expense' ? '#FF4C4C' : type === 'income' ? '#007AFF' : '#8B5CF6' }
                          ]} allowFontScaling={false}>
-                           {type === 'expense' ? 'Expense' : 'Income'}
+                           {type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}
                          </Text>
                        </View>
                      </View>
@@ -405,7 +543,8 @@ const AddTransactionScreen = () => {
                  <View style={styles.toggleContainer}>
                    <View style={[
                      styles.toggleBackground,
-                     type === 'expense' && styles.toggleBackgroundExpense
+                     type === 'expense' && styles.toggleBackgroundExpense,
+                     type === 'transfer' && styles.toggleBackgroundTransfer
                    ]}>
                      <TouchableOpacity
                        style={[
@@ -460,6 +599,34 @@ const AddTransactionScreen = () => {
                            type === 'income' && styles.toggleButtonTextActive
                          ]} allowFontScaling={false}>
                            Income
+                         </Text>
+                       </View>
+                     </TouchableOpacity>
+                     <TouchableOpacity
+                       style={[
+                         styles.toggleButton,
+                         type === 'transfer' && styles.toggleButtonTransfer
+                       ]}
+                       onPress={() => {
+                         setType('transfer');
+                         // Clear category if it doesn't exist in transfer categories
+                         if (category && !transferCategories.find(cat => cat.name === category)) {
+                           setCategory('');
+                         }
+                       }}
+                     >
+                       <View style={styles.toggleButtonContent}>
+                         <Ionicons 
+                           name="swap-vertical" 
+                           size={18} 
+                           color={type === 'transfer' ? '#FFFFFF' : '#666666'} 
+                           style={styles.toggleIcon}
+                         />
+                         <Text style={[
+                           styles.toggleButtonText,
+                           type === 'transfer' && styles.toggleButtonTextActive
+                         ]} allowFontScaling={false}>
+                           Transfer
                          </Text>
                        </View>
                      </TouchableOpacity>
@@ -569,6 +736,13 @@ const AddTransactionScreen = () => {
                           onPress={() => {
                             setCategory(cat.name);
                             setShowCategoryDropdown(false);
+                            
+                            // Credit card functionality hidden for v1 release
+                            // Auto-set transaction type for Credit Card Bill Payment
+                            // if (cat.name === 'Credit Card Bill Payment') {
+                            //   setType('transfer');
+                            // }
+                            
                             if (errors.category) {
                               setErrors(prev => ({ ...prev, category: '' }));
                             }
@@ -608,13 +782,21 @@ const AddTransactionScreen = () => {
                 <View style={styles.dropdownContent}>
                   {selectedAccountId ? (
                     <>
-                      <Ionicons name="card" size={20} color={theme.colors.text} />
+                      <Ionicons 
+                        name={
+                          getFromAccounts().find(a => a.id === selectedAccountId)?.type === 'cash' ? 'wallet' : 'business'
+                        } 
+                        size={20} 
+                        color={theme.colors.text} 
+                      />
                       <Text style={styles.dropdownText} allowFontScaling={false}>
-                        {accounts.find(a => a.id === selectedAccountId)?.name || 'Select account'}
+                        {getFromAccounts().find(a => a.id === selectedAccountId)?.displayName || 'Select account'}
                       </Text>
                     </>
                   ) : (
-                    <Text style={styles.dropdownPlaceholder} allowFontScaling={false}>Select account</Text>
+                    <Text style={styles.dropdownPlaceholder} allowFontScaling={false}>
+                      Select account
+                    </Text>
                   )}
                 </View>
                 <Ionicons 
@@ -627,12 +809,12 @@ const AddTransactionScreen = () => {
               {showAccountDropdown && (
                 <View style={styles.dropdownList}>
                   <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled style={{ maxHeight: 200 }}>
-                    {accounts.length === 0 ? (
+                    {getFromAccounts().length === 0 ? (
                       <View style={styles.dropdownItem}>
                         <Text style={styles.dropdownItemText} allowFontScaling={false}>No accounts found</Text>
                       </View>
                     ) : (
-                      accounts.map(acc => (
+                      getFromAccounts().map(acc => (
                       <TouchableOpacity
                         key={acc.id}
                         style={styles.dropdownItemRow}
@@ -643,16 +825,26 @@ const AddTransactionScreen = () => {
                         }}
                       >
                         <View style={styles.dropdownContent}>
-                          <Ionicons name={acc.type === 'cash' ? 'wallet' : 'business'} size={20} color={theme.colors.textSecondary} />
-                          <Text style={styles.dropdownItemText} allowFontScaling={false}>{acc.name}</Text>
+                          <Ionicons 
+                            name={
+                              acc.type === 'cash' ? 'wallet' : 'business'
+                            } 
+                            size={20} 
+                            color={theme.colors.textSecondary} 
+                          />
+                          <Text style={styles.dropdownItemText} allowFontScaling={false}>
+                            {acc.displayName}
+                          </Text>
                         </View>
-                        <Text style={styles.dropdownAmountText} allowFontScaling={false}>{formatCurrency(acc.balance || 0)}</Text>
+                        <Text style={styles.dropdownAmountText} allowFontScaling={false}>
+                          {formatCurrency(acc.balance || 0)}
+                        </Text>
                       </TouchableOpacity>
                     ))
                     )}
-                    {/* Add Bank Account option at the end */}
+                    {/* Add Account options at the end */}
                     <TouchableOpacity
-                      key="add-account-option"
+                      key="add-bank-account-option"
                       style={styles.dropdownItem}
                       onPress={() => {
                         setShowAccountDropdown(false);
@@ -662,12 +854,114 @@ const AddTransactionScreen = () => {
                       <Ionicons name="add" size={20} color={theme.colors.textSecondary} />
                       <Text style={styles.dropdownItemText} allowFontScaling={false}>Add Bank Account</Text>
                     </TouchableOpacity>
+                    {/* Credit card functionality hidden for v1 release */}
+                    {/* <TouchableOpacity
+                      key="add-credit-card-option"
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowAccountDropdown(false);
+                        (navigation as any).navigate('AddCreditCard');
+                      }}
+                    >
+                      <Ionicons name="card" size={20} color={theme.colors.textSecondary} />
+                      <Text style={styles.dropdownItemText} allowFontScaling={false}>Add Credit Card</Text>
+                    </TouchableOpacity> */}
                   </ScrollView>
                 </View>
               )}
             </View>
             {errors.account && <Text style={styles.errorText} allowFontScaling={false}>{errors.account}</Text>}
           </View>
+
+          {/* To Account Input - Only for Transfer */}
+          {type === 'transfer' && (
+            <View style={styles.inputGroup}>
+              <View style={styles.outlinedInputContainer}>
+                <Text style={styles.floatingLabel} allowFontScaling={false}>To Account</Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setShowToAccountDropdown(!showToAccountDropdown)}
+                >
+                  <View style={styles.dropdownContent}>
+                    {selectedToAccountId ? (
+                      <>
+                        <Ionicons 
+                          name={
+                            getToAccounts().find(a => a.id === selectedToAccountId)?.accountType === 'credit' ? 'card' : 
+                            getToAccounts().find(a => a.id === selectedToAccountId)?.type === 'cash' ? 'wallet' : 'business'
+                          } 
+                          size={20} 
+                          color={theme.colors.text} 
+                        />
+                        <Text style={styles.dropdownText} allowFontScaling={false}>
+                          {getToAccounts().find(a => a.id === selectedToAccountId)?.displayName || 'Select account'}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.dropdownPlaceholder} allowFontScaling={false}>
+                        {category === 'Credit Card Bill Payment' ? 'Select credit card' : 'Select destination account'}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons 
+                    name={showToAccountDropdown ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color={theme.colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+                {/* Simple list below for to account selection */}
+                {showToAccountDropdown && (
+                  <View style={styles.dropdownList}>
+                    <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled style={{ maxHeight: 200 }}>
+                      {getToAccounts().filter(acc => acc.id !== selectedAccountId).length === 0 ? (
+                        <View style={styles.dropdownItem}>
+                          <Text style={styles.dropdownItemText} allowFontScaling={false}>
+                            {category === 'Credit Card Bill Payment' ? 'No credit cards found' : 'No other accounts found'}
+                          </Text>
+                        </View>
+                      ) : (
+                        getToAccounts().filter(acc => acc.id !== selectedAccountId).map(acc => (
+                        <TouchableOpacity
+                          key={acc.id}
+                          style={styles.dropdownItemRow}
+                          onPress={() => {
+                            setSelectedToAccountId(acc.id);
+                            if (errors.toAccount) setErrors(prev => ({ ...prev, toAccount: '' }));
+                            setShowToAccountDropdown(false);
+                          }}
+                        >
+                          <View style={styles.dropdownContent}>
+                            <Ionicons 
+                              name={
+                                acc.accountType === 'credit' ? 'card' : 
+                                acc.type === 'cash' ? 'wallet' : 'business'
+                              } 
+                              size={20} 
+                              color={theme.colors.textSecondary} 
+                            />
+                            <Text style={styles.dropdownItemText} allowFontScaling={false}>{acc.name}</Text>
+                            {acc.accountType === 'credit' && (
+                              <Text style={[styles.dropdownItemText, { fontSize: 12, opacity: 0.7 }]} allowFontScaling={false}>
+                                (Credit Card)
+                              </Text>
+                            )}
+                          </View>
+                          <Text style={styles.dropdownAmountText} allowFontScaling={false}>
+                            {acc.accountType === 'credit' ? 
+                              `Available: ${formatCurrency(acc.availableBalance || 0)}` : 
+                              formatCurrency(acc.balance || 0)
+                            }
+                          </Text>
+                        </TouchableOpacity>
+                      ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+              {errors.toAccount && <Text style={styles.errorText} allowFontScaling={false}>{errors.toAccount}</Text>}
+            </View>
+          )}
 
           {/* Date Input */}
           <View style={styles.inputGroup}>
@@ -733,14 +1027,14 @@ const AddTransactionScreen = () => {
                 styles.button, 
                 styles.saveButton,
                 {
-                  backgroundColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
-                  shadowColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
+                  backgroundColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
+                  shadowColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
                 }
               ]}
               onPress={() => handleSaveTransaction(false)}
             >
               <Text style={styles.saveButtonText} allowFontScaling={false}>
-                {isEditMode ? `Update ${type === 'expense' ? 'Expense' : 'Income'}` : `Save ${type === 'expense' ? 'Expense' : 'Income'}`}
+                {isEditMode ? `Update ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}` : `Save ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}`}
               </Text>
             </TouchableOpacity>
             
@@ -750,8 +1044,8 @@ const AddTransactionScreen = () => {
                   styles.button, 
                   styles.saveAndAddButton,
                   {
-                    backgroundColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
-                    shadowColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
+                    backgroundColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
+                    shadowColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
                   }
                 ]}
                 onPress={() => handleSaveTransaction(true)}
@@ -834,6 +1128,9 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   toggleBackgroundExpense: {
     backgroundColor: '#FFF5F5',
   },
+  toggleBackgroundTransfer: {
+    backgroundColor: '#F3E8FF',
+  },
   toggleButton: {
     flex: 1,
     paddingVertical: 12,
@@ -855,6 +1152,17 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   toggleButtonExpense: {
     backgroundColor: '#FF4C4C',
     shadowColor: '#FF4C4C',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  toggleButtonTransfer: {
+    backgroundColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
     shadowOffset: {
       width: 0,
       height: 2,

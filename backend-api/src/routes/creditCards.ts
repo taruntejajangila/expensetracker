@@ -1,6 +1,5 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { getPool } from '../config/database';
 
 const router = express.Router();
 
@@ -20,7 +19,7 @@ router.get('/', authenticateToken, async (req, res) => {
       ORDER BY created_at DESC
     `;
     
-    const result = await getPool().query(query, [userId]);
+    const result = await req.app.locals.db.query(query, [userId]);
     
     res.json({
       success: true,
@@ -51,7 +50,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       WHERE id = $1 AND user_id = $2 AND is_active = true
     `;
     
-    const result = await getPool().query(query, [cardId, userId]);
+    const result = await req.app.locals.db.query(query, [cardId, userId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -127,17 +126,17 @@ router.post('/', authenticateToken, async (req, res) => {
     `;
     
     const duplicateCheckValues = [userId, cardNumber, name, issuer, cardType];
-    const duplicateResult = await getPool().query(duplicateCheckQuery, duplicateCheckValues);
+    const duplicateResult = await req.app.locals.db.query(duplicateCheckQuery, duplicateCheckValues);
     
     if (duplicateResult.rows.length > 0) {
       const duplicates = duplicateResult.rows;
       let errorMessage = 'Credit card already exists: ';
       
-      if (duplicates.some(d => d.card_number === cardNumber && d.card_number !== '')) {
+      if (duplicates.some((d: any) => d.card_number === cardNumber && d.card_number !== '')) {
         errorMessage += `Card number ${cardNumber} is already in use`;
-      } else if (duplicates.some(d => d.name === name && d.issuer === issuer)) {
+      } else if (duplicates.some((d: any) => d.name === name && d.issuer === issuer)) {
         errorMessage += `A credit card with the name "${name}" already exists at ${issuer}`;
-      } else if (duplicates.some(d => d.card_type === cardType && d.issuer === issuer)) {
+      } else if (duplicates.some((d: any) => d.card_type === cardType && d.issuer === issuer)) {
         errorMessage += `A ${cardType} credit card from ${issuer} already exists`;
       }
       
@@ -174,7 +173,7 @@ router.post('/', authenticateToken, async (req, res) => {
       icon || 'card'
     ];
     
-                    const result = await getPool().query(query, values);
+                    const result = await req.app.locals.db.query(query, values);
         
         return res.status(201).json({
           success: true,
@@ -202,7 +201,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       WHERE id = $1 AND user_id = $2 AND is_active = true
     `;
     
-    const checkResult = await getPool().query(checkQuery, [cardId, userId]);
+    const checkResult = await req.app.locals.db.query(checkQuery, [cardId, userId]);
     
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
@@ -214,14 +213,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Map camelCase field names to snake_case database column names
     const fieldMapping: { [key: string]: string } = {
       'name': 'name',
+      'cardName': 'name', // Frontend sends cardName, map to name
       'cardNumber': 'card_number',
       'cardType': 'card_type',
       'issuer': 'issuer',
       'creditLimit': 'credit_limit',
       'balance': 'balance',
+      'currentBalance': 'balance', // Frontend sends currentBalance, map to balance
       'minPayment': 'min_payment',
       'statementDay': 'statement_day',
       'paymentDueDay': 'payment_due_day',
+      'dueDay': 'payment_due_day', // Frontend sends dueDay, map to payment_due_day
       'color': 'color',
       'icon': 'icon'
     };
@@ -276,23 +278,23 @@ router.put('/:id', authenticateToken, async (req, res) => {
       const duplicateCheckValues = [
         userId, 
         cardId, 
-        updates.card_number || (await getPool().query('SELECT card_number FROM credit_cards WHERE id = $1', [cardId])).rows[0].card_number,
-        updates.name || (await getPool().query('SELECT name FROM credit_cards WHERE id = $1', [cardId])).rows[0].name,
-        updates.issuer || (await getPool().query('SELECT issuer FROM credit_cards WHERE id = $1', [cardId])).rows[0].issuer,
-        updates.card_type || (await getPool().query('SELECT card_type FROM credit_cards WHERE id = $1', [cardId])).rows[0].card_type
+        updates.card_number || (await req.app.locals.db.query('SELECT card_number FROM credit_cards WHERE id = $1', [cardId])).rows[0].card_number,
+        updates.name || (await req.app.locals.db.query('SELECT name FROM credit_cards WHERE id = $1', [cardId])).rows[0].name,
+        updates.issuer || (await req.app.locals.db.query('SELECT issuer FROM credit_cards WHERE id = $1', [cardId])).rows[0].issuer,
+        updates.card_type || (await req.app.locals.db.query('SELECT card_type FROM credit_cards WHERE id = $1', [cardId])).rows[0].card_type
       ];
       
-      const duplicateResult = await getPool().query(duplicateCheckQuery, duplicateCheckValues);
+      const duplicateResult = await req.app.locals.db.query(duplicateCheckQuery, duplicateCheckValues);
       
       if (duplicateResult.rows.length > 0) {
         const duplicates = duplicateResult.rows;
         let errorMessage = 'Credit card already exists: ';
         
-        if (duplicates.some(d => d.card_number === updates.card_number && updates.card_number !== '')) {
+        if (duplicates.some((d: any) => d.card_number === updates.card_number && updates.card_number !== '')) {
           errorMessage += `Card number ${updates.card_number} is already in use`;
-        } else if (duplicates.some(d => d.name === updates.name && d.issuer === updates.issuer)) {
+        } else if (duplicates.some((d: any) => d.name === updates.name && d.issuer === updates.issuer)) {
           errorMessage += `A credit card with the name "${updates.name}" already exists at ${updates.issuer}`;
-        } else if (duplicates.some(d => d.card_type === updates.card_type && d.issuer === updates.issuer)) {
+        } else if (duplicates.some((d: any) => d.card_type === updates.card_type && d.issuer === updates.issuer)) {
           errorMessage += `A ${updates.card_type} credit card from ${updates.issuer} already exists`;
         }
         
@@ -315,7 +317,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     
     if (updates.balance !== undefined) {
       const creditLimit = updates.credit_limit || 
-        (await getPool().query('SELECT credit_limit FROM credit_cards WHERE id = $1', [cardId])).rows[0].credit_limit;
+        (await req.app.locals.db.query('SELECT credit_limit FROM credit_cards WHERE id = $1', [cardId])).rows[0].credit_limit;
       
       if (updates.balance < 0 || updates.balance > creditLimit) {
         return res.status(400).json({
@@ -343,7 +345,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     console.log('🔍 Backend: Param count after loop:', paramCount);
     console.log('🔍 Backend: Values array after unshift:', values.length);
     
-    const result = await getPool().query(query, values);
+    const result = await req.app.locals.db.query(query, values);
     
     return res.json({
       success: true,
@@ -376,7 +378,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       WHERE id = $1 AND user_id = $2 AND is_active = true
     `;
     
-    const checkResult = await getPool().query(checkQuery, [cardId, userId]);
+    const checkResult = await req.app.locals.db.query(checkQuery, [cardId, userId]);
     
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
@@ -392,7 +394,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       WHERE id = $1 AND user_id = $2
     `;
     
-    await getPool().query(query, [cardId, userId]);
+    await req.app.locals.db.query(query, [cardId, userId]);
     
     return res.json({
       success: true,
@@ -422,7 +424,7 @@ router.get('/summary', authenticateToken, async (req, res) => {
       WHERE user_id = $1 AND is_active = true
     `;
     
-    const result = await getPool().query(query, [userId]);
+    const result = await req.app.locals.db.query(query, [userId]);
     const summary = result.rows[0];
     
     res.json({

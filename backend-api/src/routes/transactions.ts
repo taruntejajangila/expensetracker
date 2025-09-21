@@ -48,11 +48,22 @@ router.get('/',
           t.description,
           t.date,
           t.created_at,
+          t.tags,
+          t.from_account,
+          t.to_account,
           c.name as category,
           c.icon as categoryIcon,
-          c.color as categoryColor
+          c.color as categoryColor,
+          fa.name as from_account_name,
+          fa.bank_name as from_bank_name,
+          fa.account_number as from_account_number,
+          ta.name as to_account_name,
+          ta.bank_name as to_bank_name,
+          ta.account_number as to_account_number
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
+        LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
+        LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
         WHERE t.user_id = $1
         ORDER BY t.date DESC, t.created_at DESC
         LIMIT $2 OFFSET $3
@@ -70,10 +81,27 @@ router.get('/',
       const countResult = await req.app.locals.db.query(countQuery, [userId]);
       const total = parseInt(countResult.rows[0].total);
 
+      // Map transactions with bank account information
+      const mappedTransactions = result.rows.map((row: any) => ({
+        ...row,
+        fromAccount: row.from_account ? {
+          id: row.from_account,
+          name: row.from_account_name,
+          bankName: row.from_bank_name,
+          accountNumber: row.from_account_number
+        } : null,
+        toAccount: row.to_account ? {
+          id: row.to_account,
+          name: row.to_account_name,
+          bankName: row.to_bank_name,
+          accountNumber: row.to_account_number
+        } : null
+      }));
+
       return res.json({
         success: true,
         data: {
-          transactions: result.rows,
+          transactions: mappedTransactions,
           pagination: {
             page: parseInt(page as string),
             limit: parseInt(limit as string),
@@ -98,7 +126,7 @@ router.get('/',
 router.post('/',
   [
     body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
-    body('type').isIn(['income', 'expense']).withMessage('Type must be income or expense'),
+    body('type').isIn(['income', 'expense', 'transfer']).withMessage('Type must be income, expense, or transfer'),
     body('category').isString().trim().notEmpty().withMessage('Category is required'),
     body('description').optional().isString().trim().isLength({ max: 500 }).withMessage('Description too long'),
     body('date').isISO8601().withMessage('Valid date required')
@@ -114,8 +142,8 @@ router.post('/',
       // Get category ID from category name
       const categoryQuery = `
         SELECT id FROM categories 
-        WHERE name = $1 AND is_default = true
-        ORDER BY sort_order ASC
+        WHERE name = $1 AND is_active = true
+        ORDER BY is_default DESC, sort_order ASC
         LIMIT 1
       `;
       const categoryResult = await req.app.locals.db.query(categoryQuery, [category]);
@@ -131,9 +159,9 @@ router.post('/',
 
       // Insert transaction into database with account information
       const insertQuery = `
-        INSERT INTO transactions (user_id, amount, type, category_id, description, date, to_account, from_account, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        RETURNING id, amount, type, description, date, to_account, from_account, created_at
+        INSERT INTO transactions (user_id, amount, type, category_id, description, date, to_account, from_account, tags, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        RETURNING id, amount, type, description, date, to_account, from_account, tags, created_at
       `;
       
       const insertResult = await req.app.locals.db.query(insertQuery, [
@@ -144,13 +172,51 @@ router.post('/',
         description || '',
         new Date(date),
         req.body.toAccount || null,
-        req.body.fromAccount || null
+        req.body.fromAccount || null,
+        req.body.tags || []
       ]);
 
       const newTransaction = insertResult.rows[0];
 
-      // Update account balance if account is specified
-      if (req.body.toAccount || req.body.fromAccount) {
+      // Update account balance(s) based on transaction type
+      if (type === 'transfer') {
+        // For transfers, update both from and to accounts
+        if (req.body.fromAccount && req.body.toAccount) {
+          // Deduct from source account (should be a bank account for credit card bill payments)
+          const updateFromQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance - $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
+          `;
+          await req.app.locals.db.query(updateFromQuery, [parseFloat(amount), req.body.fromAccount, userId]);
+          
+          // Check if destination account is a credit card
+          const creditCardCheckQuery = `
+            SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
+          `;
+          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [req.body.toAccount, userId]);
+          
+          if (creditCardCheck.rows.length > 0) {
+            // Destination is a credit card - reduce the balance (payment reduces debt)
+            // Note: Credit card balance represents debt, so reducing balance means paying off debt
+            const updateCreditQuery = `
+              UPDATE credit_cards 
+              SET balance = balance - $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateCreditQuery, [parseFloat(amount), req.body.toAccount, userId]);
+          } else {
+            // Destination is a bank account
+            const updateToQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateToQuery, [parseFloat(amount), req.body.toAccount, userId]);
+          }
+        }
+      } else if (req.body.toAccount || req.body.fromAccount) {
+        // For income/expense, update single account
         const accountId = req.body.toAccount || req.body.fromAccount;
         const isIncome = type === 'income';
         const balanceChange = isIncome ? parseFloat(amount) : -parseFloat(amount);
@@ -164,22 +230,46 @@ router.post('/',
           `;
           await req.app.locals.db.query(updateCashQuery, [balanceChange, userId]);
         } else if (accountId.startsWith('credit-')) {
-          // Update credit card balance
+          // Update credit card balance (if frontend still sends with prefix)
           const creditCardId = accountId.replace('credit-', '');
+          // For credit cards, balance represents debt, so:
+          // - Income: reduce debt (subtract amount)
+          // - Expense: increase debt (add amount)
+          const creditCardBalanceChange = isIncome ? -parseFloat(amount) : parseFloat(amount);
           const updateCreditQuery = `
             UPDATE credit_cards 
             SET balance = balance + $1, updated_at = NOW()
             WHERE id = $2 AND user_id = $3
           `;
-          await req.app.locals.db.query(updateCreditQuery, [balanceChange, creditCardId, userId]);
+          await req.app.locals.db.query(updateCreditQuery, [creditCardBalanceChange, creditCardId, userId]);
         } else {
-          // Update bank account balance
-          const updateBankQuery = `
-            UPDATE bank_accounts 
-            SET balance = balance + $1, updated_at = NOW()
-            WHERE id = $2 AND user_id = $3
+          // Check if this account ID exists in credit_cards table (frontend removed prefix)
+          const creditCardCheckQuery = `
+            SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
           `;
-          await req.app.locals.db.query(updateBankQuery, [balanceChange, accountId, userId]);
+          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountId, userId]);
+          
+          if (creditCardCheck.rows.length > 0) {
+            // This is a credit card (frontend removed the prefix)
+            // For credit cards, balance represents debt, so:
+            // - Income: reduce debt (subtract amount)
+            // - Expense: increase debt (add amount)
+            const creditCardBalanceChange = isIncome ? -parseFloat(amount) : parseFloat(amount);
+            const updateCreditQuery = `
+              UPDATE credit_cards 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateCreditQuery, [creditCardBalanceChange, accountId, userId]);
+          } else {
+            // This is a regular bank account
+            const updateBankQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateBankQuery, [balanceChange, accountId, userId]);
+          }
         }
       }
 
@@ -222,11 +312,22 @@ router.get('/recent',
           t.description,
           t.date,
           t.created_at,
+          t.tags,
+          t.from_account,
+          t.to_account,
           c.name as category,
           c.icon as categoryIcon,
-          c.color as categoryColor
+          c.color as categoryColor,
+          fa.name as from_account_name,
+          fa.bank_name as from_bank_name,
+          fa.account_number as from_account_number,
+          ta.name as to_account_name,
+          ta.bank_name as to_bank_name,
+          ta.account_number as to_account_number
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
+        LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
+        LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
         WHERE t.user_id = $1
         ORDER BY t.date DESC, t.created_at DESC
         LIMIT $2
@@ -234,9 +335,26 @@ router.get('/recent',
       
       const result = await req.app.locals.db.query(query, [userId, limit]);
 
+      // Map transactions with bank account information
+      const mappedTransactions = result.rows.map((row: any) => ({
+        ...row,
+        fromAccount: row.from_account ? {
+          id: row.from_account,
+          name: row.from_account_name,
+          bankName: row.from_bank_name,
+          accountNumber: row.from_account_number
+        } : null,
+        toAccount: row.to_account ? {
+          id: row.to_account,
+          name: row.to_account_name,
+          bankName: row.to_bank_name,
+          accountNumber: row.to_account_number
+        } : null
+      }));
+
       return res.json({
         success: true,
-        data: result.rows,
+        data: mappedTransactions,
         message: 'Recent transactions retrieved successfully'
       });
     } catch (error) {
@@ -306,7 +424,7 @@ router.get('/:id',
 router.put('/:id',
   [
     body('amount').optional().isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
-    body('type').optional().isIn(['income', 'expense']).withMessage('Type must be income or expense'),
+    body('type').optional().isIn(['income', 'expense', 'transfer']).withMessage('Type must be income, expense, or transfer'),
     body('category').optional().isString().trim().notEmpty().withMessage('Category cannot be empty'),
     body('description').optional().isString().trim().isLength({ max: 500 }).withMessage('Description too long'),
     body('date').optional().isISO8601().withMessage('Valid date required')
@@ -428,7 +546,7 @@ router.delete('/:id',
           `;
           await req.app.locals.db.query(updateCashQuery, [balanceChange, userId]);
         } else if (accountToUpdate.startsWith('credit-')) {
-          // Update credit card balance
+          // Update credit card balance (if still has prefix)
           const creditCardId = accountToUpdate.replace('credit-', '');
           const updateCreditQuery = `
             UPDATE credit_cards 
@@ -437,13 +555,29 @@ router.delete('/:id',
           `;
           await req.app.locals.db.query(updateCreditQuery, [balanceChange, creditCardId, userId]);
         } else {
-          // Update bank account balance
-          const updateBankQuery = `
-            UPDATE bank_accounts 
-            SET balance = balance + $1, updated_at = NOW()
-            WHERE id = $2 AND user_id = $3
+          // Check if this account ID exists in credit_cards table
+          const creditCardCheckQuery = `
+            SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
           `;
-          await req.app.locals.db.query(updateBankQuery, [balanceChange, accountToUpdate, userId]);
+          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountToUpdate, userId]);
+          
+          if (creditCardCheck.rows.length > 0) {
+            // This is a credit card
+            const updateCreditQuery = `
+              UPDATE credit_cards 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateCreditQuery, [balanceChange, accountToUpdate, userId]);
+          } else {
+            // This is a regular bank account
+            const updateBankQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(updateBankQuery, [balanceChange, accountToUpdate, userId]);
+          }
         }
       }
 

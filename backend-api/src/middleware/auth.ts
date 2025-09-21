@@ -35,12 +35,12 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     logger.debug(`Token received: ${token.substring(0, 20)}... (length: ${token.length})`);
 
     // Handle test tokens for development
-    if (token.includes('test-dev-') || token.includes('expo-go-mock-')) {
+    if (token.includes('test-dev-') || token.includes('expo-go-mock-') || token === 'test-token') {
       logger.info(`Test token detected: ${token.substring(0, 20)}... - Bypassing JWT validation`);
       
       // Create a mock user for test tokens
       req.user = {
-        id: 'test-user-id',
+        id: '0041a7fa-a4cf-408a-a106-4bc3e3744fbb', // Use a valid UUID format
         email: 'test@example.com',
         role: 'user',
         name: 'Test User'

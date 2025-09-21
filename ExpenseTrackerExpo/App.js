@@ -4,6 +4,7 @@ import './globalFontFix';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -41,6 +42,7 @@ import DebtPlansScreen from './screens/DebtPlansScreen';
 import BudgetScreen from './screens/BudgetScreen';
 import ExpensesScreen from './screens/ExpensesScreen';
 import IncomeScreen from './screens/IncomeScreen';
+import RemindersScreen from './screens/RemindersScreen';
 
 // Import auth screens
 import LoginScreen from './screens/auth/LoginScreen';
@@ -54,6 +56,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ScrollProvider } from './context/ScrollContext';
 import { NotificationProvider } from './context/NotificationContext';
+
+// Import daily reminder service
+import DailyReminderService from './services/DailyReminderService';
 
 // Import AdMob components
 import { SplashScreenAd } from './components/SplashScreenAd';
@@ -111,21 +116,25 @@ function MainStackNavigator() {
       <Stack.Screen name="SpentInMonth" component={SpentInMonthScreen} />
       <Stack.Screen name="AllTransaction" component={AllTransactionScreen} />
       <Stack.Screen name="Accounts" component={AccountsScreen} />
-      <Stack.Screen name="CreditCards" component={CreditCardScreen} />
+      {/* Credit Cards feature hidden for v1 release */}
+      {/* <Stack.Screen name="CreditCards" component={CreditCardScreen} /> */}
       <Stack.Screen name="Loans" component={LoansScreen} />
       <Stack.Screen name="BudgetPlanning" component={BudgetPlanningScreen} />
       <Stack.Screen name="SavingsGoals" component={SavingsGoalsScreen} />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} />
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen name="AddAccount" component={AddAccountScreen} />
-      <Stack.Screen name="AddCreditCard" component={AddCreditCardScreen} />
+      {/* Credit Cards feature hidden for v1 release */}
+      {/* <Stack.Screen name="AddCreditCard" component={AddCreditCardScreen} /> */}
       <Stack.Screen name="AddLoan" component={AddLoanScreen} />
       <Stack.Screen name="AddGoal" component={AddGoalScreen} />
-      <Stack.Screen name="EditCreditCard" component={EditCreditCardScreen} />
+      {/* Credit Cards feature hidden for v1 release */}
+      {/* <Stack.Screen name="EditCreditCard" component={EditCreditCardScreen} /> */}
       <Stack.Screen name="EditLoan" component={EditLoanScreen} />
       <Stack.Screen name="EditGoal" component={EditGoalScreen} />
       <Stack.Screen name="BankAccountDetail" component={BankAccountDetailScreen} />
-      <Stack.Screen name="CreditCardDetails" component={CreditCardDetailsScreen} />
+      {/* Credit Cards feature hidden for v1 release */}
+      {/* <Stack.Screen name="CreditCardDetails" component={CreditCardDetailsScreen} /> */}
       <Stack.Screen name="LoanAccount" component={LoanAccountScreen} />
       <Stack.Screen name="LoanAmortization" component={LoanAmortizationScreen} />
       <Stack.Screen name="LoanCalculator" component={LoanCalculatorScreen} />
@@ -135,6 +144,7 @@ function MainStackNavigator() {
       <Stack.Screen name="Income" component={IncomeScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="Reminders" component={RemindersScreen} />
     </Stack.Navigator>
   );
 }
@@ -209,13 +219,82 @@ function AppNavigator() {
     }
   }, [isLoading, user, appInitialized, adMobInitialized]);
 
+  // Initialize daily reminders when user is authenticated
+  useEffect(() => {
+    if (user && !isLoading) {
+      const initializeDailyReminders = async () => {
+        try {
+          await DailyReminderService.getInstance().initialize();
+        } catch (error) {
+          console.error('Failed to initialize daily reminders:', error);
+        }
+      };
+      
+      initializeDailyReminders();
+    }
+  }, [user, isLoading]);
+
+  // Handle notification responses (when user taps on notifications)
+  useEffect(() => {
+    if (user && !isLoading) {
+      const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('🔔 User tapped notification - showing splash ad for monetization');
+        
+        // Handle the notification response in the service
+        DailyReminderService.getInstance().handleNotificationResponse(response);
+        
+        // Show splash ad when user comes through notification (monetization opportunity)
+        setShowSplashAd(true);
+      });
+
+      return () => {
+        responseListener.remove();
+      };
+    }
+  }, [user, isLoading]);
+
+  // Check for pending budget reminders when app starts or comes to foreground
+  useEffect(() => {
+    if (user && !isLoading) {
+      const checkBudgetReminder = async () => {
+        try {
+          const pendingReminder = await DailyReminderService.getInstance().checkPendingBudgetReminder();
+          if (pendingReminder) {
+            // Navigate to budget planning screen after a short delay
+            setTimeout(() => {
+              // This would be handled by navigation in the actual app
+              console.log('🚀 Should navigate to Budget Planning screen due to notification tap');
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error checking pending budget reminder:', error);
+        }
+      };
+
+      checkBudgetReminder();
+    }
+  }, [user, isLoading]);
+
   const handleSplashAdClose = () => {
+    console.log('📱 Splash ad closed - user continued to app without ad engagement');
     setShowSplashAd(false);
   };
 
   const handleSplashAdClick = () => {
-    // Handle ad click - could track analytics, redirect to app store, etc.
-    console.log('Splash screen ad clicked');
+    // Handle ad click - track monetization metrics
+    console.log('💰 Splash screen ad clicked - monetization event triggered');
+    console.log('📊 User came through notification and engaged with ad');
+    
+    // Track this as a successful monetization event
+    // This could be sent to analytics service for revenue tracking
+    const monetizationEvent = {
+      type: 'notification_driven_ad_click',
+      timestamp: new Date().toISOString(),
+      source: 'splash_ad_from_notification',
+      revenue_potential: true
+    };
+    
+    console.log('💵 Monetization Event:', monetizationEvent);
   };
 
   if (isLoading) {

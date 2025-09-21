@@ -172,7 +172,8 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             isActive={currentRoute === 'Accounts'}
           />
           
-          <DrawerItem
+          {/* Credit Cards feature hidden for v1 release */}
+          {/* <DrawerItem
             icon="card-outline"
             label="Credit Cards"
             onPress={() => {
@@ -187,7 +188,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
               );
             }}
             isActive={currentRoute === 'CreditCards'}
-          />
+          /> */}
           
           <DrawerItem
             icon="document-text-outline"
@@ -238,6 +239,23 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
               );
             }}
             isActive={currentRoute === 'SavingsGoals'}
+          />
+          
+          <DrawerItem
+            icon="alarm-outline"
+            label="Reminders"
+            onPress={() => {
+              navigation.closeDrawer();
+              navigation.dispatch(
+                CommonActions.navigate({
+                  name: 'MainApp',
+                  params: {
+                    screen: 'Reminders',
+                  },
+                })
+              );
+            }}
+            isActive={currentRoute === 'Reminders'}
           />
           
           <DrawerItem

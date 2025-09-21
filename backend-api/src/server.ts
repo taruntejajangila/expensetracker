@@ -80,16 +80,22 @@ app.use(cors({
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
-// Rate limiting
+// Rate limiting - More generous for development
 app.use('/api/', rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '500'), // Increased from 100 to 500 for development
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  // Skip rate limiting for localhost in development
+  skip: (req): boolean => {
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || (req.ip && req.ip.startsWith('192.168.')) || false;
+    const isDevelopment = (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) || false;
+    return Boolean(isLocalhost && isDevelopment);
+  }
 }));
 
 // Body parsing middleware

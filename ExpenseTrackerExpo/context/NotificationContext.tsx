@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
@@ -31,6 +31,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const isUserInteractingRef = useRef(false);
 
   // Configure notification behavior
   useEffect(() => {
@@ -83,10 +84,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       if (!authToken) return;
 
       const API_BASE_URL = 'http://192.168.29.14:5001/api';
-      const platform = Platform.OS === 'ios' ? 'ios' : 'android';
-      const deviceId = await AsyncStorage.getItem('deviceId') || 'unknown';
+      const platform = Platform.OS;
 
-      const response = await fetch(`${API_BASE_URL}/notifications/register-token`, {
+      const response = await fetch(`${API_BASE_URL}/notifications/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -95,29 +95,35 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         body: JSON.stringify({
           token,
           platform,
-          deviceId,
+          deviceInfo: {
+            brand: Platform.OS === 'ios' ? 'Apple' : 'Google',
+            modelName: 'Unknown',
+            osName: Platform.OS,
+            osVersion: 'Unknown',
+          },
         }),
       });
 
       if (response.ok) {
-        console.log('Push notification token registered with backend');
+        console.log('✅ Push notification token registered with backend');
       } else {
-        console.error('Failed to register token with backend');
+        console.error('❌ Failed to register token with backend:', response.status);
       }
     } catch (error) {
-      console.error('Error registering token with backend:', error);
+      console.error('❌ Error registering token with backend:', error);
     }
   };
 
-  // Poll for new notifications
+  // Fetch notifications from backend
   const refreshNotifications = async () => {
     try {
+      console.log('🔄 refreshNotifications called - User interacting:', isUserInteractingRef.current);
       setIsLoading(true);
       const authToken = await AsyncStorage.getItem('authToken');
       if (!authToken) return;
 
       const API_BASE_URL = 'http://192.168.29.14:5001/api';
-      const response = await fetch(`${API_BASE_URL}/notifications/poll`, {
+      const response = await fetch(`${API_BASE_URL}/notifications`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -127,28 +133,87 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.notifications) {
-          setNotifications(data.notifications);
-          setUnreadCount(data.notifications.length);
+        if (data.success && data.data) {
+          setNotifications(data.data);
+          const unreadNotifications = data.data.filter((n: any) => !n.read);
+          setUnreadCount(unreadNotifications.length);
+          console.log('✅ Notifications loaded:', data.data.length);
         }
+      } else {
+        console.error('❌ Failed to fetch notifications:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('❌ Error fetching notifications:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Mark notification as read
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true }
-          : notif
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  const markAsRead = async (notificationId: string) => {
+    try {
+      console.log('🔔 markAsRead called for notification:', notificationId);
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (!authToken) return;
+
+      // Set user interaction flag to prevent auto-refresh conflicts
+      isUserInteractingRef.current = true;
+      console.log('🔔 User interaction flag set to true');
+      
+      // Optimistically update the UI first
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, read: true }
+            : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Notification marked as read successfully:', result);
+        // Clear user interaction flag after a short delay
+        setTimeout(() => {
+          isUserInteractingRef.current = false;
+          console.log('🔔 User interaction flag set to false');
+        }, 1000);
+      } else {
+        // Revert the optimistic update if the API call failed
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId 
+              ? { ...notif, read: false }
+              : notif
+          )
+        );
+        setUnreadCount(prev => prev + 1);
+        isUserInteractingRef.current = false;
+        const errorResult = await response.json();
+        console.error('❌ Failed to mark notification as read:', errorResult);
+      }
+    } catch (error) {
+      // Revert the optimistic update if there was an error
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, read: false }
+            : notif
+        )
+      );
+      setUnreadCount(prev => prev + 1);
+      isUserInteractingRef.current = false;
+      console.error('❌ Error marking notification as read:', error);
+    }
   };
 
   // Mark all notifications as read
@@ -164,11 +229,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     // Initial load
     refreshNotifications();
 
-    // Poll every 30 seconds
-    const interval = setInterval(refreshNotifications, 30000);
+    // Poll every 2 minutes (reduced from 30 seconds to prevent race conditions)
+    const interval = setInterval(() => {
+      // Only auto-refresh if user is not currently interacting
+      console.log('⏰ Auto-refresh interval triggered - User interacting:', isUserInteractingRef.current);
+      if (!isUserInteractingRef.current) {
+        console.log('⏰ Auto-refresh proceeding');
+        refreshNotifications();
+      } else {
+        console.log('⏰ Auto-refresh skipped due to user interaction');
+      }
+    }, 120000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array - interval is created once and never recreated
 
   // Listen for incoming notifications
   useEffect(() => {

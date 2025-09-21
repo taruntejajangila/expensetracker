@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ApiClient from '../utils/ApiClient';
 
 interface User {
   id: string;
@@ -39,36 +40,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token) {
         console.log('🔍 AuthContext: Found stored token, validating...');
         
-        // Validate token with backend
+        // Validate token with backend using ApiClient
         const API_BASE_URL = 'http://192.168.29.14:5001/api';
+        const apiClient = ApiClient.getInstance();
+        
         try {
-          const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+          const userData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
+            'Authorization': `Bearer ${token}`,
           });
           
-          if (response.ok) {
-            const userData = await response.json();
-            if (userData.success && userData.data) {
-              const user: User = {
-                id: userData.data.id,
-                email: userData.data.email,
-                name: userData.data.name,
-                avatar: undefined,
-                createdAt: userData.data.createdAt,
-              };
-              setUser(user);
-              console.log('🔍 AuthContext: User restored from valid token');
-            } else {
-              console.log('🔍 AuthContext: Invalid token response, clearing...');
-              await AsyncStorage.clear();
-              setUser(null);
-            }
+          if (userData.success && userData.data) {
+            const user: User = {
+              id: userData.data.id,
+              email: userData.data.email,
+              name: userData.data.name,
+              avatar: undefined,
+              createdAt: userData.data.createdAt,
+            };
+            setUser(user);
+            console.log('🔍 AuthContext: User restored from valid token');
           } else {
-            console.log('🔍 AuthContext: Token validation failed, clearing...');
+            console.log('🔍 AuthContext: Invalid token response, clearing...');
             await AsyncStorage.clear();
             setUser(null);
           }
@@ -95,28 +87,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔍 AuthContext: Starting login process...');
       
       const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const apiClient = ApiClient.getInstance();
       
-      // Call the backend login API
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
+      // Call the backend login API with retry logic
+      const result = await apiClient.post(`${API_BASE_URL}/auth/login`, {
+        email: email,
+        password: password,
       });
 
-      console.log('🔍 AuthContext: Login response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('🔍 AuthContext: Login API error:', errorData);
-        throw new Error(errorData.message || `Login failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('🔍 AuthContext: Login API success:', result);
 
       if (result.success && result.data) {
@@ -164,30 +142,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔍 AuthContext: Starting registration process...');
       
       const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const apiClient = ApiClient.getInstance();
       
-      // Call the backend registration API
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          password: password
-          // phone field removed to avoid validation issues
-        }),
+      // Call the backend registration API with retry logic
+      const result = await apiClient.post(`${API_BASE_URL}/auth/register`, {
+        name: name,
+        email: email,
+        password: password
       });
 
-      console.log('🔍 AuthContext: Registration response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('🔍 AuthContext: Registration API error:', errorData);
-        throw new Error(errorData.message || `Registration failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('🔍 AuthContext: Registration API success:', result);
 
       if (result.success && result.data) {
@@ -201,6 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: userData.id,
           email: userData.email,
           name: userData.name,
+          phone: userData.phone,
           avatar: undefined,
           createdAt: userData.createdAt,
         };
@@ -228,6 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     }
   };
+
 
   const logout = async () => {
     try {

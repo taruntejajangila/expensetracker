@@ -62,31 +62,37 @@ export const LoanService = {
       }
 
       const result = await response.json();
-      console.log('🔍 LoanService: Response data:', result);
       
       if (result.success) {
         console.log('🔍 LoanService: Successfully fetched loans:', result.data.length);
         
         // Map API response to expected format
-        const mappedLoans = result.data.map((loan: any) => ({
-          id: loan.id,
-          name: loan.name,
-          principal: parseFloat(loan.amount), // Changed from principalAmount to principal
-          interestRate: parseFloat(loan.interestRate),
-          tenureMonths: loan.termMonths, // Changed from termMonths to tenureMonths
-          monthlyPayment: parseFloat(loan.monthlyPayment),
-          remainingBalance: parseFloat(loan.remainingBalance),
-          emiStartDate: loan.startDate, // Changed from startDate to emiStartDate
-          nextPaymentDate: loan.nextPaymentDate || loan.startDate, // Added nextPaymentDate
-          endDate: loan.endDate,
-          lender: loan.lender,
-          type: loan.loanType,
-          status: loan.status,
-          color: '#007AFF', // Default color, can be customized
-          icon: 'document-text', // Default icon, can be customized
-          createdAt: loan.createdAt,
-          updatedAt: loan.updatedAt
-        }));
+        const mappedLoans = result.data.map((loan: any) => {
+          const rawRate = parseFloat(loan.interestRate);
+          
+          // Smart detection: if rate > 1, it's already a percentage; if <= 1, it's a decimal
+          const interestRate = rawRate > 1 ? rawRate : rawRate * 100;
+          
+          return {
+            id: loan.id,
+            name: loan.name,
+            principal: parseFloat(loan.amount), // Changed from principalAmount to principal
+            interestRate: interestRate, // Smart conversion: decimal (0.26) -> 26%, percentage (12.5) -> 12.5%
+            tenureMonths: loan.termMonths, // Changed from termMonths to tenureMonths
+            monthlyPayment: parseFloat(loan.monthlyPayment),
+            remainingBalance: parseFloat(loan.remainingBalance),
+            emiStartDate: loan.startDate, // Changed from startDate to emiStartDate
+            nextPaymentDate: loan.nextPaymentDate || loan.startDate, // Added nextPaymentDate
+            endDate: loan.endDate,
+            lender: loan.lender,
+            type: loan.loanType,
+            status: loan.status,
+            color: '#007AFF', // Default color, can be customized
+            icon: 'document-text', // Default icon, can be customized
+            createdAt: loan.createdAt,
+            updatedAt: loan.updatedAt
+          };
+        });
         
         console.log('🔍 LoanService: Mapped loans:', mappedLoans.length);
         return mappedLoans;
@@ -146,20 +152,45 @@ export const LoanService = {
     try {
       const token = await getAuthToken();
       
+      // Map frontend fields to backend API expected format
+      const backendLoanData = {
+        name: loan.name,
+        loanType: loan.type === 'personal' ? 'personal' : 
+                 loan.type === 'mortgage' || loan.type === 'home' ? 'home' :
+                 loan.type === 'auto' || loan.type === 'car' ? 'car' :
+                 loan.type === 'business' ? 'business' :
+                 loan.type === 'student' ? 'student' : 'other', // Map to valid backend types
+        amount: loan.principal, // Map 'principal' to 'amount'
+        interestRate: loan.interestRate > 1 ? loan.interestRate / 100 : loan.interestRate, // Convert percentage to decimal (e.g., 26% -> 0.26, but keep 0.26 as 0.26)
+        termMonths: loan.tenureMonths, // Map 'tenureMonths' to 'termMonths'
+        startDate: loan.emiStartDate, // Map 'emiStartDate' to 'startDate'
+        lender: loan.lender,
+        // Optional fields
+        accountNumber: '',
+        notes: ''
+      };
+      
+      console.log('🔍 LoanService: Sending loan data to backend:', backendLoanData);
+      
       const response = await fetch(`${API_BASE_URL}/loans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(loan),
+        body: JSON.stringify(backendLoanData),
       });
 
+      console.log('🔍 LoanService: Add loan response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 LoanService: Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('🔍 LoanService: Add loan response:', result);
       
       if (result.success) {
         return result;
@@ -176,20 +207,44 @@ export const LoanService = {
     try {
       const token = await getAuthToken();
       
+      // Map frontend fields to backend API expected format
+      const backendLoanData: any = {};
+      
+      if (loan.name !== undefined) backendLoanData.name = loan.name;
+      if (loan.type !== undefined) {
+        backendLoanData.loanType = loan.type === 'personal' ? 'personal' : 
+                                   loan.type === 'mortgage' || loan.type === 'home' ? 'home' :
+                                   loan.type === 'auto' || loan.type === 'car' ? 'car' :
+                                   loan.type === 'business' ? 'business' :
+                                   loan.type === 'student' ? 'student' : 'other';
+      }
+      if (loan.principal !== undefined) backendLoanData.amount = loan.principal;
+      if (loan.interestRate !== undefined) backendLoanData.interestRate = loan.interestRate > 1 ? loan.interestRate / 100 : loan.interestRate; // Smart conversion: percentage -> decimal, decimal stays decimal
+      if (loan.tenureMonths !== undefined) backendLoanData.termMonths = loan.tenureMonths;
+      if (loan.emiStartDate !== undefined) backendLoanData.startDate = loan.emiStartDate;
+      if (loan.lender !== undefined) backendLoanData.lender = loan.lender;
+      
+      console.log('🔍 LoanService: Sending update loan data to backend:', backendLoanData);
+      
       const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(loan),
+        body: JSON.stringify(backendLoanData),
       });
 
+      console.log('🔍 LoanService: Update loan response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 LoanService: Update loan error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('🔍 LoanService: Update loan response:', result);
       
       if (result.success) {
         return result;

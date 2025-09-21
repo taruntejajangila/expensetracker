@@ -93,6 +93,7 @@ const BankAccountDetailScreen: React.FC = () => {
   // State for transactions and spending data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [spendingData, setSpendingData] = useState<any>(null);
+  const [currentAccount, setCurrentAccount] = useState<AccountParam>(account);
 
   // Load transactions for this account
   useEffect(() => {
@@ -104,32 +105,52 @@ const BankAccountDetailScreen: React.FC = () => {
   // Handle immediate refresh when coming from edit screen
   useEffect(() => {
     if (refresh && account) {
-      // The account data is already updated, just reload transactions
+      console.log('🔄 BankAccountDetail: Refresh flag detected, reloading data...');
+      // Update current account with fresh data
+      setCurrentAccount(account);
+      // Reload transactions
       loadTransactions();
       // Clear the refresh flag to prevent infinite loops
       (navigation as any).setParams({ refresh: false });
     }
   }, [refresh, account, navigation]);
 
+  // Function to refresh account data from backend
+  const refreshAccountData = async () => {
+    if (!account?.id) return;
+    
+    try {
+      console.log('🔄 BankAccountDetail: Refreshing account data from backend...');
+      const freshAccount = await AccountService.getAccountById(account.id);
+      if (freshAccount) {
+        setCurrentAccount(freshAccount);
+        console.log('✅ BankAccountDetail: Account data refreshed successfully');
+      }
+    } catch (error) {
+      console.error('❌ BankAccountDetail: Error refreshing account data:', error);
+    }
+  };
+
   // Auto-refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       console.log('🔄 Bank account detail screen focused - refreshing data...');
       if (account) {
+        refreshAccountData(); // Refresh account data from backend
         loadTransactions();
       }
     }, [account])
   );
 
   const loadTransactions = async () => {
-    if (!account) return;
+    if (!currentAccount) return;
     
     try {
       const allTransactions = await TransactionService.getTransactions();
       
       // Filter transactions for this specific account
       const accountTransactions = allTransactions.filter(transaction => {
-        return transaction.accountId === account.id;
+        return transaction.accountId === currentAccount.id;
       });
 
       if (accountTransactions.length > 0) {
@@ -146,9 +167,9 @@ const BankAccountDetailScreen: React.FC = () => {
             date: new Date(),
             color: '#FF6B6B',
             icon: 'cafe',
-            note: `Account ${account.name}`,
+            note: `Account ${currentAccount.name}`,
             type: 'expense' as const,
-            accountId: account.id
+            accountId: currentAccount.id
           },
           {
             id: '2',
@@ -158,9 +179,9 @@ const BankAccountDetailScreen: React.FC = () => {
             date: new Date(Date.now() - 24 * 60 * 60 * 1000),
             color: '#4ECDC4',
             icon: 'basket',
-            note: `Account ${account.name}`,
+            note: `Account ${currentAccount.name}`,
             type: 'expense' as const,
-            accountId: account.id
+            accountId: currentAccount.id
           },
           {
             id: '3',
@@ -170,9 +191,9 @@ const BankAccountDetailScreen: React.FC = () => {
             date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
             color: '#45B7D1',
             icon: 'car',
-            note: `Account ${account.name}`,
+            note: `Account ${currentAccount.name}`,
             type: 'expense' as const,
-            accountId: account.id
+            accountId: currentAccount.id
           }
         ];
         setTransactions(simulatedTransactions);
@@ -277,7 +298,7 @@ const BankAccountDetailScreen: React.FC = () => {
 
   
 
-  if (!account) {
+  if (!currentAccount) {
     return (
       <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}> 
         <Text style={styles.mutedText} allowFontScaling={false}>No account data provided.</Text>
@@ -368,7 +389,7 @@ const BankAccountDetailScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header with Safe Area */}
-      <ScreenHeader theme={theme} insets={insets} account={account} />
+      <ScreenHeader theme={theme} insets={insets} account={currentAccount} />
 
       <ScrollView 
         style={styles.content} 
@@ -384,13 +405,13 @@ const BankAccountDetailScreen: React.FC = () => {
         {/* Bank Card Component */}
         <View style={styles.bankCardContainer}>
           <BankCard
-            accountNumber={account.accountNumber}
-            accountHolderName={account.accountHolderName || account.name}
-            accountType={account.accountType || 'Bank Account'}
-            bankName={account.bankName || account.name}
-            balance={account.balance}
-            currency={account.currency}
-            accountNickname={account.bankName && account.name !== account.bankName ? account.name : undefined}
+            accountNumber={currentAccount.accountNumber}
+            accountHolderName={currentAccount.accountHolderName || currentAccount.name}
+            accountType={currentAccount.accountType || 'Bank Account'}
+            bankName={currentAccount.bankName || currentAccount.name}
+            balance={currentAccount.balance}
+            currency={currentAccount.currency}
+            accountNickname={currentAccount.bankName && currentAccount.name !== currentAccount.bankName ? currentAccount.name : undefined}
           />
         </View>
 
