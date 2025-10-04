@@ -353,18 +353,34 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             icon="help-circle-outline"
             label="Help & Support"
             onPress={() => {
-              // Add help navigation or modal
-              // Help pressed
+              navigation.closeDrawer();
+              navigation.dispatch(
+                CommonActions.navigate({
+                  name: 'MainApp',
+                  params: {
+                    screen: 'HelpSupport',
+                  },
+                })
+              );
             }}
+            isActive={currentRoute === 'HelpSupport'}
           />
           
           <DrawerItem
             icon="information-circle-outline"
             label="About"
             onPress={() => {
-              // Add about navigation or modal
-              // About pressed
+              navigation.closeDrawer();
+              navigation.dispatch(
+                CommonActions.navigate({
+                  name: 'MainApp',
+                  params: {
+                    screen: 'About',
+                  },
+                })
+              );
             }}
+            isActive={currentRoute === 'About'}
           />
         </ScrollView>
 
@@ -572,3 +588,4 @@ const styles = StyleSheet.create({
 });
 
 export default CustomDrawer;
+

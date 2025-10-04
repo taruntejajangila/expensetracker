@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import TransactionService from '../services/transactionService';
+import OfflineScreen from '../components/OfflineScreen';
+import { useNetwork } from '../context/NetworkContext';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -722,6 +724,7 @@ const AllTransactionScreen: React.FC = () => {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { isOfflineMode } = useNetwork();
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1025,6 +1028,16 @@ const AllTransactionScreen: React.FC = () => {
     
     return { income, expense, balance, isCurrentMonth };
   }, [selectedMonth, monthlyExpenses, monthlyIncome]);
+
+  // Show offline screen when offline
+  if (isOfflineMode) {
+    return (
+      <OfflineScreen 
+        title="No transactions to show 📱"
+        message="Your transaction history is stored safely in the cloud. Connect to the internet to view your financial data."
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>

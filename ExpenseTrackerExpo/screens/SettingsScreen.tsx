@@ -12,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 
 const SettingsScreen: React.FC = () => {
   const { theme } = useTheme();
   const { logout, clearAllUserData, user } = useAuth();
+  const navigation = useNavigation();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
@@ -203,6 +205,7 @@ const SettingsScreen: React.FC = () => {
               thumbColor={darkModeEnabled ? theme.colors.primary : theme.colors.textSecondary}
             />
           </View>
+
         </View>
 
         {/* Data Management */}

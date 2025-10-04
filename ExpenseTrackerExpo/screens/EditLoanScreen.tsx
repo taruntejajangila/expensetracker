@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions, Alert } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import WheelDatePicker from '../components/WheelDatePicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LoanService, StoredLoan } from '../services/LoanService';
@@ -426,23 +426,18 @@ const EditLoanScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
           {showEmiDatePicker && (
-            <DateTimePicker
-              value={emiDate || new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              onChange={(event, selectedDate) => {
-                if (selectedDate) {
-                  setEmiDate(selectedDate);
-                  const y = selectedDate.getFullYear();
-                  const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                  const d = String(selectedDate.getDate()).padStart(2, '0');
-                  setEmiStartDate(`${y}-${m}-${d}`);
-                }
-                // Close picker on any selection/change
+            <WheelDatePicker
+              selectedDate={emiDate || new Date()}
+              onDateChange={(d: Date) => {
+                setEmiDate(d);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                setEmiStartDate(`${y}-${m}-${day}`);
                 setShowEmiDatePicker(false);
               }}
-              minimumDate={new Date(2000, 0, 1)}
-              maximumDate={new Date(2100, 11, 31)}
+              label="EMI Start Date"
+              placeholder="Select date"
             />
           )}
         </View>

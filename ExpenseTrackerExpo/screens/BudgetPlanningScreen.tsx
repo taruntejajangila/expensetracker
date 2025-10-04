@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useNetwork } from '../context/NetworkContext';
+import OfflineScreen from '../components/OfflineScreen';
 import { useScroll } from '../context/ScrollContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -64,6 +66,7 @@ const BudgetPlanningScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { scrollY } = useScroll();
+  const { isOfflineMode } = useNetwork();
   const [currentBudget, setCurrentBudget] = useState<BudgetOverview | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<BudgetCategory | null>(null);
@@ -131,9 +134,14 @@ const BudgetPlanningScreen: React.FC = () => {
     
     // Create budget categories from expense categories only
     const budgetCategories: BudgetCategory[] = categoriesData.map(category => {
-      // Find budget for this category
-      const budget = budgetsData.find((b: any) => b.categoryId === category.id);
+      // Find budget for this category (compare as strings to handle type mismatch)
+      const budget = budgetsData.find((b: any) => String(b.categoryId) === String(category.id));
       const budgetAmount = budget ? parseFloat(budget.amount || 0) : 0;
+      
+      console.log(`🔍 Matching budget for ${category.name} (ID: ${category.id}):`, 
+        budget ? `Found - ₹${budgetAmount}` : 'Not found',
+        `Available budgets:`, budgetsData.map((b: any) => `${b.categoryId}(${typeof b.categoryId})`).join(', ')
+      );
       
       // Calculate spent amount from expenses for current month
       const currentMonthExpenses = expensesData.filter((e: any) => {
@@ -281,6 +289,16 @@ const BudgetPlanningScreen: React.FC = () => {
   };
 
   const styles = createStyles(theme, insets);
+
+  // Show offline screen when offline
+  if (isOfflineMode) {
+    return (
+      <OfflineScreen 
+        title="Budget planning unavailable 📊"
+        message="Your budget data is stored safely in the cloud. Connect to the internet to plan and track your expenses."
+      />
+    );
+  }
 
   if (isLoading) {
     return (

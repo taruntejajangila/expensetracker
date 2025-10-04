@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
+import { useNetwork } from '../context/NetworkContext';
+import OfflineScreen from '../components/OfflineScreen';
 import { useScroll } from '../context/ScrollContext';
 import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -39,6 +41,7 @@ const SavingsGoalsScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { scrollY } = useScroll();
+  const { isOfflineMode } = useNetwork();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentGoal, setCurrentGoal] = useState<SavingsGoal | null>(null);
   const [newAmount, setNewAmount] = useState('');
@@ -294,6 +297,16 @@ const SavingsGoalsScreen: React.FC = () => {
     }
   }, insets);
 
+  // Show offline screen when offline
+  if (isOfflineMode) {
+    return (
+      <OfflineScreen 
+        title="Goals are sleeping 💤"
+        message="Your savings goals are stored safely in the cloud. Connect to the internet to track your progress and add new goals."
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -362,97 +375,135 @@ const SavingsGoalsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           
-          {goals.map(goal => (
-            <TouchableOpacity
-              key={goal.id}
-              style={[styles.goalCard, { backgroundColor: getColorWithOpacity(goal.color || '#007AFF', 0.15) }]}
-              onPress={() => handleUpdateProgress(goal)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.goalHeader}>
-                <View style={styles.goalIconContainer}>
-                  <Text style={styles.goalIconText} allowFontScaling={false}>{goal.icon}</Text>
-                </View>
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalName} allowFontScaling={false}>{goal.name}</Text>
-                  <Text style={styles.goalCategory} allowFontScaling={false}>{goal.category}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.goalAmounts}>
-                <View style={styles.goalAmountItem}>
-                  <Text style={styles.goalAmountLabel} allowFontScaling={false}>Current</Text>
-                  <Text style={styles.goalCurrentAmount} allowFontScaling={false}>
-                    {formatCurrency(goal.currentAmount)}
-                  </Text>
-                </View>
-                <View style={styles.goalAmountDivider} />
-                <View style={styles.goalAmountItem}>
-                  <Text style={styles.goalAmountLabel} allowFontScaling={false}>Target</Text>
-                  <Text style={styles.goalTargetAmount} allowFontScaling={false}>
-                    {formatCurrency(goal.targetAmount)}
-                  </Text>
-                </View>
-                <View style={styles.goalAmountDivider} />
-                <View style={styles.goalAmountItem}>
-                  <Text style={styles.goalAmountLabel} allowFontScaling={false}>Remaining</Text>
-                  <Text style={[styles.goalRemainingAmount, { color: getStatusColor(goal.currentAmount, goal.targetAmount) }]} allowFontScaling={false}>
-                    {goal.currentAmount >= goal.targetAmount
-                      ? 'Complete!'
-                      : formatCurrency(goal.targetAmount - goal.currentAmount)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.goalProgressSection}>
-                <View style={styles.goalProgressHeader}>
-                  <Text style={styles.goalProgressLabel} allowFontScaling={false}>Progress</Text>
-                  <Text style={styles.goalProgressPercentage} allowFontScaling={false}>
-                    {getProgress(goal.currentAmount, goal.targetAmount)}%
-                  </Text>
-                </View>
-                <View style={styles.goalProgressBar}>
-                  <View 
-                    style={[
-                      styles.goalProgressBarFill, 
-                      { 
-                        width: `${getProgress(goal.currentAmount, goal.targetAmount)}%`,
-                        backgroundColor: getStatusColor(goal.currentAmount, goal.targetAmount)
-                      }
-                    ]} 
-                  />
-                </View>
-              </View>
-
-              <View style={styles.goalFooter}>
-                <View style={styles.goalDeadline}>
-                  <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
-                  <View style={styles.deadlineInfo}>
-                    <Text style={styles.goalDeadlineDate} allowFontScaling={false}>
-                      {formatDeadlineDisplay(goal.deadline)}
-                    </Text>
-                    <Text style={styles.goalDeadlineText} allowFontScaling={false}>
-                      {getDaysRemaining(goal.deadline)}
-                    </Text>
+          {goals.map(goal => {
+            const progress = getProgress(goal.currentAmount, goal.targetAmount);
+            const isCompleted = goal.currentAmount >= goal.targetAmount;
+            const statusColor = getStatusColor(goal.currentAmount, goal.targetAmount);
+            
+            return (
+              <View key={goal.id} style={styles.goalCardContainer}>
+                <TouchableOpacity
+                  style={[styles.goalCard, { borderLeftColor: goal.color || '#007AFF' }]}
+                  onPress={() => handleUpdateProgress(goal)}
+                  activeOpacity={0.8}
+                >
+                  {/* Header with Icon and Status */}
+                  <View style={styles.goalHeader}>
+                    <View style={[styles.goalIconContainer, { backgroundColor: goal.color || '#007AFF' }]}>
+                      <Text style={styles.goalIconText} allowFontScaling={false}>{goal.icon}</Text>
+                    </View>
+                    <View style={styles.goalInfo}>
+                      <Text style={styles.goalName} allowFontScaling={false}>{goal.name}</Text>
+                      <Text style={styles.goalCategory} allowFontScaling={false}>{goal.category}</Text>
+                    </View>
+                    <View style={styles.goalStatusBadge}>
+                      <Text style={[styles.goalStatusText, { color: statusColor }]} allowFontScaling={false}>
+                        {isCompleted ? '🎉' : getStatusEmoji(goal.currentAmount, goal.targetAmount)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.goalActionButtons}>
-                  <TouchableOpacity 
-                    style={styles.editGoalButton}
-                    onPress={() => handleEditGoal(goal)}
-                  >
-                    <Text style={styles.editGoalButtonText} allowFontScaling={false}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.updateProgressButton}
-                    onPress={() => handleUpdateProgress(goal)}
-                  >
-                    <Text style={styles.updateProgressButtonText} allowFontScaling={false}>Update Progress</Text>
-                  </TouchableOpacity>
-                </View>
+
+                  {/* Progress Section */}
+                  <View style={styles.goalProgressSection}>
+                    <View style={styles.goalProgressHeader}>
+                      <Text style={styles.goalProgressLabel} allowFontScaling={false}>Progress</Text>
+                      <Text style={[styles.goalProgressPercentage, { color: statusColor }]} allowFontScaling={false}>
+                        {progress}%
+                      </Text>
+                    </View>
+                    <View style={styles.goalProgressBarContainer}>
+                      <View style={styles.goalProgressBar}>
+                        <View 
+                          style={[
+                            styles.goalProgressBarFill, 
+                            { 
+                              width: `${progress}%`,
+                              backgroundColor: statusColor
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <View style={styles.goalProgressDots}>
+                        {[0, 25, 50, 75, 100].map((milestone) => (
+                          <View 
+                            key={milestone}
+                            style={[
+                              styles.progressDot,
+                              { 
+                                backgroundColor: progress >= milestone ? statusColor : theme.colors.border,
+                                opacity: progress >= milestone ? 1 : 0.3
+                              }
+                            ]} 
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Amounts Section */}
+                  <View style={styles.goalAmountsSection}>
+                    <View style={styles.goalAmountRow}>
+                      <View style={styles.goalAmountItem}>
+                        <Text style={styles.goalAmountLabel} allowFontScaling={false}>Saved</Text>
+                        <Text style={styles.goalCurrentAmount} allowFontScaling={false}>
+                          {formatCurrency(goal.currentAmount)}
+                        </Text>
+                      </View>
+                      <View style={styles.goalAmountDivider} />
+                      <View style={styles.goalAmountItem}>
+                        <Text style={styles.goalAmountLabel} allowFontScaling={false}>Target</Text>
+                        <Text style={styles.goalTargetAmount} allowFontScaling={false}>
+                          {formatCurrency(goal.targetAmount)}
+                        </Text>
+                      </View>
+                      <View style={styles.goalAmountDivider} />
+                      <View style={styles.goalAmountItem}>
+                        <Text style={styles.goalAmountLabel} allowFontScaling={false}>
+                          {isCompleted ? 'Achieved!' : 'Remaining'}
+                        </Text>
+                        <Text style={[styles.goalRemainingAmount, { color: statusColor }]} allowFontScaling={false}>
+                          {isCompleted
+                            ? '🎉'
+                            : formatCurrency(goal.targetAmount - goal.currentAmount)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Footer with Deadline and Actions */}
+                  <View style={styles.goalFooter}>
+                    <View style={styles.goalDeadline}>
+                      <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
+                      <View style={styles.deadlineInfo}>
+                        <Text style={styles.goalDeadlineDate} allowFontScaling={false}>
+                          {formatDeadlineDisplay(goal.deadline)}
+                        </Text>
+                        <Text style={styles.goalDeadlineText} allowFontScaling={false}>
+                          {getDaysRemaining(goal.deadline)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.goalActionButtons}>
+                      <TouchableOpacity 
+                        style={[styles.actionButton, styles.editButton]}
+                        onPress={() => handleEditGoal(goal)}
+                      >
+                        <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
+                        <Text style={styles.actionButtonText} allowFontScaling={false}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.actionButton, styles.updateButton]}
+                        onPress={() => handleUpdateProgress(goal)}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
+                        <Text style={[styles.actionButtonText, styles.updateButtonText]} allowFontScaling={false}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
 
         {/* Loading State */}
@@ -870,175 +921,227 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     color: theme.colors.primary,
     marginLeft: 6,
   },
+  goalCardContainer: {
+    marginBottom: 12,
+  },
   goalCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+    borderRightColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   goalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   goalIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 1,
+    elevation: 1,
   },
   goalIconText: {
-    fontSize: 20,
+    fontSize: 16,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: 16,
+    width: 16,
+    height: 16,
   },
   goalInfo: {
     flex: 1,
   },
   goalName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
+    lineHeight: 18,
   },
   goalCategory: {
-    fontSize: 14,
+    fontSize: 11,
     color: theme.colors.textSecondary,
     fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  goalStatus: {
+  goalStatusBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  goalStatusText: {
+    fontSize: 14,
+  },
   goalProgressSection: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   goalProgressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
   },
   goalProgressLabel: {
-    fontSize: 14,
+    fontSize: 10,
     color: theme.colors.textSecondary,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   goalProgressPercentage: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.text,
+  },
+  goalProgressBarContainer: {
+    position: 'relative',
   },
   goalProgressBar: {
-    height: 6,
+    height: 4,
     backgroundColor: theme.colors.border,
-    borderRadius: 3,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   goalProgressBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  goalAmounts: {
+  goalProgressDots: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 4,
+    paddingHorizontal: 1,
+  },
+  progressDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  goalAmountsSection: {
+    marginBottom: 12,
+  },
+  goalAmountRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
   },
   goalAmountItem: {
     alignItems: 'center',
     flex: 1,
   },
   goalAmountLabel: {
-    fontSize: 11,
+    fontSize: 9,
     color: theme.colors.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   goalCurrentAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: theme.colors.text,
   },
   goalTargetAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: theme.colors.text,
   },
   goalRemainingAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   goalAmountDivider: {
     width: 1,
-    height: 24,
+    height: 20,
     backgroundColor: theme.colors.border,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
   },
   goalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+  },
+  goalDeadline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  deadlineInfo: {
+    marginLeft: 4,
+  },
+  goalDeadlineDate: {
+    fontSize: 10,
+    color: theme.colors.text,
+    fontWeight: '600',
+    marginBottom: 1,
+  },
+  goalDeadlineText: {
+    fontSize: 9,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   goalActionButtons: {
     flexDirection: 'row',
     gap: 8,
   },
-  editGoalButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editGoalButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  goalDeadline: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  deadlineInfo: {
-    marginLeft: 6,
-  },
-  goalDeadlineDate: {
-    fontSize: 12,
-    color: theme.colors.text,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  goalDeadlineText: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginLeft: 6,
-    fontWeight: '500',
-  },
-  updateProgressButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + '15',
-    alignItems: 'center',
+    borderRadius: 14,
+    minWidth: 70,
     justifyContent: 'center',
   },
-  updateProgressButtonText: {
-    fontSize: 12,
+  editButton: {
+    backgroundColor: theme.colors.primary + '15',
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+  },
+  updateButton: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  actionButtonText: {
+    fontSize: 11,
     fontWeight: '600',
-    color: theme.colors.primary,
+    marginLeft: 4,
+  },
+  updateButtonText: {
+    color: '#FFFFFF',
   },
 
   loadingContainer: {

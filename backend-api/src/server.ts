@@ -25,6 +25,9 @@ import adminRoutes from './routes/admin';
 import analyticsRoutes from './routes/analytics';
 import notificationRoutes from './routes/notifications';
 import bannerRoutes from './routes/banners';
+import reminderRoutes from './routes/reminders';
+import supportTicketsRoutes from './routes/supportTickets';
+import adminSupportTicketsRoutes from './routes/adminSupportTickets';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -116,6 +119,26 @@ app.use(morgan('combined', {
   }
 }));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Expense Tracker API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      admin: '/api/admin',
+      auth: '/api/auth',
+      users: '/api/users',
+      transactions: '/api/transactions',
+      categories: '/api/categories'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -144,6 +167,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/banners', bannerRoutes);
+app.use('/api/reminders', reminderRoutes);
+app.use('/api/support-tickets', supportTicketsRoutes);
+app.use('/api/admin/support-tickets', adminSupportTicketsRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {

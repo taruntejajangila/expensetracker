@@ -8,6 +8,21 @@ export interface PushNotificationData {
   userId?: string;
   userEmail?: string;
   targetAll?: boolean;
+  // Custom notification fields
+  type?: 'simple' | 'custom';
+  customContent?: {
+    id: string;
+    type: 'announcement' | 'blog_post' | 'update' | 'promotion' | 'general';
+    content: string;
+    author?: string;
+    imageUrl?: string;
+    actionButton?: {
+      text: string;
+      url?: string;
+      action?: string;
+    };
+    tags?: string[];
+  };
 }
 
 export interface NotificationToken {
@@ -23,6 +38,36 @@ export interface NotificationToken {
 
 class NotificationService {
   private pool = getPool();
+
+  constructor() {
+    // Create custom_notifications table if it doesn't exist
+    this.initializeCustomNotificationsTable();
+  }
+
+  private async initializeCustomNotificationsTable() {
+    try {
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS custom_notifications (
+          id VARCHAR(255) PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          body VARCHAR(500) NOT NULL,
+          type VARCHAR(50) NOT NULL,
+          content TEXT NOT NULL,
+          author VARCHAR(255),
+          image_url VARCHAR(2048),
+          action_button_text VARCHAR(100),
+          action_button_url VARCHAR(2048),
+          action_button_action VARCHAR(100),
+          tags JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      logger.info('✅ Custom notifications table initialized');
+    } catch (error) {
+      logger.error('❌ Error initializing custom notifications table:', error);
+    }
+  }
 
   /**
    * Register a push notification token for a user
@@ -220,14 +265,32 @@ class NotificationService {
         return;
       }
 
+      // Prepare notification data
+      let messageData = notificationData.data || {};
+      
+      if (notificationData.type === 'custom' && notificationData.customContent) {
+        // Store custom content in database
+        await this.storeCustomNotification(notificationData.customContent);
+        
+        messageData = {
+          ...messageData,
+          type: 'custom',
+          customNotificationId: notificationData.customContent.id,
+          notificationType: notificationData.customContent.type,
+        };
+        logger.info(`📱 Sending custom notification: ${notificationData.customContent.id} of type ${notificationData.customContent.type}`);
+      }
+
       const message = {
         to: token,
         title: notificationData.title,
         body: notificationData.body,
-        data: notificationData.data || {},
+        data: messageData,
         sound: 'default',
         badge: 1,
       };
+
+      logger.info(`📤 Push notification message data:`, JSON.stringify(messageData, null, 2));
 
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
@@ -253,6 +316,44 @@ class NotificationService {
       logger.info(`Push notification sent successfully to token ${token.substring(0, 20)}...`);
     } catch (error) {
       logger.error('Error sending push notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get custom notification content by ID
+   */
+  async getCustomNotification(id: string): Promise<any> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM custom_notifications WHERE id = $1',
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        type: row.type,
+        content: row.content,
+        author: row.author,
+        imageUrl: row.image_url,
+        actionButton: row.action_button_text ? {
+          text: row.action_button_text,
+          url: row.action_button_url,
+          action: row.action_button_action
+        } : undefined,
+        tags: row.tags,
+        publishedAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    } catch (error) {
+      logger.error('Error getting custom notification:', error);
       throw error;
     }
   }
@@ -292,6 +393,66 @@ class NotificationService {
   }
 
   /**
+   * Store custom notification content in database
+   */
+  private async storeCustomNotification(customContent: any): Promise<void> {
+    try {
+      await this.pool.query(`
+        INSERT INTO custom_notifications (
+          id, title, body, type, content, author, image_url,
+          action_button_text, action_button_url, action_button_action, tags
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          body = EXCLUDED.body,
+          type = EXCLUDED.type,
+          content = EXCLUDED.content,
+          author = EXCLUDED.author,
+          image_url = EXCLUDED.image_url,
+          action_button_text = EXCLUDED.action_button_text,
+          action_button_url = EXCLUDED.action_button_url,
+          action_button_action = EXCLUDED.action_button_action,
+          tags = EXCLUDED.tags,
+          updated_at = CURRENT_TIMESTAMP
+      `, [
+        customContent.id,
+        customContent.title || '', // Use title from custom content
+        customContent.body || '', // Use body from custom content
+        customContent.type,
+        customContent.content,
+        customContent.author,
+        customContent.imageUrl,
+        customContent.actionButton?.text,
+        customContent.actionButton?.url,
+        customContent.actionButton?.action,
+        customContent.tags ? JSON.stringify(customContent.tags) : null
+      ]);
+      
+      logger.info(`📝 Stored custom notification content: ${customContent.id}`);
+    } catch (error) {
+      logger.error('Error storing custom notification:', error);
+      // Don't throw error to avoid breaking notification sending
+    }
+  }
+
+  /**
+   * Update custom notification with title and body
+   */
+  private async updateCustomNotificationTitleAndBody(id: string, title: string, body: string): Promise<void> {
+    try {
+      await this.pool.query(`
+        UPDATE custom_notifications 
+        SET title = $2, body = $3, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [id, title, body]);
+      
+      logger.info(`📝 Updated custom notification title/body: ${id}`);
+    } catch (error) {
+      logger.error('Error updating custom notification title/body:', error);
+    }
+  }
+
+  /**
    * Store notification in database
    */
   private async storeNotificationInDatabase(notificationData: PushNotificationData, targetUserId: string | null): Promise<void> {
@@ -306,6 +467,15 @@ class NotificationService {
         JSON.stringify(notificationData.data || {}),
         notificationData.data?.type || 'admin_notification'
       ]);
+      
+      // If this is a custom notification, update the custom notification with title and body
+      if (notificationData.type === 'custom' && notificationData.customContent) {
+        await this.updateCustomNotificationTitleAndBody(
+          notificationData.customContent.id,
+          notificationData.title,
+          notificationData.body
+        );
+      }
       
       logger.info(`Notification stored in database for user ${targetUserId || 'all users'}: ${notificationData.title}`);
     } catch (error) {
@@ -400,6 +570,52 @@ class NotificationService {
   }
 
   /**
+   * Get notifications for a specific user
+   */
+  async getUserNotifications(userId: string): Promise<any[]> {
+    try {
+      const result = await this.pool.query(`
+        SELECT 
+          n.id,
+          n.title,
+          n.body,
+          n.data,
+          n.type,
+          n.status,
+          n.created_at,
+          n.read_at,
+          n.target_user_id,
+          CASE 
+            WHEN n.read_at IS NOT NULL THEN true 
+            ELSE false 
+          END as read
+        FROM notifications n
+        WHERE n.target_user_id = $1 OR n.target_user_id IS NULL
+        ORDER BY n.created_at DESC
+        LIMIT 50
+      `, [userId]);
+
+      const notifications = result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : (row.data || {}),
+        type: row.type,
+        status: row.status,
+        createdAt: row.created_at,
+        readAt: row.read_at,
+        read: row.read
+      }));
+
+      logger.info(`Retrieved ${notifications.length} notifications for user ${userId}`);
+      return notifications;
+    } catch (error: any) {
+      logger.error('Error getting user notifications:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get notification history for admin panel
    */
   async getNotificationHistory(days: number = 7, limit: number = 20, offset: number = 0): Promise<{
@@ -434,8 +650,7 @@ class NotificationService {
           n.delivered_at,
           n.read_at,
           u.email as user_email,
-          u.first_name,
-          u.last_name
+          u.name
         FROM notifications n
         LEFT JOIN users u ON n.target_user_id = u.id
         WHERE n.created_at >= NOW() - INTERVAL '${days} days'
@@ -456,8 +671,7 @@ class NotificationService {
         readAt: row.read_at,
         targetUser: row.user_email ? {
           email: row.user_email,
-          firstName: row.first_name,
-          lastName: row.last_name
+          name: row.name
         } : null
       }));
 

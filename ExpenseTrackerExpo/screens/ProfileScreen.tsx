@@ -32,20 +32,34 @@ const ProfileScreen: React.FC = () => {
 
   const handleClearData = () => {
     Alert.alert(
-      'Clear All Data',
-      'This will remove all your local data. This action cannot be undone.',
+      '⚠️ Clear All Data',
+      'This will permanently delete ALL your data including:\n\n• All Transactions\n• All Accounts\n• All Budgets\n• All Goals\n• All Loans\n• All Reminders\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Clear Data', 
+          text: 'Yes, Clear Everything', 
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearAllUserData();
-              Alert.alert('Success', 'All data has been cleared successfully.');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to clear data. Please try again.');
-            }
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              '🚨 Final Confirmation',
+              'This is your last chance to cancel.\n\nType your email to confirm deletion.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Proceed',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await clearAllUserData();
+                      Alert.alert('✅ Success', 'All data has been cleared successfully.');
+                    } catch (error) {
+                      Alert.alert('❌ Error', 'Failed to clear data. Please try again.');
+                    }
+                  }
+                }
+              ]
+            );
           }
         }
       ]
@@ -263,6 +277,17 @@ const ProfileScreen: React.FC = () => {
       fontSize: 14,
       fontWeight: '600',
     },
+    appNameContainer: {
+      alignItems: 'center',
+      marginTop: 20,
+      marginBottom: 30,
+    },
+    appNameText: {
+      fontSize: 24,
+      color: '#666666',
+      opacity: 0.4,
+      fontWeight: '700',
+    },
     // Decorative circle graphics
     decorativeCircle1: {
       position: 'absolute',
@@ -333,9 +358,12 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.navTitle} allowFontScaling={false}>PROFILE</Text>
           <TouchableOpacity 
             style={styles.navButton}
-            onPress={() => navigation.navigate('Settings')}
+            onPress={() => {
+              console.log('🔍 ProfileScreen: Navigating to EditProfile screen...');
+              navigation.navigate('EditProfile' as never);
+            }}
           >
-            <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="create-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
@@ -391,59 +419,88 @@ const ProfileScreen: React.FC = () => {
           </View>
 
           <View style={styles.separator} />
-
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
-              <Ionicons name="shield-outline" size={20} color="#666666" />
+              <Ionicons name="call-outline" size={20} color="#666666" />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel} allowFontScaling={false}>Account Type</Text>
+              <Text style={styles.infoLabel} allowFontScaling={false}>Phone</Text>
               <Text style={styles.infoValue} allowFontScaling={false}>
-                {user?.isAdmin ? 'Administrator' : 'Standard User'}
+                {user?.phone || 'Not provided'}
               </Text>
-            </View>
-          </View>
-
-          <View style={styles.separator} />
-
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="calendar-outline" size={20} color="#666666" />
-            </View>
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel} allowFontScaling={false}>Member Since</Text>
-              <Text style={styles.infoValue} allowFontScaling={false}>
-                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.separator} />
-
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="settings-outline" size={20} color="#666666" />
-            </View>
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel} allowFontScaling={false}>Preferences</Text>
-              <Text style={styles.infoValue} allowFontScaling={false}>Default Settings</Text>
             </View>
           </View>
         </View>
 
-        {/* Data Management Card */}
+        {/* Help & Support Card */}
         <View style={styles.infoCard}>
-          <TouchableOpacity style={styles.settingItem} onPress={handleClearData}>
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={() => navigation.navigate('HelpSupport' as never)}
+          >
             <View style={styles.settingLeft}>
               <View style={styles.settingIcon}>
-                <Ionicons name="trash-outline" size={20} color="#666666" />
+                <Ionicons name="help-circle-outline" size={20} color="#007AFF" />
               </View>
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel} allowFontScaling={false}>Data Management</Text>
-                <Text style={styles.settingText} allowFontScaling={false}>Clear All Data</Text>
+                <Text style={styles.settingLabel} allowFontScaling={false}>Support</Text>
+                <Text style={styles.settingText} allowFontScaling={false}>Help & Support</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999999" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Legal & Information Card */}
+        <View style={styles.infoCard}>
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={() => navigation.navigate('PrivacyPolicy' as never)}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#666666" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel} allowFontScaling={false}>Legal</Text>
+                <Text style={styles.settingText} allowFontScaling={false}>Privacy Policy</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999999" />
+          </TouchableOpacity>
+
+          <View style={styles.separator} />
+
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={() => navigation.navigate('TermsConditions' as never)}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="document-text-outline" size={20} color="#666666" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel} allowFontScaling={false}>Legal</Text>
+                <Text style={styles.settingText} allowFontScaling={false}>Terms & Conditions</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999999" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger Zone Card */}
+        <View style={[styles.infoCard, { borderColor: '#FFE5E5', borderWidth: 1 }]}>
+          <TouchableOpacity style={styles.settingItem} onPress={handleClearData}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingLabel, { color: '#FF3B30' }]} allowFontScaling={false}>Danger Zone</Text>
+                <Text style={styles.settingText} allowFontScaling={false}>Clear All Data</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#FF3B30" />
           </TouchableOpacity>
         </View>
 
@@ -456,6 +513,11 @@ const ProfileScreen: React.FC = () => {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText} allowFontScaling={false}>Logout</Text>
         </TouchableOpacity>
+
+        {/* App Name */}
+        <View style={styles.appNameContainer}>
+          <Text style={styles.appNameText} allowFontScaling={false}>MyPaisa Finance Manager</Text>
+        </View>
       </ScrollView>
     </View>
   );

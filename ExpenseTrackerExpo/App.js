@@ -1,6 +1,9 @@
 // Import font fix first - must be before any other imports
 import './globalFontFix';
 
+// Import network error handler to override global fetch
+import './utils/NetworkErrorHandler';
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -15,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 // Import all your existing screens
 import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import NotificationScreen from './screens/NotificationScreen';
 import SpentInMonthScreen from './screens/SpentInMonthScreen';
@@ -43,6 +48,14 @@ import BudgetScreen from './screens/BudgetScreen';
 import ExpensesScreen from './screens/ExpensesScreen';
 import IncomeScreen from './screens/IncomeScreen';
 import RemindersScreen from './screens/RemindersScreen';
+import NotificationDetailScreen from './screens/NotificationDetailScreen';
+import HelpSupportScreen from './screens/HelpSupportScreen';
+import AboutScreen from './screens/AboutScreen';
+import CreateTicketScreen from './screens/CreateTicketScreen';
+import MyTicketsScreen from './screens/MyTicketsScreen';
+import TicketDetailScreen from './screens/TicketDetailScreen';
+import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
+import TermsConditionsScreen from './screens/TermsConditionsScreen';
 
 // Import auth screens
 import LoginScreen from './screens/auth/LoginScreen';
@@ -56,9 +69,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ScrollProvider } from './context/ScrollContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { SimpleTicketProvider as TicketProvider } from './contexts/SimpleTicketContext';
+import { NetworkProvider } from './context/NetworkContext';
 
 // Import daily reminder service
 import DailyReminderService from './services/DailyReminderService';
+import NotificationNavigationService from './services/NotificationNavigationService';
 
 // Import AdMob components
 import { SplashScreenAd } from './components/SplashScreenAd';
@@ -71,6 +87,8 @@ const Stack = createStackNavigator();
 
 // Tab Navigator
 function TabNavigator() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -93,11 +111,25 @@ function TabNavigator() {
         tabBarLabelStyle: {
           fontSize: 12,
           allowFontScaling: false,
+          marginTop: 2,
+          fontWeight: '500',
         },
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 10,
+          paddingHorizontal: 10,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E7EB',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
       })}
     >
@@ -145,6 +177,16 @@ function MainStackNavigator() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="Reminders" component={RemindersScreen} />
+      <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
+      <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
+      <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
+      <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
     </Stack.Navigator>
   );
 }
@@ -192,6 +234,7 @@ function AppNavigator() {
   const [showSplashAd, setShowSplashAd] = useState(false);
   const [appInitialized, setAppInitialized] = useState(false);
   const [adMobInitialized, setAdMobInitialized] = useState(false);
+  const navigationRef = React.useRef(null);
 
   // Mock AdMob initialization for Expo Go
   useEffect(() => {
@@ -219,18 +262,26 @@ function AppNavigator() {
     }
   }, [isLoading, user, appInitialized, adMobInitialized]);
 
-  // Initialize daily reminders when user is authenticated
+  // Initialize daily reminders and notification navigation when user is authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      const initializeDailyReminders = async () => {
+      const initializeServices = async () => {
         try {
+          // Initialize daily reminders
           await DailyReminderService.getInstance().initialize();
+          
+          // Set up notification navigation service
+          NotificationNavigationService.getInstance().setNavigationRef(navigationRef.current);
+          
+          // Check for any pending notifications
+          await NotificationNavigationService.getInstance().checkPendingNotification();
+          
         } catch (error) {
-          console.error('Failed to initialize daily reminders:', error);
+          console.error('Failed to initialize services:', error);
         }
       };
       
-      initializeDailyReminders();
+      initializeServices();
     }
   }, [user, isLoading]);
 
@@ -238,12 +289,12 @@ function AppNavigator() {
   useEffect(() => {
     if (user && !isLoading) {
       const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('🔔 User tapped notification - showing splash ad for monetization');
+        console.log('🔔 User tapped notification:', response.notification.request.content);
         
-        // Handle the notification response in the service
-        DailyReminderService.getInstance().handleNotificationResponse(response);
+        // Use the notification navigation service to handle the response
+        NotificationNavigationService.getInstance().handleNotificationResponse(response);
         
-        // Show splash ad when user comes through notification (monetization opportunity)
+        // Show splash ad for monetization (for both simple and custom notifications)
         setShowSplashAd(true);
       });
 
@@ -302,7 +353,7 @@ function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
       {user ? <DrawerNavigator /> : <AuthStackNavigator />}
       
@@ -336,15 +387,19 @@ const styles = StyleSheet.create({
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <ScrollProvider>
-            <NotificationProvider>
-              <AppNavigator />
-            </NotificationProvider>
-          </ScrollProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <NetworkProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <ScrollProvider>
+              <NotificationProvider>
+                <TicketProvider>
+                  <AppNavigator />
+                </TicketProvider>
+              </NotificationProvider>
+            </ScrollProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </NetworkProvider>
     </SafeAreaProvider>
   );
 }

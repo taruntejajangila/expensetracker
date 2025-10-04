@@ -1,7 +1,7 @@
 // AccountService connected to backend API
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 // For testing - you can get a real token from your backend login
 const getAuthToken = async () => {
@@ -50,33 +50,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 AccountService: Error fetching accounts:', error);
-      
-      // Fallback to mock data if backend is not available
-      console.log('🔍 AccountService: Falling back to mock data');
-      return [
-        {
-          id: '1',
-          name: 'Main Checking',
-          type: 'bank',
-          balance: 5000,
-          accountNumber: '****1234',
-          bankName: 'Chase Bank',
-          color: '#007AFF',
-          icon: 'card',
-          lastUpdated: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Savings Account',
-          type: 'bank',
-          balance: 15000,
-          accountNumber: '****5678',
-          bankName: 'Wells Fargo',
-          color: '#34C759',
-          icon: 'wallet',
-          lastUpdated: new Date().toISOString(),
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -258,19 +232,13 @@ export default {
   },
 
   async ensureDefaultWallet() {
-    // Mock implementation - return a default wallet
-    return {
-      id: 'default-wallet',
-      name: 'Default Wallet',
-      type: 'wallet',
-      balance: 0
-    };
+    // This should be handled by the backend
+    throw new Error('ensureDefaultWallet not implemented - use backend API');
   },
 
   async adjustAccountBalance(accountId: string, delta: number) {
-    // Mock implementation
-    console.log(`Adjusting account ${accountId} balance by ${delta}`);
-    return { success: true };
+    // This should be handled by the backend
+    throw new Error('adjustAccountBalance not implemented - use backend API');
   }
 };
 

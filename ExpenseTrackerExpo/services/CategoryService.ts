@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 export interface Category {
   id: string;
@@ -77,113 +77,7 @@ export const categoryService = {
       }
     } catch (error) {
       console.error('🔍 CategoryService: Error fetching categories:', error);
-      
-      // Fallback to mock data if backend is not available
-      console.log('🔍 CategoryService: Falling back to mock data');
-      return [
-        // Income Categories
-        {
-          id: '1',
-          name: 'Salary',
-          type: 'income',
-          icon: 'cash',
-          color: '#34C759',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Freelance',
-          type: 'income',
-          icon: 'laptop',
-          color: '#F7DC6F',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '3',
-          name: 'Investment',
-          type: 'income',
-          icon: 'trending-up',
-          color: '#98D8C8',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        // Expense Categories
-        {
-          id: '4',
-          name: 'Food & Dining',
-          type: 'expense',
-          icon: 'restaurant',
-          color: '#FF6B6B',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '5',
-          name: 'Transportation',
-          type: 'expense',
-          icon: 'car',
-          color: '#4ECDC4',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '6',
-          name: 'Shopping',
-          type: 'expense',
-          icon: 'bag',
-          color: '#A8E6CF',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '7',
-          name: 'Entertainment',
-          type: 'expense',
-          icon: 'film',
-          color: '#FFB6C1',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '8',
-          name: 'Bills & Utilities',
-          type: 'expense',
-          icon: 'receipt',
-          color: '#DDA0DD',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '9',
-          name: 'Healthcare',
-          type: 'expense',
-          icon: 'medical',
-          color: '#87CEEB',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '10',
-          name: 'Education',
-          type: 'expense',
-          icon: 'school',
-          color: '#F0E68C',
-          isDefault: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 

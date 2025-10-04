@@ -18,13 +18,17 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useScroll } from '../context/ScrollContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useNetwork } from '../context/NetworkContext';
 
 import TransactionService from '../services/transactionService';
 import AccountService from '../services/AccountService';
 import DailyReminderService from '../services/DailyReminderService';
+import NotificationNavigationService from '../services/NotificationNavigationService';
+import OfflineBanner from '../components/OfflineBanner';
+import OfflineScreen from '../components/OfflineScreen';
 import { BannerAd, showInterstitialAd } from '../components/AdMobComponents';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 
 const { width } = Dimensions.get('window');
@@ -37,7 +41,12 @@ const getGreeting = (userName?: string) => {
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const route = useRoute();
   const { scrollY } = useScroll();
+  const { isOfflineMode } = useNetwork();
+  
+  // Get refresh parameter from route
+  const refresh = (route.params as any)?.refresh;
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,24 +78,31 @@ const HomeScreen: React.FC = () => {
   
   const loadAds = async () => {
     try {
+      console.log('🔍 HomeScreen: Loading banners...');
       // Load banners from the public API endpoint
-      const response = await fetch('http://192.168.29.14:5001/api/banners/public');
+      const response = await fetch('http://192.168.1.4:5000/api/banners/public');
+      console.log('🔍 HomeScreen: Banner response status:', response.status);
       if (response.ok) {
         const bannerResponse = await response.json();
+        console.log('🔍 HomeScreen: Banner response data:', bannerResponse);
         if (bannerResponse.success && bannerResponse.data) {
           // Transform banner data to include full image URLs
           const transformedBanners = bannerResponse.data.map((banner: any) => ({
             ...banner,
             imageUrl: banner.image_url 
-              ? `http://192.168.29.14:5001${banner.image_url}`
+              ? `http://192.168.1.4:5000${banner.image_url}`
               : null
           }));
+          console.log('🔍 HomeScreen: Transformed banners:', transformedBanners);
           setBanners(transformedBanners);
           setCurrentBannerIndex(0);
+          console.log('✅ HomeScreen: Banners loaded successfully');
         } else {
+          console.log('❌ HomeScreen: Invalid banner response format');
           throw new Error('Invalid banner response format');
         }
         } else {
+          console.log('❌ HomeScreen: Banner response not ok:', response.status);
           setBanners([]);
         }
     } catch (e) {
@@ -149,6 +165,19 @@ const HomeScreen: React.FC = () => {
   const { user } = useAuth();
   const { registerForPushNotifications } = useNotifications();
 
+  // Handle immediate refresh when coming from AddTransaction
+  useEffect(() => {
+    if (refresh) {
+      console.log('🔄 HomeScreen: Refresh flag detected, forcing immediate data reload...');
+      setIsDataStale(true);
+      setAppInitialized(true);
+      loadStats(true); // Force refresh stats
+      loadTransactionData(true); // Force refresh transactions
+      // Clear the refresh flag to prevent infinite loops
+      (navigation as any).setParams({ refresh: false });
+    }
+  }, [refresh, navigation]);
+
   // Load transaction data with caching and debouncing
   const loadTransactionData = useCallback(async (forceRefresh = false) => {
     const now = Date.now();
@@ -177,10 +206,25 @@ const HomeScreen: React.FC = () => {
       // Load financial summary with force refresh if needed
       const transactions = await TransactionService.getTransactions(forceRefresh);
       
-      // Separate transactions by type
-      const incomeTransactions = (transactions || []).filter(t => t.type === 'income');
-      const expenseTransactions = (transactions || []).filter(t => t.type === 'expense');
-      const transferTransactions = (transactions || []).filter(t => t.type === 'transfer');
+      // Filter transactions for CURRENT MONTH only (Money Manager shows current month data)
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      const currentMonthTransactions = (transactions || []).filter(t => {
+        const txnDate = new Date(t.date);
+        return txnDate.getFullYear() === currentYear && txnDate.getMonth() === currentMonth;
+      });
+      
+      console.log(`🔍 HomeScreen: Filtering for current month (${currentYear}-${currentMonth + 1}):`, {
+        totalTransactions: transactions?.length || 0,
+        currentMonthTransactions: currentMonthTransactions.length,
+      });
+      
+      // Separate current month transactions by type
+      const incomeTransactions = currentMonthTransactions.filter(t => t.type === 'income');
+      const expenseTransactions = currentMonthTransactions.filter(t => t.type === 'expense');
+      const transferTransactions = currentMonthTransactions.filter(t => t.type === 'transfer');
       
       const totalIncome = incomeTransactions
         .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
@@ -408,6 +452,8 @@ const HomeScreen: React.FC = () => {
   // Reload data when screen comes into focus (after adding a transaction)
   useFocusEffect(
     React.useCallback(() => {
+      console.log('🔄 HomeScreen: Screen focused - checking if refresh needed...');
+      
       // Clear any existing timeout
       if (loadDataTimeoutRef.current) {
         clearTimeout(loadDataTimeoutRef.current);
@@ -417,19 +463,13 @@ const HomeScreen: React.FC = () => {
       loadDataTimeoutRef.current = setTimeout(() => {
         const now = Date.now();
         
-        // Force refresh on first focus after app initialization
-        // or reload if data is stale or we have no data
-        const shouldReload = !appInitialized || 
-                           isDataStale || 
-                           (now - lastDataLoad) > CACHE_DURATION || 
-                           recentTransactions.length === 0;
-        
-        if (shouldReload && !loading) {
-          setIsDataStale(true);
-          setAppInitialized(true);
-          loadStats(true); // Force refresh stats
-          loadTransactionData(true); // Force refresh transactions
-        }
+        // Always force refresh when screen comes into focus
+        // This ensures new transactions are immediately visible
+        console.log('🔄 HomeScreen: Forcing data refresh on focus...');
+        setIsDataStale(true);
+        setAppInitialized(true);
+        loadStats(true); // Force refresh stats
+        loadTransactionData(true); // Force refresh transactions
       }, DEBOUNCE_DELAY);
       
       // Cleanup function
@@ -438,7 +478,7 @@ const HomeScreen: React.FC = () => {
           clearTimeout(loadDataTimeoutRef.current);
         }
       };
-    }, []) // Empty dependency array - only run on focus/blur
+    }, [loadStats, loadTransactionData]) // Include dependencies to ensure callback updates
   );
 
 
@@ -480,6 +520,58 @@ const HomeScreen: React.FC = () => {
     } catch (error) {
       console.error('❌ Error testing salary reminder:', error);
       alert('Error testing salary reminder: ' + error.message);
+    }
+  };
+
+  // Test function for custom notifications
+  const testCustomNotification = async () => {
+    try {
+      console.log('🧪 Testing custom notification...');
+      
+      await NotificationNavigationService.getInstance().simulateCustomNotification();
+      console.log('✅ Custom notification test triggered');
+    } catch (error) {
+      console.error('❌ Error testing custom notification:', error);
+    }
+  };
+
+  // Direct navigation test
+  const testDirectNavigation = () => {
+    try {
+      console.log('🧪 Testing direct navigation to NotificationDetail...');
+      
+      const testNotification = {
+        id: 'direct-test-' + Date.now(),
+        title: '🧪 Direct Navigation Test',
+        body: 'This is a direct navigation test',
+        type: 'update',
+        content: `# Direct Navigation Test
+
+This is a test to verify that direct navigation to the NotificationDetail screen works properly.
+
+## Test Features:
+- Direct navigation without notification
+- Content display
+- Back navigation
+- Screen rendering
+
+If you can see this content, the navigation system is working correctly!`,
+        author: 'Test Team',
+        actionButton: {
+          text: 'Test Action',
+          action: 'test_action'
+        },
+        tags: ['test', 'navigation', 'direct']
+      };
+
+      (navigation as any).navigate('NotificationDetail', {
+        notificationId: testNotification.id,
+        notification: testNotification
+      });
+      
+      console.log('✅ Direct navigation test triggered');
+    } catch (error) {
+      console.error('❌ Error testing direct navigation:', error);
     }
   };
 
@@ -841,6 +933,52 @@ const HomeScreen: React.FC = () => {
       width: 20,
       backgroundColor: '#007AFF',
     },
+    appQuoteContainer: {
+      alignItems: 'center',
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.lg,
+    },
+    appQuote: {
+      fontSize: 36,
+      color: '#999999', // Lighter shade
+      textAlign: 'left',
+      fontStyle: 'italic',
+      fontWeight: '500',
+      lineHeight: 40,
+      marginBottom: theme.spacing.sm,
+    },
+    appName: {
+      fontSize: theme.fontSize.xl,
+      color: '#1A365D',
+      textAlign: 'center',
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    madeWithLoveContainer: {
+      alignItems: 'center',
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+    },
+    madeWithLoveText: {
+      fontSize: theme.fontSize.lg,
+      color: '#333333', // Darker for better visibility
+      textAlign: 'center',
+      fontStyle: 'italic',
+      fontWeight: '500',
+      letterSpacing: 0.5,
+      marginBottom: 4,
+    },
+    madeWithLoveSubtext: {
+      fontSize: theme.fontSize.sm,
+      color: '#666666',
+      textAlign: 'center',
+      fontStyle: 'italic',
+      fontWeight: '400',
+      opacity: 0.8,
+    },
 
     floatingCardsContainer: {
       marginBottom: theme.spacing.sm,
@@ -1144,7 +1282,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.notificationButton}
               onPress={() => {
-                navigation.navigate('Notifications' as never);
+                (navigation as any).navigate('MainApp', { screen: 'Notifications' });
               }}
             >
               <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
@@ -1169,6 +1307,17 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.loadingText} allowFontScaling={false}>Loading...</Text>
         </View>
       </View>
+    );
+  }
+
+  // Show offline screen when offline
+  if (isOfflineMode) {
+    return (
+      <OfflineScreen 
+        onRetry={onRefresh}
+        title="Oops! Your internet took a coffee break ☕"
+        message="Don't worry, your financial data is safe in the cloud! Tap the button below to reconnect and see your transactions."
+      />
     );
   }
 
@@ -1215,7 +1364,7 @@ const HomeScreen: React.FC = () => {
             <View style={styles.cardRow}>
               <View style={styles.cardLeftSection}>
                 <Ionicons name="arrow-up" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
-                <Text style={styles.cardLeftText} allowFontScaling={false}>Cash Expense</Text>
+                <Text style={styles.cardLeftText} allowFontScaling={false}>Expense</Text>
               </View>
               <View style={styles.cardRightSection}>
                 <Ionicons name="arrow-down" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
@@ -1463,6 +1612,23 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
+        {/* App Quote and Name */}
+        <View style={styles.appQuoteContainer}>
+          <Text style={styles.appQuote}>
+            "Every rupee counts, every decision matters."
+          </Text>
+        </View>
+
+        {/* Made with Love in INDIA */}
+        <View style={styles.madeWithLoveContainer}>
+          <Text style={styles.madeWithLoveText}>
+            Made with ❤️ in INDIA
+          </Text>
+          <Text style={styles.madeWithLoveSubtext}>
+            MyPaisa Finance Manager
+          </Text>
+        </View>
+
         {/* Test Button for Salary Reminder */}
         <TouchableOpacity 
           style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 140, 160) }]}
@@ -1470,6 +1636,54 @@ const HomeScreen: React.FC = () => {
         >
           <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
           <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Test Salary</Text>
+        </TouchableOpacity>
+
+        {/* Test Button for Custom Notifications */}
+        <TouchableOpacity 
+          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 200, 220), right: 20 }]}
+          onPress={testCustomNotification}
+        >
+          <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Test Custom</Text>
+        </TouchableOpacity>
+
+        {/* Direct Navigation Test Button */}
+        <TouchableOpacity 
+          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 260, 280), right: 20 }]}
+          onPress={testDirectNavigation}
+        >
+          <Ionicons name="navigate-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Direct Nav</Text>
+        </TouchableOpacity>
+
+        {/* Notification Detail Button */}
+        <TouchableOpacity 
+          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 320, 340), right: 20 }]}
+          onPress={() => {
+            // Navigate to NotificationDetail screen
+            (navigation as any).navigate('MainApp', { 
+              screen: 'NotificationDetail',
+              params: {
+                notificationId: 'sample-notification-1',
+                notification: {
+                  id: 'sample-notification-1',
+                  title: 'Welcome to Expense Tracker!',
+                  content: 'This is a sample notification detail screen. You can view detailed information about notifications here. Click the button below to test the link functionality.',
+                  type: 'announcement',
+                  publishedAt: new Date().toISOString(),
+                  author: 'Expense Tracker Team',
+                  actionButton: {
+                    text: 'Visit Website',
+                    url: 'https://www.google.com',
+                    action: 'open_url'
+                  }
+                }
+              }
+            });
+          }}
+        >
+          <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Notifications</Text>
         </TouchableOpacity>
 
       </ScrollView>

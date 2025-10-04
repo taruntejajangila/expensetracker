@@ -11,18 +11,22 @@ router.get('/public', async (req, res) => {
     
     const bannersQuery = `
       SELECT 
-        id,
-        title,
-        subtitle,
-        description,
-        image_url,
-        target_url,
-        background_color,
-        text_color,
-        icon,
-        sort_order
-      FROM active_banners
-      ORDER BY sort_order ASC, created_at DESC
+        b.id,
+        b.title,
+        b.subtitle,
+        b.description,
+        b.image_url,
+        b.target_url,
+        b.background_color,
+        b.text_color,
+        b.icon,
+        b.sort_order,
+        b.created_at
+      FROM banners b
+      WHERE b.is_active = true
+        AND (b.start_date IS NULL OR b.start_date <= NOW())
+        AND (b.end_date IS NULL OR b.end_date >= NOW())
+      ORDER BY b.sort_order ASC, b.created_at DESC
     `;
 
     const result = await pool.query(bannersQuery);

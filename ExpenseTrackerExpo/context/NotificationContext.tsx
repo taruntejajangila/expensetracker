@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import ApiClient from '../utils/ApiClient';
 
 export interface Notification {
   id: string;
@@ -81,9 +82,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const registerTokenWithBackend = async (token: string) => {
     try {
       const authToken = await AsyncStorage.getItem('authToken');
-      if (!authToken) return;
+      if (!authToken) {
+        console.log('🔕 Skipping token registration: no auth token');
+        return;
+      }
 
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const platform = Platform.OS;
 
       const response = await fetch(`${API_BASE_URL}/notifications/register`, {
@@ -119,28 +123,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     try {
       console.log('🔄 refreshNotifications called - User interacting:', isUserInteractingRef.current);
       setIsLoading(true);
+
       const authToken = await AsyncStorage.getItem('authToken');
-      if (!authToken) return;
+      if (!authToken) {
+        console.log('🔕 Skipping notifications fetch: no auth token');
+        return;
+      }
 
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
-      const response = await fetch(`${API_BASE_URL}/notifications`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
+      const apiClient = ApiClient.getInstance();
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          setNotifications(data.data);
-          const unreadNotifications = data.data.filter((n: any) => !n.read);
-          setUnreadCount(unreadNotifications.length);
-          console.log('✅ Notifications loaded:', data.data.length);
-        }
+      const result = await apiClient.get(`${API_BASE_URL}/notifications`);
+
+      if (result.success && result.data) {
+        setNotifications(result.data);
+        const unreadNotifications = result.data.filter((n: any) => !n.read);
+        setUnreadCount(unreadNotifications.length);
+        console.log('✅ Notifications loaded:', result.data.length);
       } else {
-        console.error('❌ Failed to fetch notifications:', response.status);
+        console.error('❌ Failed to fetch notifications:', result.message);
       }
     } catch (error) {
       console.error('❌ Error fetching notifications:', error);
@@ -153,34 +154,27 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const markAsRead = async (notificationId: string) => {
     try {
       console.log('🔔 markAsRead called for notification:', notificationId);
-      const authToken = await AsyncStorage.getItem('authToken');
-      if (!authToken) return;
 
       // Set user interaction flag to prevent auto-refresh conflicts
       isUserInteractingRef.current = true;
       console.log('🔔 User interaction flag set to true');
-      
+
       // Optimistically update the UI first
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === notificationId
             ? { ...notif, read: true }
             : notif
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
 
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
-      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
+      const apiClient = ApiClient.getInstance();
 
-      if (response.ok) {
-        const result = await response.json();
+      const result = await apiClient.post(`${API_BASE_URL}/notifications/${notificationId}/read`);
+
+      if (result.success) {
         console.log('✅ Notification marked as read successfully:', result);
         // Clear user interaction flag after a short delay
         setTimeout(() => {
@@ -189,9 +183,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         }, 1000);
       } else {
         // Revert the optimistic update if the API call failed
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
+        setNotifications(prev =>
+          prev.map(notif =>
+            notif.id === notificationId
               ? { ...notif, read: false }
               : notif
           )
@@ -203,9 +197,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
     } catch (error) {
       // Revert the optimistic update if there was an error
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === notificationId
             ? { ...notif, read: false }
             : notif
         )
@@ -217,11 +211,36 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-    setUnreadCount(0);
+  const markAllAsRead = async () => {
+    try {
+      console.log('🔔 markAllAsRead called');
+
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (!authToken) {
+        console.log('🔕 Skipping mark all as read: no auth token');
+        return;
+      }
+
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
+      const apiClient = ApiClient.getInstance();
+
+      const result = await apiClient.post(`${API_BASE_URL}/notifications/mark-all-read`);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ All notifications marked as read:', data.data.updatedCount);
+
+        // Update local state
+        setNotifications(prev =>
+          prev.map(notif => ({ ...notif, read: true }))
+        );
+        setUnreadCount(0);
+      } else {
+        console.error('❌ Failed to mark all notifications as read:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error marking all notifications as read:', error);
+    }
   };
 
   // Set up notification polling

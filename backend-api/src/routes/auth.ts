@@ -1,10 +1,11 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { createUser, authenticateUser, getUserById } from '../utils/userUtils';
-import { generateAccessToken, generateRefreshToken } from '../utils/authUtils';
+import { generateAccessToken, generateRefreshToken, hashPassword, comparePassword } from '../utils/authUtils';
 import { validateRequest } from '../middleware/validation';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
+import pool from '../config/database';
 
 const router = express.Router();
 
@@ -46,7 +47,8 @@ router.post('/register',
             name: newUser.name,
             email: newUser.email,
             phone: newUser.phone,
-            role: newUser.role
+            role: newUser.role,
+            createdAt: newUser.created_at
           },
           accessToken,
           refreshToken
@@ -113,7 +115,8 @@ router.post('/login',
             name: user.name,
             email: user.email,
             phone: user.phone,
-            role: user.role
+            role: user.role,
+            createdAt: user.created_at
           },
           accessToken,
           refreshToken
@@ -232,6 +235,7 @@ router.get('/me',
           id: user.id,
           name: user.name,
           email: user.email,
+          phone: user.phone,
           role: user.role,
           createdAt: user.created_at
         }
@@ -241,6 +245,199 @@ router.get('/me',
       res.status(500).json({
         success: false,
         message: 'Failed to get profile'
+      });
+    }
+  }
+);
+
+// PATCH /api/auth/profile - Update user profile
+router.patch('/profile',
+  authenticateToken,
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      const authUser = req.user;
+      if (!authUser) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+        return;
+      }
+
+      const { name, phone } = req.body;
+
+      // Validation
+      if (!name || !name.trim()) {
+        res.status(400).json({
+          success: false,
+          message: 'Name is required'
+        });
+        return;
+      }
+
+      if (name.trim().length < 2) {
+        res.status(400).json({
+          success: false,
+          message: 'Name must be at least 2 characters'
+        });
+        return;
+      }
+
+      // Optional phone validation
+      if (phone && phone.trim()) {
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+          res.status(400).json({
+            success: false,
+            message: 'Please enter a valid 10-digit phone number'
+          });
+          return;
+        }
+      }
+
+      logger.info(`Update profile request for user: ${authUser.id}`, { name, phone });
+
+      // Update user in database
+      const updateQuery = `
+        UPDATE users 
+        SET name = $1, phone = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id, name, email, phone, role, created_at, updated_at
+      `;
+      
+      const result = await pool.query(updateQuery, [
+        name.trim(),
+        phone && phone.trim() ? phone.trim() : null,
+        authUser.id
+      ]);
+
+      if (result.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      const updatedUser = result.rows[0];
+
+      logger.info(`Profile updated successfully for user: ${authUser.id}`);
+
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          role: updatedUser.role,
+          createdAt: updatedUser.created_at
+        }
+      });
+    } catch (error) {
+      logger.error('Update profile error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update profile'
+      });
+    }
+  }
+);
+
+// POST /api/auth/change-password - Change user password
+router.post('/change-password',
+  authenticateToken,
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      const authUser = req.user;
+      if (!authUser) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+        return;
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      // Validation
+      if (!currentPassword || !newPassword) {
+        res.status(400).json({
+          success: false,
+          message: 'Current password and new password are required'
+        });
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        res.status(400).json({
+          success: false,
+          message: 'New password must be at least 6 characters'
+        });
+        return;
+      }
+
+      if (currentPassword === newPassword) {
+        res.status(400).json({
+          success: false,
+          message: 'New password must be different from current password'
+        });
+        return;
+      }
+
+      logger.info(`Change password request for user: ${authUser.id}`);
+
+      // Get user from database to verify current password (need password hash)
+      const userQuery = await pool.query(
+        'SELECT id, email, name, password, role FROM users WHERE id = $1',
+        [authUser.id]
+      );
+      
+      if (userQuery.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      const userWithPassword = userQuery.rows[0];
+
+      // Verify current password
+      const isPasswordValid = await comparePassword(currentPassword, userWithPassword.password);
+      if (!isPasswordValid) {
+        res.status(401).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+        return;
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update password in database
+      const updateQuery = `
+        UPDATE users 
+        SET password = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id
+      `;
+      
+      await pool.query(updateQuery, [hashedPassword, authUser.id]);
+
+      logger.info(`Password changed successfully for user: ${authUser.id}`);
+
+      res.json({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    } catch (error) {
+      logger.error('Change password error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to change password'
       });
     }
   }

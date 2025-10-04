@@ -302,6 +302,7 @@ const LoginScreen: React.FC = () => {
                 Don't have an account?{' '}
                 <Text style={styles.registerLink}
                   onPress={() => navigation.navigate('Register' as never)}
+                  allowFontScaling={false}
                 >
                   Create Account
                 </Text>

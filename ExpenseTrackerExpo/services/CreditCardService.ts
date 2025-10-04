@@ -1,7 +1,7 @@
 // CreditCardService connected to backend API
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 const getAuthToken = async () => {
   try {
@@ -79,47 +79,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 CreditCardService: Error fetching credit cards:', error);
-      
-      // Fallback to mock data if backend is not available
-      console.log('🔍 CreditCardService: Falling back to mock data');
-      return [
-        {
-          id: '1',
-          name: 'Chase Freedom',
-          cardNumber: '****1234',
-          bankName: 'Chase Bank',
-          creditLimit: 5000,
-          currentBalance: 1200,
-          availableCredit: 3800,
-          interestRate: 18.99,
-          minimumPayment: 25,
-          dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-          color: '#007AFF',
-          icon: 'card',
-          type: 'visa',
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Capital One Venture',
-          cardNumber: '****5678',
-          bankName: 'Capital One',
-          creditLimit: 8000,
-          currentBalance: 0,
-          availableCredit: 8000,
-          interestRate: 16.99,
-          minimumPayment: 0,
-          dueDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
-          color: '#34C759',
-          icon: 'card',
-          type: 'mastercard',
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 

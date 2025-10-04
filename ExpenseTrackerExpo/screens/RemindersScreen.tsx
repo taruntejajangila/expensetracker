@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import WheelDatePicker from '../components/WheelDatePicker';
 
 // Import new components and types
 import { Reminder } from '../types/PaymentTypes';
@@ -63,18 +64,94 @@ const RemindersScreen: React.FC = () => {
   // State for paid items
   const [paidItems, setPaidItems] = useState<{ [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } }>({});
   
+  // Get current time in 12-hour format
+  const getCurrentTime = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return {
+      time24: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+      time12: {
+        hours: displayHours.toString().padStart(2, '0'),
+        minutes: minutes.toString().padStart(2, '0'),
+        period: period,
+      }
+    };
+  };
+
+  const currentTime = getCurrentTime();
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     type: 'general' as Reminder['type'],
     date: new Date(),
-    time: '09:00',
+    time: currentTime.time24,
     isEnabled: true,
     repeat: 'none' as Reminder['repeat'],
     category: '',
     amount: '',
   });
+
+  // Time input states
+  const [timeInputs, setTimeInputs] = useState({
+    hours: currentTime.time12.hours,
+    minutes: currentTime.time12.minutes,
+    period: currentTime.time12.period,
+  });
+
+  // Convert 24-hour time to 12-hour format
+  const convertTo12Hour = (time24: string) => {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return {
+      hours: displayHours.toString().padStart(2, '0'),
+      minutes: minutes.toString().padStart(2, '0'),
+      period,
+    };
+  };
+
+  // Convert 12-hour time to 24-hour format
+  const convertTo24Hour = (hours: string, minutes: string, period: string) => {
+    // Handle empty values
+    if (!hours || !minutes) {
+      return '09:00'; // Default time
+    }
+    
+    let hour24 = parseInt(hours);
+    if (isNaN(hour24)) {
+      return '09:00'; // Default if invalid
+    }
+    
+    if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    } else if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    }
+    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+  };
+
+  // Update time inputs when formData.time changes
+  useEffect(() => {
+    const time12 = convertTo12Hour(formData.time);
+    setTimeInputs(time12);
+  }, [formData.time]);
+
+  // Handle time input changes
+  const handleTimeChange = (field: 'hours' | 'minutes' | 'period', value: string) => {
+    const newTimeInputs = { ...timeInputs, [field]: value };
+    setTimeInputs(newTimeInputs);
+    
+    // Only update formData if we have valid values
+    if (newTimeInputs.hours && newTimeInputs.minutes) {
+      const time24 = convertTo24Hour(newTimeInputs.hours, newTimeInputs.minutes, newTimeInputs.period);
+      setFormData(prev => ({ ...prev, time: time24 }));
+    }
+  };
 
   // Sample reminder types with icons and colors
   const reminderTypes = [
@@ -258,6 +335,50 @@ const RemindersScreen: React.FC = () => {
     Alert.alert('Success', 'Payment reverted successfully.');
   };
 
+  const clearAllReminders = async () => {
+    Alert.alert(
+      'Clear All Reminders',
+      'This will delete all your custom reminders. This action cannot be undone. Are you sure?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              
+              // Clear local cache
+              const userId = (user as any)?.email || (user as any)?.uid || undefined;
+              await TransactionAnalysisService.clearUserData(userId);
+              
+              // Clear all manual reminders from backend
+              const allReminders = await ReminderService.getReminders();
+              for (const reminder of allReminders) {
+                if (reminder.sourceType === 'manual') {
+                  await ReminderService.deleteReminder(reminder.id);
+                }
+              }
+              
+              // Reload reminders
+              await loadReminders();
+              
+              Alert.alert('Success', 'All custom reminders have been cleared.');
+            } catch (error) {
+              console.error('Error clearing reminders:', error);
+              Alert.alert('Error', 'Failed to clear reminders. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const cleanupExpiredPaidItems = () => {
     const now = new Date();
     const twoDaysInMs = 2 * 24 * 60 * 60 * 1000; // 2 days in milliseconds
@@ -346,7 +467,10 @@ const RemindersScreen: React.FC = () => {
           },
           sound: 'default',
         },
-        trigger: notificationDate as any,
+        trigger: {
+          type: 'date',
+          date: notificationDate,
+        },
       });
       
       return notificationId;
@@ -436,17 +560,23 @@ const RemindersScreen: React.FC = () => {
         await scheduleNotification(newReminder);
       }
 
-      // Reset form
+      // Reset form with current time
+      const resetTime = getCurrentTime();
       setFormData({
         title: '',
         description: '',
         type: 'general',
         date: new Date(),
-        time: '09:00',
+        time: resetTime.time24,
         isEnabled: true,
         repeat: 'none',
         category: '',
         amount: '',
+      });
+      setTimeInputs({
+        hours: resetTime.time12.hours,
+        minutes: resetTime.time12.minutes,
+        period: resetTime.time12.period,
       });
       setShowAddModal(false);
       setEditingReminder(null);
@@ -535,6 +665,18 @@ const RemindersScreen: React.FC = () => {
       justifyContent: 'center',
       minWidth: 60,
     },
+    headerButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 20,
+      backgroundColor: 'transparent',
+    },
     backButton: {
       width: 40,
       height: 40,
@@ -552,12 +694,6 @@ const RemindersScreen: React.FC = () => {
       textAlign: 'center',
       opacity: 0.8,
       marginTop: 2,
-    },
-    addButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     content: {
       flex: 1,
@@ -699,7 +835,7 @@ const RemindersScreen: React.FC = () => {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FF950015',
+    backgroundColor: '#FF950005',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -946,13 +1082,16 @@ const RemindersScreen: React.FC = () => {
       marginBottom: 8,
     },
     textInput: {
-      borderWidth: 1,
-      borderColor: '#E0E0E0',
-      borderRadius: 8,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
       paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingVertical: 8,
       fontSize: 16,
+      fontWeight: '600',
       color: theme.colors.text,
+      minHeight: 40,
     },
     textArea: {
       height: 80,
@@ -996,6 +1135,61 @@ const RemindersScreen: React.FC = () => {
     },
     timeInput: {
       flex: 0.4,
+    },
+    timeInputContainer: {
+      flex: 0.4,
+    },
+    timeInputRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 12,
+      justifyContent: 'space-between',
+    },
+    timeField: {
+      flex: 1,
+    },
+    timeFieldLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    timeTextInput: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+      minHeight: 40,
+    },
+    timeSeparator: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 8,
+      marginHorizontal: 4,
+    },
+    periodButton: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 40,
+    },
+    periodButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
     },
     switchRow: {
       flexDirection: 'row',
@@ -1080,7 +1274,7 @@ const RemindersScreen: React.FC = () => {
   smartBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF950015',
+    backgroundColor: '#FF950005',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1153,12 +1347,20 @@ const RemindersScreen: React.FC = () => {
           </View>
           
           <View style={styles.headerRight}>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Ionicons name="add" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={[styles.headerButton, { marginRight: 8 }]}
+                onPress={clearAllReminders}
+              >
+                <Ionicons name="trash-outline" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Ionicons name="add" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -1170,7 +1372,7 @@ const RemindersScreen: React.FC = () => {
       <View style={styles.container}>
         <ScreenHeader theme={theme} insets={insets} />
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Loading reminders...</Text>
+          <Text style={styles.emptyTitle} allowFontScaling={false}>Loading reminders...</Text>
         </View>
       </View>
     );
@@ -1251,26 +1453,26 @@ const RemindersScreen: React.FC = () => {
                         <View style={[styles.reminderTypeIcon, { backgroundColor: urgencyColor + '15' }]}>
                           <Ionicons name="alarm" size={18} color={urgencyColor} />
                         </View>
-                        <Text style={styles.reminderTypeText}>Loan EMI</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>Loan EMI</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: urgencyColor }]}
                         onPress={() => handleMarkAsPaid(reminder, 'loan')}
                       >
                         <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Mark as Paid</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Mark as Paid</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
-                    <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
+                    <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>{formatDate(reminder.dueDate)}</Text>
-                        <Text style={styles.reminderTime}>{reminder.time}</Text>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>{formatDate(reminder.dueDate)}</Text>
+                        <Text style={styles.reminderTime} allowFontScaling={false}>{reminder.time}</Text>
                       </View>
-                      <Text style={[styles.reminderAmount, { color: urgencyColor }]}>
+                      <Text style={[styles.reminderAmount, { color: urgencyColor }]} allowFontScaling={false}>
                         ₹{reminder.amount?.toLocaleString()}
                       </Text>
                     </View>
@@ -1291,24 +1493,24 @@ const RemindersScreen: React.FC = () => {
                         <View style={[styles.reminderTypeIcon, { backgroundColor: '#34C75915' }]}>
                           <Ionicons name="checkmark-circle" size={18} color="#34C759" />
                         </View>
-                        <Text style={styles.reminderTypeText}>Paid</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>Paid</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: '#34C759' }]}
                         onPress={() => revertPayment(reminder.id)}
                       >
                         <Ionicons name="arrow-undo" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Revert</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Revert</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
-                    <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
+                    <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]}>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
+                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
                           {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
                         </Text>
                       </View>
@@ -1346,29 +1548,29 @@ const RemindersScreen: React.FC = () => {
                   <View key={reminder.id} style={styles.smartReminderCard}>
                     <View style={styles.reminderHeader}>
                       <View style={styles.reminderTypeContainer}>
-                        <View style={[styles.reminderTypeIcon, { backgroundColor: '#FF950015' }]}>
+                        <View style={[styles.reminderTypeIcon, { backgroundColor: '#FF950005' }]}>
                           <Ionicons name="bulb" size={18} color="#FF9500" />
                         </View>
-                        <Text style={styles.reminderTypeText}>AI Detected</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>AI Detected</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: urgencyColor }]}
                         onPress={() => handleMarkAsPaid(reminder, 'smart')}
                       >
                         <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Mark as Paid</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Mark as Paid</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
-                    <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
+                    <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>{formatDate(reminder.dueDate)}</Text>
-                        <Text style={styles.reminderTime}>{reminder.time}</Text>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>{formatDate(reminder.dueDate)}</Text>
+                        <Text style={styles.reminderTime} allowFontScaling={false}>{reminder.time}</Text>
                       </View>
-                      <Text style={[styles.reminderAmount, { color: urgencyColor }]}>
+                      <Text style={[styles.reminderAmount, { color: urgencyColor }]} allowFontScaling={false}>
                         ₹{reminder.amount?.toLocaleString()}
                       </Text>
                     </View>
@@ -1389,24 +1591,24 @@ const RemindersScreen: React.FC = () => {
                         <View style={[styles.reminderTypeIcon, { backgroundColor: '#34C75915' }]}>
                           <Ionicons name="checkmark-circle" size={18} color="#34C759" />
                         </View>
-                        <Text style={styles.reminderTypeText}>Paid</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>Paid</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: '#34C759' }]}
                         onPress={() => revertPayment(reminder.id)}
                       >
                         <Ionicons name="arrow-undo" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Revert</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Revert</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
-                    <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
+                    <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]}>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
+                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
                           {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
                         </Text>
                       </View>
@@ -1459,32 +1661,32 @@ const RemindersScreen: React.FC = () => {
                         <View style={[styles.reminderTypeIcon, { backgroundColor: '#34C759' + '15' }]}>
                           <Ionicons name="checkmark-circle" size={18} color="#34C759" />
                         </View>
-                        <Text style={styles.reminderTypeText}>Paid</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>Paid</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: '#34C759' }]}
                         onPress={() => revertPayment(reminder.id)}
                       >
                         <Ionicons name="arrow-undo" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Revert</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Revert</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
-                    <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
+                    <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]}>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
+                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
                           {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
                         </Text>
                       </View>
                       {reminder.category && (
-                        <Text style={styles.reminderCategory}>{reminder.category}</Text>
+                        <Text style={styles.reminderCategory} allowFontScaling={false}>{reminder.category}</Text>
                       )}
                       {reminder.amount && (
-                        <Text style={[styles.reminderAmount, { color: '#34C759' }]}>₹{reminder.amount.toLocaleString()}</Text>
+                        <Text style={[styles.reminderAmount, { color: '#34C759' }]} allowFontScaling={false}>₹{reminder.amount.toLocaleString()}</Text>
                       )}
                     </View>
 
@@ -1493,13 +1695,13 @@ const RemindersScreen: React.FC = () => {
                         style={[styles.actionButton, styles.editButton]}
                         onPress={() => handleEditReminder(reminder)}
                       >
-                        <Text style={[styles.actionButtonText, styles.editButtonText]}>Edit</Text>
+                        <Text style={[styles.actionButtonText, styles.editButtonText]} allowFontScaling={false}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.deleteButton]}
                         onPress={() => handleDeleteReminder(reminder.id)}
                       >
-                        <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
+                        <Text style={[styles.actionButtonText, styles.deleteButtonText]} allowFontScaling={false}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1513,32 +1715,32 @@ const RemindersScreen: React.FC = () => {
                         <View style={[styles.reminderTypeIcon, { backgroundColor: typeInfo.color + '15' }]}>
                           <Ionicons name={typeInfo.icon as any} size={18} color={typeInfo.color} />
                         </View>
-                        <Text style={styles.reminderTypeText}>{typeInfo.label}</Text>
+                        <Text style={styles.reminderTypeText} allowFontScaling={false}>{typeInfo.label}</Text>
                       </View>
                       <TouchableOpacity
                         style={[styles.compactPayButton, { backgroundColor: urgencyColor }]}
                         onPress={() => handleMarkAsPaid(reminder, 'custom')}
                       >
                         <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.compactPayButtonText}>Mark as Paid</Text>
+                        <Text style={styles.compactPayButtonText} allowFontScaling={false}>Mark as Paid</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.reminderTitle}>{reminder.title}</Text>
+                    <Text style={styles.reminderTitle} allowFontScaling={false}>{reminder.title}</Text>
                     {reminder.description && (
-                      <Text style={styles.reminderDescription}>{reminder.description}</Text>
+                      <Text style={styles.reminderDescription} allowFontScaling={false}>{reminder.description}</Text>
                     )}
 
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
-                        <Text style={styles.reminderDate}>{formatDate(reminder.date)}</Text>
-                        <Text style={styles.reminderTime}>{reminder.time}</Text>
+                        <Text style={styles.reminderDate} allowFontScaling={false}>{formatDate(reminder.date)}</Text>
+                        <Text style={styles.reminderTime} allowFontScaling={false}>{reminder.time}</Text>
                       </View>
                       {reminder.category && (
-                        <Text style={styles.reminderCategory}>{reminder.category}</Text>
+                        <Text style={styles.reminderCategory} allowFontScaling={false}>{reminder.category}</Text>
                       )}
                       {reminder.amount && (
-                        <Text style={styles.reminderAmount}>₹{reminder.amount.toLocaleString()}</Text>
+                        <Text style={styles.reminderAmount} allowFontScaling={false}>₹{reminder.amount.toLocaleString()}</Text>
                       )}
                     </View>
 
@@ -1547,13 +1749,13 @@ const RemindersScreen: React.FC = () => {
                         style={[styles.actionButton, styles.editButton]}
                         onPress={() => handleEditReminder(reminder)}
                       >
-                        <Text style={[styles.actionButtonText, styles.editButtonText]}>Edit</Text>
+                        <Text style={[styles.actionButtonText, styles.editButtonText]} allowFontScaling={false}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.deleteButton]}
                         onPress={() => handleDeleteReminder(reminder.id)}
                       >
-                        <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
+                        <Text style={[styles.actionButtonText, styles.deleteButtonText]} allowFontScaling={false}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1576,7 +1778,7 @@ const RemindersScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={styles.modalTitle} allowFontScaling={false}>
                 {editingReminder ? 'Edit Reminder' : 'Add New Reminder'}
               </Text>
               <TouchableOpacity
@@ -1584,16 +1786,22 @@ const RemindersScreen: React.FC = () => {
                 onPress={() => {
                   setShowAddModal(false);
                   setEditingReminder(null);
+                  const resetTime = getCurrentTime();
                   setFormData({
                     title: '',
                     description: '',
                     type: 'general',
                     date: new Date(),
-                    time: '09:00',
+                    time: resetTime.time24,
                     isEnabled: true,
                     repeat: 'none',
                     category: '',
                     amount: '',
+                  });
+                  setTimeInputs({
+                    hours: resetTime.time12.hours,
+                    minutes: resetTime.time12.minutes,
+                    period: resetTime.time12.period,
                   });
                 }}
               >
@@ -1604,7 +1812,7 @@ const RemindersScreen: React.FC = () => {
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Title */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Title *</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Title *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={formData.title}
@@ -1616,7 +1824,7 @@ const RemindersScreen: React.FC = () => {
 
               {/* Description */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Description</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Description</Text>
                 <TextInput
                   style={[styles.textInput, styles.textArea]}
                   value={formData.description}
@@ -1629,7 +1837,7 @@ const RemindersScreen: React.FC = () => {
 
               {/* Type */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Type</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Type</Text>
                 <View style={styles.typeSelector}>
                   {reminderTypes.map((type) => (
                     <TouchableOpacity
@@ -1651,6 +1859,7 @@ const RemindersScreen: React.FC = () => {
                           styles.typeOptionText,
                           { color: formData.type === type.key ? '#007AFF' : '#666666' },
                         ]}
+                        allowFontScaling={false}
                       >
                         {type.label}
                       </Text>
@@ -1659,34 +1868,77 @@ const RemindersScreen: React.FC = () => {
                 </View>
               </View>
 
-              {/* Date and Time */}
+              {/* Date */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Date & Time</Text>
-                <View style={styles.dateTimeRow}>
-                  <View style={styles.dateTimeInput}>
+                <Text style={styles.formLabel} allowFontScaling={false}>Date</Text>
+                <WheelDatePicker
+                  selectedDate={formData.date}
+                  onDateChange={(date) => setFormData(prev => ({ ...prev, date }))}
+                />
+              </View>
+
+              {/* Time */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel} allowFontScaling={false}>Time</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Hours</Text>
                     <TextInput
-                      style={styles.textInput}
-                      value={formData.date.toLocaleDateString()}
-                      placeholder="Select date"
-                      placeholderTextColor="#999999"
-                      editable={false}
+                      style={styles.timeTextInput}
+                      value={timeInputs.hours}
+                      onChangeText={(value) => {
+                        const numValue = value.replace(/[^0-9]/g, '');
+                        if (numValue.length <= 2) {
+                          handleTimeChange('hours', numValue);
+                        }
+                      }}
+                      keyboardType="numeric"
+                      maxLength={2}
+                      placeholder="09"
+                      allowFontScaling={false}
+                      selectTextOnFocus={true}
                     />
                   </View>
-                  <View style={styles.timeInput}>
+                  <Text style={styles.timeSeparator} allowFontScaling={false}>:</Text>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Minutes</Text>
                     <TextInput
-                      style={styles.textInput}
-                      value={formData.time}
-                      onChangeText={(text) => setFormData(prev => ({ ...prev, time: text }))}
-                      placeholder="09:00"
-                      placeholderTextColor="#999999"
+                      style={styles.timeTextInput}
+                      value={timeInputs.minutes}
+                      onChangeText={(value) => {
+                        const numValue = value.replace(/[^0-9]/g, '');
+                        if (numValue.length <= 2) {
+                          handleTimeChange('minutes', numValue);
+                        }
+                      }}
+                      keyboardType="numeric"
+                      maxLength={2}
+                      placeholder="00"
+                      allowFontScaling={false}
+                      selectTextOnFocus={true}
                     />
+                  </View>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Period</Text>
+                    <TouchableOpacity
+                      style={styles.periodButton}
+                      onPress={() => {
+                        const newPeriod = timeInputs.period === 'AM' ? 'PM' : 'AM';
+                        handleTimeChange('period', newPeriod);
+                      }}
+                    >
+                      <Text style={styles.periodButtonText} allowFontScaling={false}>
+                        {timeInputs.period}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
 
               {/* Category */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Category</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Category</Text>
                 <TextInput
                   style={styles.textInput}
                   value={formData.category}
@@ -1698,7 +1950,7 @@ const RemindersScreen: React.FC = () => {
 
               {/* Amount */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Amount (Optional)</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Amount (Optional)</Text>
                 <TextInput
                   style={styles.textInput}
                   value={formData.amount}
@@ -1711,7 +1963,7 @@ const RemindersScreen: React.FC = () => {
 
               {/* Repeat */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Repeat</Text>
+                <Text style={styles.formLabel} allowFontScaling={false}>Repeat</Text>
                 <View style={styles.typeSelector}>
                   {repeatOptions.map((option) => (
                     <TouchableOpacity
@@ -1727,6 +1979,7 @@ const RemindersScreen: React.FC = () => {
                           styles.typeOptionText,
                           { color: formData.repeat === option.key ? '#007AFF' : '#666666' },
                         ]}
+                        allowFontScaling={false}
                       >
                         {option.label}
                       </Text>
@@ -1738,7 +1991,7 @@ const RemindersScreen: React.FC = () => {
               {/* Enabled */}
               <View style={styles.formGroup}>
                 <View style={styles.switchRow}>
-                  <Text style={styles.formLabel}>Enable Reminder</Text>
+                  <Text style={styles.formLabel} allowFontScaling={false}>Enable Reminder</Text>
                   <Switch
                     value={formData.isEnabled}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, isEnabled: value }))}
@@ -1750,7 +2003,7 @@ const RemindersScreen: React.FC = () => {
             </ScrollView>
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveReminder}>
-              <Text style={styles.saveButtonText}>
+              <Text style={styles.saveButtonText} allowFontScaling={false}>
                 {editingReminder ? 'Update Reminder' : 'Create Reminder'}
               </Text>
             </TouchableOpacity>
@@ -1771,13 +2024,13 @@ const RemindersScreen: React.FC = () => {
               <View style={styles.confirmModalIcon}>
                 <Ionicons name="warning" size={32} color="#FF9500" />
               </View>
-              <Text style={styles.confirmModalTitle}>
+              <Text style={styles.confirmModalTitle} allowFontScaling={false}>
                 {confirmModalData?.type === 'custom' ? 'Mark as Completed' : 'Early Payment Confirmation'}
               </Text>
             </View>
             
             <View style={styles.confirmModalBody}>
-              <Text style={styles.confirmModalMessage}>
+              <Text style={styles.confirmModalMessage} allowFontScaling={false}>
                 {confirmModalData?.type === 'custom' 
                   ? 'Are you sure you want to mark this reminder as completed?'
                   : 'Are you sure you want to mark this payment as paid?'
@@ -1786,20 +2039,20 @@ const RemindersScreen: React.FC = () => {
               
               {confirmModalData && (
                 <View style={styles.confirmModalDetails}>
-                  <Text style={styles.confirmModalDetailTitle}>{confirmModalData.reminder.title}</Text>
-                  <Text style={styles.confirmModalDetailAmount}>
+                  <Text style={styles.confirmModalDetailTitle} allowFontScaling={false}>{confirmModalData.reminder.title}</Text>
+                  <Text style={styles.confirmModalDetailAmount} allowFontScaling={false}>
                     ₹{confirmModalData.reminder.amount?.toLocaleString()}
                   </Text>
-                  <Text style={styles.confirmModalDetailDate}>
+                  <Text style={styles.confirmModalDetailDate} allowFontScaling={false}>
                     Due: {formatDate(confirmModalData.reminder.dueDate)}
                   </Text>
-                  <Text style={styles.confirmModalDetailTime}>
+                  <Text style={styles.confirmModalDetailTime} allowFontScaling={false}>
                     {confirmModalData.daysUntilDue} days remaining
                   </Text>
                 </View>
               )}
               
-              <Text style={styles.confirmModalNote}>
+              <Text style={styles.confirmModalNote} allowFontScaling={false}>
                 {confirmModalData?.type === 'custom' 
                   ? 'Marking this reminder as completed will show it as paid.'
                   : 'This payment is not due yet. Marking it as paid will generate a new reminder for next month.'
@@ -1812,7 +2065,7 @@ const RemindersScreen: React.FC = () => {
                 style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
                 onPress={closeConfirmModal}
               >
-                <Text style={styles.confirmModalCancelButtonText}>Cancel</Text>
+                <Text style={styles.confirmModalCancelButtonText} allowFontScaling={false}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -1823,7 +2076,7 @@ const RemindersScreen: React.FC = () => {
                   }
                 }}
               >
-                <Text style={styles.confirmModalConfirmButtonText}>Mark as Paid</Text>
+                <Text style={styles.confirmModalConfirmButtonText} allowFontScaling={false}>Mark as Paid</Text>
               </TouchableOpacity>
             </View>
           </View>

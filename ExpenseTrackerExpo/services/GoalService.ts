@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 // Helper function to get auth token
 const getAuthToken = async (): Promise<string | null> => {
@@ -112,10 +112,10 @@ export default {
         body: JSON.stringify({
           name: goal.name,
           description: goal.description,
-          target_amount: goal.targetAmount,
-          current_amount: goal.currentAmount || 0,
-          target_date: goal.targetDate,
-          goal_type: goal.goalType || 'savings',
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount || 0,
+          targetDate: goal.targetDate,
+          goalType: goal.goalType || 'savings',
           icon: goal.icon || 'target',
           color: goal.color || '#007AFF',
         }),
@@ -139,6 +139,7 @@ export default {
   async updateGoal(id: string, goal: Partial<Goal>): Promise<{ success: boolean }> {
     try {
       console.log('🔍 GoalService: Updating goal in cloud database...');
+      console.log('🔍 GoalService: Goal data to update:', goal);
       const token = await getAuthToken();
       
       if (!token) {
@@ -146,22 +147,26 @@ export default {
         return { success: true };
       }
 
+      const updateData = {
+        name: goal.name,
+        description: goal.description,
+        targetAmount: goal.targetAmount,
+        targetDate: goal.targetDate,
+        goalType: goal.goalType,
+        icon: goal.icon,
+        color: goal.color,
+        status: goal.status,
+      };
+      
+      console.log('🔍 GoalService: Sending update data:', updateData);
+
       const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: goal.name,
-          description: goal.description,
-          target_amount: goal.targetAmount,
-          target_date: goal.targetDate,
-          goal_type: goal.goalType,
-          icon: goal.icon,
-          color: goal.color,
-          status: goal.status,
-        }),
+        body: JSON.stringify(updateData),
       });
 
       if (response.ok) {
@@ -330,38 +335,5 @@ export default {
     }
   },
 
-  // Mock data fallback
-  getMockGoals(): Goal[] {
-    return [
-      {
-        id: '1',
-        name: 'Emergency Fund',
-        description: 'Build an emergency fund for unexpected expenses',
-        targetAmount: 10000,
-        currentAmount: 3500,
-        targetDate: new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active',
-        goalType: 'emergency',
-        icon: 'shield',
-        color: '#FF6B6B',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        name: 'Vacation Fund',
-        description: 'Save for a dream vacation',
-        targetAmount: 5000,
-        currentAmount: 1200,
-        targetDate: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active',
-        goalType: 'travel',
-        icon: 'airplane',
-        color: '#4ECDC4',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-    ];
-  }
 };
 

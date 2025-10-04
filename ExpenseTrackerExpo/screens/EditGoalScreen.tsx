@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import WheelDatePicker from '../components/WheelDatePicker';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GoalService from '../services/GoalService';
@@ -52,7 +52,7 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
   
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  // Using WheelDatePicker; no inline native picker toggle needed
 
   const icons = ['🎯', '💰', '🏠', '🚗', '✈️', '🎓', '💍', '🏥', '📱', '💻', '🎮', '📚', '🏋️', '🎨', '🎵', '🍕', '☕', '🌴', '🏖️', '🎪', '🎭', '🎨', '📸', '🎬', '🎤', '🎧', '🎹', '🎸', '🥁', '🎺', '🎻', '🎷', '🎺', '🎸', '🎹', '🎤', '🎧', '🎬', '📸', '🎨', '🎭', '🎪', '🏖️', '🌴', '☕', '🍕', '🎵', '🏋️', '📚', '🎮', '💻', '📱', '🏥', '💍', '🎓', '✈️', '🚗', '🏠', '💰', '🎯'];
 
@@ -102,6 +102,8 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
         ...goal,
         name: goalName.trim(),
         targetAmount: amount,
+        targetDate: deadline,
+        goalType: category.trim(),
         icon: selectedIcon,
         color: selectedColor,
         deadline: deadline,
@@ -292,42 +294,16 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
         {/* Deadline Input */}
         <View style={styles.inputSection}>
           <Text style={styles.inputLabel} allowFontScaling={false}>Deadline</Text>
-          <TouchableOpacity
-            style={styles.deadlinePickerButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <View style={styles.deadlinePickerContent}>
-              <Text style={styles.deadlinePreview} allowFontScaling={false}>
-                {deadlineDate.toLocaleDateString('en-US', { 
-                  month: 'long', 
-                  day: 'numeric', 
-                  year: 'numeric' 
-                })}
-              </Text>
-              <Text style={styles.deadlinePickerButtonText} allowFontScaling={false}>Change Date</Text>
-            </View>
-          </TouchableOpacity>
-          
-          {showDatePicker && (
-            <View style={styles.datePickerContainer}>
-              <DateTimePicker
-                value={deadlineDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) {
-                    setDeadlineDate(selectedDate);
-                    setDeadline(selectedDate.toISOString());
-                  }
-                  const action = event?.type;
-                  if (action === 'set' || Platform.OS === 'ios') {
-                    setShowDatePicker(false);
-                  }
-                }}
-                style={styles.picker}
-              />
-            </View>
-          )}
+          <View style={styles.datePickerContainer}>
+            <WheelDatePicker
+              selectedDate={deadlineDate}
+              onDateChange={(d: Date) => {
+                setDeadlineDate(d);
+                setDeadline(d.toISOString());
+              }}
+              placeholder="Select a deadline"
+            />
+          </View>
         </View>
 
         {/* Category Input */}
@@ -685,8 +661,8 @@ const createStyles = (theme: any) => StyleSheet.create({
      color: theme.colors?.textSecondary || '#8E8E93',
    },
   datePickerContainer: {
-    marginTop: 12,
-    alignItems: 'center',
+    marginTop: 8,
+    alignItems: 'stretch',
   },
   picker: {
     width: 200,

@@ -16,12 +16,14 @@ import {
   Bell,
   FileSearch,
   Send,
-  Image
+  Image,
+  MessageSquare
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Users', href: '/users', icon: Users },
+  { name: 'Support Tickets', href: '/support-tickets', icon: MessageSquare },
   { name: 'Promotional Ads', href: '/banners', icon: Image },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Financial', href: '/financial', icon: DollarSign },

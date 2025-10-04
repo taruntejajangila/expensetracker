@@ -12,8 +12,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import NotificationNavigationService from '../services/NotificationNavigationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NotificationScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -33,16 +36,121 @@ const NotificationScreen: React.FC = () => {
     refreshNotifications();
   }, []);
 
-  const handleNotificationPress = (notification: any) => {
+  const handleNotificationPress = async (notification: any) => {
+    console.log('🔔 handleNotificationPress called with notification:', notification);
+    console.log('🔔 Notification data:', notification.data);
+    
     // Mark as read when pressed
     markAsRead(notification.id);
     
     // Handle notification data if available
     if (notification.data) {
-      // Navigate based on notification data
-      if (notification.data.screen) {
+      console.log('🔔 Processing notification data...');
+      console.log('🔔 Data type:', notification.data.type);
+      console.log('🔔 Custom notification ID:', notification.data.customNotificationId);
+      
+      // Check if it's a custom notification
+      if (notification.data.type === 'custom' && notification.data.customNotificationId) {
+        console.log('📱 Custom notification detected! Fetching full content...');
+        console.log('📱 Custom notification ID:', notification.data.customNotificationId);
+        
+        try {
+          // Fetch full custom notification content
+          const authToken = await AsyncStorage.getItem('authToken');
+          if (!authToken) {
+            console.error('❌ No auth token available');
+            return;
+          }
+
+          const API_BASE_URL = 'http://192.168.1.4:5000/api';
+          const response = await fetch(`${API_BASE_URL}/notifications/custom/${notification.data.customNotificationId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const customData = await response.json();
+            console.log('📱 Fetched custom notification content:', customData);
+            
+            // Navigate with full custom content
+            const navigateAction = CommonActions.navigate({
+              name: 'NotificationDetail',
+              params: {
+                notificationId: notification.data.customNotificationId,
+                notification: {
+                  id: customData.id || notification.data.customNotificationId,
+                  title: customData.title || notification.title,
+                  body: customData.body || notification.body,
+                  type: customData.type || notification.data.notificationType || 'general',
+                  publishedAt: customData.publishedAt || notification.createdAt,
+                  author: customData.author || 'System',
+                  content: customData.content || customData.body || notification.body,
+                  actionButton: customData.actionButton,
+                  tags: customData.tags,
+                  imageUrl: customData.imageUrl
+                }
+              }
+            });
+            
+            console.log('📱 Using CommonActions.navigate with full content');
+            navigation.dispatch(navigateAction);
+            console.log('✅ Navigation with full content completed');
+          } else {
+            console.error('❌ Failed to fetch custom content, using basic data');
+            // Fallback to basic navigation
+            const navigateAction = CommonActions.navigate({
+              name: 'NotificationDetail',
+              params: {
+                notificationId: notification.data.customNotificationId,
+                notification: {
+                  id: notification.data.customNotificationId,
+                  title: notification.title,
+                  body: notification.body,
+                  type: notification.data.notificationType || 'general',
+                  publishedAt: notification.createdAt,
+                  author: 'System',
+                  content: notification.body,
+                  actionButton: notification.data.actionButton,
+                  tags: notification.data.tags
+                }
+              }
+            });
+            navigation.dispatch(navigateAction);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching custom content:', error);
+          // Fallback to basic navigation
+          const navigateAction = CommonActions.navigate({
+            name: 'NotificationDetail',
+            params: {
+              notificationId: notification.data.customNotificationId,
+              notification: {
+                id: notification.data.customNotificationId,
+                title: notification.title,
+                body: notification.body,
+                type: notification.data.notificationType || 'general',
+                publishedAt: notification.createdAt,
+                author: 'System',
+                content: notification.body,
+                actionButton: notification.data.actionButton,
+                tags: notification.data.tags
+              }
+            }
+          });
+          navigation.dispatch(navigateAction);
+        }
+      } else if (notification.data.screen) {
+        console.log('🔔 Regular notification with screen navigation');
+        // Handle other notification types with screen navigation
         navigation.navigate(notification.data.screen as never);
+      } else {
+        console.log('🔔 No specific navigation for this notification type');
       }
+    } else {
+      console.log('🔔 No notification data available');
     }
   };
 

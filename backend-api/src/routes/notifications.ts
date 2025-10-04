@@ -1,440 +1,361 @@
-import { Router } from 'express';
+import express from 'express';
+import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth';
-import { verifyAccessToken } from '../utils/authUtils';
-import { notificationService, PushNotificationData } from '../services/notificationService';
 import { logger } from '../utils/logger';
-import { getUserById } from '../utils/userUtils';
+import notificationService from '../services/notificationService';
+import { getPool } from '../config/database';
 
-const router = Router();
+const router = express.Router();
 
-/**
- * Register push notification token
- * POST /api/notifications/register-token
- */
-router.post('/register-token', authenticateToken, async (req, res) => {
+// Validation middleware for token registration
+const validateTokenRegistration = [
+  body('token').isString().notEmpty().withMessage('Push token is required'),
+  body('platform').optional().isIn(['ios', 'android', 'web', 'mobile']).withMessage('Invalid platform'),
+  body('deviceInfo').optional().isObject().withMessage('Device info must be an object'),
+];
+
+// POST /api/notifications/register - Register push notification token
+router.post('/register', authenticateToken, validateTokenRegistration, async (req: any, res: any) => {
   try {
-    const { token, platform, deviceId } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    if (!token || !platform) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Token and platform are required' 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
 
-    if (!['ios', 'android'].includes(platform)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Platform must be either ios or android' 
-      });
+    const userId = req.user.id;
+    const { token, platform = 'mobile', deviceInfo } = req.body;
+
+    // Store the token in the database
+    try {
+      await notificationService.registerToken(
+        userId,
+        token,
+        platform as 'ios' | 'android',
+        deviceInfo?.modelName
+      );
+      logger.info(`Push token registered for user ${userId}: ${token} (platform: ${platform})`);
+    } catch (dbError) {
+      logger.error('Error storing notification token:', dbError);
+      // Continue with response even if database storage fails
+    }
+    
+    if (deviceInfo) {
+      logger.info(`Device info: ${JSON.stringify(deviceInfo)}`);
     }
 
-    await notificationService.registerToken(userId, token, platform, deviceId);
-
-    logger.info(`Push notification token registered for user ${userId}`);
-    return res.json({ 
-      success: true, 
-      message: 'Push notification token registered successfully' 
-    });
-  } catch (error) {
-    logger.error('Error registering push notification token:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to register push notification token' 
-    });
-  }
-});
-
-/**
- * Deactivate push notification token
- * DELETE /api/notifications/token
- */
-router.delete('/token', authenticateToken, async (req, res) => {
-  try {
-    const { token } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    if (!token) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Token is required' 
-      });
-    }
-
-    await notificationService.deactivateToken(token, userId);
-
-    logger.info(`Push notification token deactivated for user ${userId}`);
-    return res.json({ 
-      success: true, 
-      message: 'Push notification token deactivated successfully' 
-    });
-  } catch (error) {
-    logger.error('Error deactivating push notification token:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to deactivate push notification token' 
-    });
-  }
-});
-
-/**
- * Get user's notification tokens (for debugging)
- * GET /api/notifications/tokens
- */
-router.get('/tokens', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    const tokens = await notificationService.getUserTokens(userId);
-
-    return res.json({ 
-      success: true, 
-      data: { tokens } 
-    });
-  } catch (error) {
-    logger.error('Error getting user notification tokens:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to get notification tokens' 
-    });
-  }
-});
-
-/**
- * Send push notification to specific user (Admin only)
- * POST /api/notifications/send
- */
-router.post('/send', async (req, res) => {
-  try {
-    const { title, body, data, userId, userEmail, targetAll } = req.body;
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.substring(7);
-
-    // Handle test tokens for development
-    if (token && (token.includes('test-dev-') || token.includes('expo-go-mock-'))) {
-      logger.info('Development mode: Processing notification with test token');
-      
-      if (!title || !body) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Title and body are required' 
-        });
+    res.json({
+      success: true,
+      message: 'Push token registered successfully',
+      data: {
+        userId,
+        token,
+        platform,
+        deviceInfo,
+        registeredAt: new Date().toISOString()
       }
+    });
+  } catch (error: any) {
+    logger.error('Error registering push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register push token',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 
-      // Store notification in in-memory array for mobile app polling
-      const notification = {
-        id: Date.now(),
-        title,
-        body,
-        data: data || {},
-        createdAt: new Date().toISOString()
-      };
-      recentNotifications.unshift(notification);
-      
-      // Keep only last 50 notifications
-      if (recentNotifications.length > 50) {
-        recentNotifications = recentNotifications.slice(0, 50);
+// GET /api/notifications - Get user notifications
+router.get('/', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+    
+    // Fetch notifications from database
+    const notifications = await notificationService.getUserNotifications(userId);
+
+    logger.info(`Retrieved ${notifications.length} notifications for user ${userId}`);
+
+    res.json({
+      success: true,
+      data: notifications,
+      message: 'Notifications retrieved successfully'
+    });
+  } catch (error: any) {
+    logger.error('Error retrieving notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve notifications',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// POST /api/notifications/:id/read - Mark notification as read
+router.post('/:id/read', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+    const notificationId = req.params.id;
+
+    // Update notification as read in database
+    const pool = getPool();
+    const result = await pool.query(`
+      UPDATE notifications 
+      SET read_at = NOW() 
+      WHERE id = $1 AND (target_user_id = $2 OR target_user_id IS NULL)
+      RETURNING id, read_at
+    `, [notificationId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found or not accessible to user'
+      });
+    }
+
+    logger.info(`Notification ${notificationId} marked as read by user ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Notification marked as read',
+      data: {
+        notificationId,
+        userId,
+        readAt: result.rows[0].read_at
       }
+    });
+  } catch (error: any) {
+    logger.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as read',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 
-      return res.json({ 
-        success: true, 
-        message: 'Test notification sent successfully' 
-      });
-    }
+// POST /api/notifications/mark-all-read - Mark all notifications as read
+router.post('/mark-all-read', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
 
-    // For production tokens, use normal authentication
-    // We need to manually authenticate here since we removed the middleware
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
+    // Update all notifications as read in database
+    const pool = getPool();
+    const result = await pool.query(`
+      UPDATE notifications 
+      SET read_at = NOW() 
+      WHERE (target_user_id = $1 OR target_user_id IS NULL) AND read_at IS NULL
+    `, [userId]);
 
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired access token'
-      });
-    }
+    const updatedCount = result.rowCount || 0;
 
-    // Get user from database
-    const user = await getUserById(decoded.userId);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found or inactive'
-      });
-    }
+    logger.info(`Marked ${updatedCount} notifications as read for user ${userId}`);
 
-    // Check if user is admin
-    if (user.role !== 'admin' && user.role !== 'super_admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
+    res.json({
+      success: true,
+      message: `Marked ${updatedCount} notifications as read`,
+      data: {
+        userId,
+        updatedCount,
+        readAt: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    logger.error('Error marking all notifications as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark all notifications as read',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 
-    if (!title || !body) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Title and body are required' 
-      });
-    }
-
-    const notificationData: PushNotificationData = {
+// POST /api/notifications/send - Send notification (admin only)
+router.post('/send', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { title, body, targetAll, userEmail, userEmails, data, type, customContent } = req.body;
+    
+    logger.info('📥 Received notification request:', {
       title,
       body,
-      data,
-      userId,
-      userEmail,
-      targetAll
-    };
+      targetAll,
+      userEmails,
+      type,
+      customContent: customContent ? 'Present' : 'Not present',
+      customContentType: customContent?.type,
+      customContentId: customContent?.id
+    });
 
-    let notificationResult;
+    if (!title || !body) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and body are required'
+      });
+    }
+
     if (targetAll) {
-      notificationResult = await notificationService.sendToAll(notificationData);
-      logger.info(`Push notification sent to all users by admin ${user.id}`);
-    } else {
-      if (!userId && !userEmail) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Either userId or userEmail must be provided' 
-        });
-      }
-      notificationResult = await notificationService.sendToUser(notificationData);
-      logger.info(`Push notification sent to user by admin ${user.id}`);
-    }
+      const notificationData = {
+        title,
+        body,
+        data: type === 'custom' && customContent ? {
+          type: 'custom',
+          from: 'admin_panel',
+          notificationType: customContent.type,
+          customNotificationId: customContent.id,
+          actionButton: customContent.actionButton,
+          tags: customContent.tags
+        } : (data || { type: 'admin_notification', from: 'admin_panel' }),
+        targetAll,
+        userEmail: undefined,
+        ...(type === 'custom' && customContent ? {
+          type: 'custom' as const,
+          customContent: customContent
+        } : {
+          type: 'simple' as const
+        })
+      };
 
-    return res.json({ 
-      success: true, 
-      message: 'Push notification sent successfully' 
-    });
-  } catch (error) {
-    logger.error('Error sending push notification:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to send push notification' 
-    });
-  }
-});
-
-/**
- * Get notification statistics (Admin only)
- * GET /api/notifications/stats
- */
-router.get('/stats', authenticateToken, async (req, res) => {
-  try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
-
-    const stats = await notificationService.getNotificationStats();
-
-    return res.json({ 
-      success: true, 
-      data: stats 
-    });
-  } catch (error) {
-    logger.error('Error getting notification stats:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to get notification statistics' 
-    });
-  }
-});
-
-// Simple in-memory notification store for development
-let recentNotifications: any[] = [];
-
-/**
- * Test endpoint to verify routes are working
- * GET /api/notifications/test
- */
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Notification routes are working!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-/**
- * Poll for new notifications (Mobile app)
- * GET /api/notifications/poll
- */
-router.get('/poll', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
-      });
-    }
-
-    // Get recent notifications from database (last 5 minutes)
-    const recentNotifications = await notificationService.getRecentNotifications(5);
-    
-    // Get user's notification tokens to check for token-based notifications
-    let tokenStrings: string[] = [];
-    try {
-      const userTokens = await notificationService.getUserTokens(userId);
-      tokenStrings = userTokens.map(token => token.token);
-    } catch (error) {
-      // If user has no tokens, continue with empty array
-      logger.info(`No notification tokens found for user ${userId}`);
-    }
-    
-    // Filter notifications that are relevant to this user
-    // Include notifications that are:
-    // 1. Sent to all users (target_user_id is null)
-    // 2. Sent specifically to this user (target_user_id matches)
-    // 3. Sent to user's notification tokens (target_token matches)
-    const userNotifications = recentNotifications.filter(notif => 
-      !notif.target_user_id || 
-      notif.target_user_id === userId ||
-      (notif.target_token && tokenStrings.includes(notif.target_token))
-    );
-    
-    return res.json({
-      success: true,
-      notifications: userNotifications,
-      hasNew: userNotifications.length > 0
-    });
-  } catch (error) {
-    logger.error('Error polling notifications:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to poll notifications' 
-    });
-  }
-});
-
-/**
- * Get recent notifications (Mobile app)
- * GET /api/notifications/recent
- */
-router.get('/recent', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authorization token required' 
-      });
-    }
-
-    const token = authHeader.substring(7);
-    
-    // For development mode with test tokens, return recent notifications
-    if (token.includes('test-dev-') || token.includes('expo-go-mock-')) {
-      // Filter notifications from the last 5 minutes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      const recent = recentNotifications.filter(notif => 
-        new Date(notif.createdAt) > fiveMinutesAgo
-      );
+      await notificationService.sendToAll(notificationData);
       
+      logger.info(`Notification sent to all users by admin: ${title}`);
+
       return res.json({
         success: true,
-        notifications: recent
+        message: 'Notification sent to all users successfully',
+        data: {
+          title,
+          body,
+          targetAll: true,
+          userEmails: null,
+          sentAt: new Date().toISOString()
+        }
+      });
+    } else {
+      // Handle multiple users or single user
+      const emails = userEmails || (userEmail ? [userEmail] : []);
+      
+      if (emails.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one user email is required when not targeting all users'
+        });
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      // Send to each user individually
+      for (const email of emails) {
+        try {
+          const notificationData = {
+            title,
+            body,
+            data: data || { type: 'admin_notification', from: 'admin_panel' },
+            targetAll: false,
+            userEmail: email,
+            ...(type === 'custom' && customContent ? {
+              type: 'custom' as const,
+              customContent: customContent
+            } : {
+              type: 'simple' as const
+            })
+          };
+
+          await notificationService.sendToUser(notificationData);
+          successCount++;
+        } catch (error: any) {
+          errorCount++;
+          errors.push({ email, error: error.message });
+          logger.error(`Failed to send notification to ${email}:`, error);
+        }
+      }
+
+      logger.info(`Notification sent by admin: ${title} - ${successCount} successful, ${errorCount} failed`);
+
+      res.json({
+        success: errorCount === 0,
+        message: errorCount === 0 
+          ? `Notification sent to ${successCount} user(s) successfully`
+          : `Notification sent to ${successCount} user(s), ${errorCount} failed`,
+        data: {
+          title,
+          body,
+          targetAll: false,
+          userEmails: emails,
+          successCount,
+          errorCount,
+          errors: errors.length > 0 ? errors : undefined,
+          sentAt: new Date().toISOString()
+        }
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error sending notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send notification',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// GET /api/notifications/custom/:id - Get custom notification content
+router.get('/custom/:id', async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Custom notification ID is required'
       });
     }
 
-    // For production tokens, return empty array for now
-    return res.json({
+    const customNotification = await notificationService.getCustomNotification(id);
+    
+    if (!customNotification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Custom notification not found'
+      });
+    }
+
+    res.json({
       success: true,
-      notifications: []
+      data: customNotification
     });
-  } catch (error) {
-    logger.error('Error getting recent notifications:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to get recent notifications' 
-    });
-  }
-});
-
-/**
- * Get notification history (Admin only)
- * GET /api/notifications/history
- */
-router.get('/history', authenticateToken, async (req, res) => {
-  try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
-
-    const { page = 1, limit = 20, days = 7 } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
-
-    const result = await notificationService.getNotificationHistory(
-      Number(days),
-      Number(limit),
-      offset
-    );
-
-    return res.json({ 
-      success: true, 
-      data: result
-    });
-  } catch (error) {
-    logger.error('Error getting notification history:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to get notification history' 
+  } catch (error: any) {
+    logger.error('Error fetching custom notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch custom notification'
     });
   }
 });
 
-/**
- * Clean up inactive tokens (Admin only)
- * POST /api/notifications/cleanup
- */
-router.post('/cleanup', authenticateToken, async (req, res) => {
+// GET /api/notifications/history - Get notification history (admin only)
+router.get('/history', authenticateToken, async (req: any, res: any) => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
+    const days = parseInt(req.query.days as string) || 7;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
 
-    const deletedCount = await notificationService.cleanupInactiveTokens();
+    const history = await notificationService.getNotificationHistory(days, limit, offset);
 
-    return res.json({ 
-      success: true, 
-      message: `Cleaned up ${deletedCount} inactive tokens`,
-      data: { deletedCount }
+    res.json({
+      success: true,
+      data: history,
+      message: 'Notification history retrieved successfully'
     });
-  } catch (error) {
-    logger.error('Error cleaning up inactive tokens:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to clean up inactive tokens' 
+  } catch (error: any) {
+    logger.error('Error retrieving notification history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve notification history',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

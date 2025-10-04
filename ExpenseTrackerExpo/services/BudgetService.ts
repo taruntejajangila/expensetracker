@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 export interface Budget {
   id: string;
@@ -25,9 +25,8 @@ const getAuthToken = async (): Promise<string> => {
       console.log('🔍 BudgetService: Retrieved auth token: Token found');
       return token;
     } else {
-      console.log('🔍 BudgetService: No auth token found, using test token');
-      // Fallback to test token for development
-      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NDRmMGExZi1kOTY4LTRmYzUtOGY0Yi01YmMxYTUyN2UxOTEiLCJlbWFpbCI6InNhbWVlcmF0ZXN0aW5nQGdtYWlsLmNvbSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzU4MzY1MTIzLCJleHAiOjE3NjA5NTcxMjN9.YgESmlfSXtL5qX6Gl3gsa4orrytp4GQAQMcVwnhNOno';
+      console.log('🔍 BudgetService: No auth token found');
+      throw new Error('No authentication token available');
     }
   } catch (error) {
     console.error('🔍 BudgetService: Error retrieving auth token:', error);
@@ -68,25 +67,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 BudgetService: Error fetching budgets:', error);
-      
-      // Fallback to mock data if backend is not available
-      console.log('🔍 BudgetService: Falling back to mock data');
-      return [
-        {
-          id: '1',
-          name: 'Monthly Budget',
-          amount: 5000,
-          spent: 3200,
-          category: 'General',
-          categoryId: '1',
-          period: 'monthly',
-          startDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -105,11 +86,15 @@ export default {
         body: JSON.stringify(budget),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log('🔍 BudgetService: Response status:', response.status);
 
       const result = await response.json();
+      console.log('🔍 BudgetService: Response data:', result);
+
+      if (!response.ok) {
+        console.error('🔍 BudgetService: Validation errors:', result.errors || result.message);
+        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+      }
       
       if (result.success) {
         console.log('🔍 BudgetService: Budget created successfully');
@@ -216,19 +201,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 BudgetService: Error fetching budget analytics:', error);
-      
-      // Fallback to mock data
-      return {
-        totalBudgeted: 5000,
-        totalSpent: 3200,
-        remainingAmount: 1800,
-        percentageSpent: 64,
-        topCategories: [
-          { name: 'Bills & Utilities', spent: 1200, percentage: 37.5 },
-          { name: 'Food & Dining', spent: 650, percentage: 20.3 },
-          { name: 'Transportation', spent: 320, percentage: 10.0 }
-        ]
-      };
+      throw error; // No fallback - cloud storage is required
     }
   }
 };

@@ -3,6 +3,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { handleNetworkError } from './NetworkErrorHandler';
 
 interface RetryOptions {
   maxRetries?: number;
@@ -45,6 +46,11 @@ class ApiClient {
       console.error('Error getting auth token:', error);
       return null;
     }
+  }
+
+  // Public method to get auth token (for FormData uploads)
+  public async getToken(): Promise<string | null> {
+    return this.getAuthToken();
   }
 
   /**
@@ -117,7 +123,7 @@ class ApiClient {
 
       console.log('🔄 ApiClient: Refreshing access token...');
       
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -150,6 +156,7 @@ class ApiClient {
       }
     } catch (error) {
       console.error('❌ ApiClient: Token refresh error:', error);
+      handleNetworkError(error);
       return null;
     }
   }
@@ -167,8 +174,8 @@ class ApiClient {
       const now = Math.floor(Date.now() / 1000);
       const timeUntilExpiry = payload.exp - now;
 
-      // Refresh if token expires within 2 hours (7200 seconds)
-      if (timeUntilExpiry < 7200 && timeUntilExpiry > 0) {
+      // Refresh if token expires within 120 seconds
+      if (timeUntilExpiry < 120 && timeUntilExpiry > 0) {
         console.log(`🔄 ApiClient: Token expires in ${Math.floor(timeUntilExpiry / 3600)} hours, refreshing proactively...`);
         await this.refreshAccessToken();
       }
@@ -258,7 +265,7 @@ class ApiClient {
         };
 
         // Add authorization header if token exists and URL is not auth-related
-        if (authToken && !url.includes('/auth/')) {
+        if (authToken) {
           headers['Authorization'] = `Bearer ${authToken}`;
         }
         
@@ -283,7 +290,10 @@ class ApiClient {
         }
 
         // Handle authentication errors with automatic token refresh
-        if (response.status === 401 && !hasTriedTokenRefresh && authToken && !url.includes('/auth/')) {
+        // Allow refresh for all non-auth endpoints AND specifically for /auth/me validation
+        const isAuthEndpoint = url.includes('/auth/');
+        const isAuthMe = url.includes('/auth/me');
+        if (response.status === 401 && !hasTriedTokenRefresh && authToken && (!isAuthEndpoint || isAuthMe)) {
           console.log('🔄 ApiClient: 401 error detected, attempting token refresh...');
           
           const newToken = await this.refreshAccessToken();
@@ -313,6 +323,9 @@ class ApiClient {
       } catch (error) {
         lastError = error as Error;
         console.error(`❌ ApiClient: Attempt ${attempt + 1} failed:`, error);
+
+        // Handle network errors
+        handleNetworkError(error);
 
         // Don't retry on certain errors
         if (this._isNonRetryableError(error as Error)) {
@@ -385,6 +398,9 @@ class ApiClient {
       } catch (error) {
         lastError = error as Error;
         console.error(`❌ ApiClient: Attempt ${attempt + 1} failed:`, error);
+
+        // Handle network errors
+        handleNetworkError(error);
 
         // Don't retry on certain errors
         if (this._isNonRetryableError(error as Error)) {
@@ -467,6 +483,20 @@ class ApiClient {
     return this.request<T>(url, {
       method: 'DELETE',
       headers,
+    });
+  }
+
+  /**
+   * Convenience method for PATCH requests with automatic token refresh
+   */
+  async patch<T = any>(url: string, data?: any, headers?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.request<T>(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: data ? JSON.stringify(data) : undefined,
     });
   }
 }

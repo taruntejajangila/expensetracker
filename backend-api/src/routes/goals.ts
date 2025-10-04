@@ -24,7 +24,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
     logger.info(`Fetching goals for user: ${userId}`);
 
     const result = await db.query(
-      `SELECT id, name, description, target_amount, current_amount, target_date, 
+      `SELECT id, title as name, description, target_amount, current_amount, target_date, 
               status, goal_type, icon, color, created_at, updated_at
        FROM goals 
        WHERE user_id = $1 
@@ -60,7 +60,7 @@ router.get('/:id', async (req: express.Request, res: express.Response) => {
     logger.info(`Fetching goal ${goalId} for user: ${userId}`);
 
     const result = await db.query(
-      `SELECT id, name, description, target_amount, current_amount, target_date, 
+      `SELECT id, title as name, description, target_amount, current_amount, target_date, 
               status, goal_type, icon, color, created_at, updated_at
        FROM goals 
        WHERE id = $1 AND user_id = $2`,
@@ -114,14 +114,14 @@ router.post('/', async (req: express.Request, res: express.Response) => {
     logger.info(`Creating new goal for user: ${userId}`);
 
     const result = await db.query(
-      `INSERT INTO goals (user_id, name, description, target_amount, current_amount, 
+      `INSERT INTO goals (user_id, title, description, target_amount, current_amount, 
                          target_date, status, goal_type, icon, color, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-       RETURNING id, name, description, target_amount, current_amount, target_date, 
+       RETURNING id, title, description, target_amount, current_amount, target_date, 
                  status, goal_type, icon, color, created_at, updated_at`,
       [
         userId,
-        name,
+        name, // Use 'name' from request body for 'title' column
         description || null,
         parseFloat(targetAmount),
         0, // current_amount starts at 0
@@ -188,13 +188,13 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
 
     const result = await db.query(
       `UPDATE goals 
-       SET name = $1, description = $2, target_amount = $3, target_date = $4, 
+       SET title = $1, description = $2, target_amount = $3, target_date = $4, 
            goal_type = $5, icon = $6, color = $7, status = $8, updated_at = NOW()
        WHERE id = $9 AND user_id = $10
-       RETURNING id, name, description, target_amount, current_amount, target_date, 
+       RETURNING id, title as name, description, target_amount, current_amount, target_date, 
                  status, goal_type, icon, color, created_at, updated_at`,
       [
-        name,
+        name, // Use 'name' from request body for 'title' column
         description || null,
         parseFloat(targetAmount),
         targetDate,

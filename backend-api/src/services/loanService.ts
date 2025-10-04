@@ -590,14 +590,14 @@ class LoanService {
       termMonths: parseInt(row.term_months),
       startDate: row.start_date,
       endDate: row.end_date,
-      monthlyPayment: parseFloat(row.monthly_payment),
-      totalInterest: 0, // Not stored in database
-      totalAmount: parseFloat(row.amount), // Principal amount for now
-      remainingBalance: parseFloat(row.remaining_balance),
+      monthlyPayment: parseFloat(row.monthly_payment || 0),
+      totalInterest: 0, // Calculated field
+      totalAmount: parseFloat(row.amount), // Principal amount
+      remainingBalance: parseFloat(row.remaining_balance || row.amount),
       status: row.status,
       lender: row.lender,
-      accountNumber: undefined, // Not stored in database
-      notes: undefined, // Not stored in database
+      accountNumber: row.account_number, // Fixed: was undefined
+      notes: row.notes, // Fixed: was undefined
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };

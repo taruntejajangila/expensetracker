@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { categoryService } from './CategoryService';
 import DailyReminderService from './DailyReminderService';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 export interface Transaction {
   id: string;
@@ -203,56 +203,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error fetching transactions:', error);
-      console.log('🔍 TransactionService: Falling back to mock data');
-      
-      // Fallback to mock data if cloud database is unavailable
-      const mockTransactions = [
-        {
-          id: '1',
-          accountId: '1',
-          type: 'expense',
-          amount: 1200,
-          title: 'Lunch at restaurant',
-          category: 'Food & Dining',
-          description: 'Lunch at restaurant',
-          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'restaurant',
-          color: '#FF6B6B',
-          categoryicon: 'restaurant',
-          categorycolor: '#FF6B6B',
-        },
-        {
-          id: '2',
-          accountId: '1',
-          type: 'expense',
-          amount: 500,
-          title: 'Fuel for car',
-          category: 'Transportation',
-          description: 'Fuel for car',
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'car',
-          color: '#4ECDC4',
-          categoryicon: 'car',
-          categorycolor: '#4ECDC4',
-        },
-        {
-          id: '3',
-          accountId: '1',
-          type: 'income',
-          amount: 25000,
-          title: 'Freelance work',
-          category: 'Freelance',
-          description: 'Monthly freelance payment',
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'laptop',
-          color: '#F7DC6F',
-          categoryicon: 'laptop',
-          categorycolor: '#F7DC6F',
-        }
-      ];
-      
-      // Enrich mock data with category information as well
-      return await enrichTransactionsWithCategories(mockTransactions);
+      throw error; // No fallback - cloud storage is required
     }
   },
   
@@ -351,35 +302,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error fetching transactions:', error);
-      console.log('🔍 TransactionService: Falling back to mock data');
-      
-      // Fallback to mock data if cloud database is unavailable
-      return [
-        {
-          id: '1',
-          accountId: '1',
-          type: 'expense',
-          amount: 1200,
-          title: 'Lunch at restaurant',
-          category: 'Food & Dining',
-          description: 'Lunch at restaurant',
-          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'restaurant',
-          color: '#FF6B6B',
-        },
-        {
-          id: '3',
-          accountId: '1',
-          type: 'income',
-          amount: 50000,
-          title: 'Monthly salary',
-          category: 'Salary',
-          description: 'Monthly salary',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          icon: 'cash',
-          color: '#98D8C8',
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -456,47 +379,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error fetching transactions by month:', error);
-      
-      // Fallback to mock data if backend is not available
-      console.log('🔍 TransactionService: Falling back to mock data');
-      return [
-        {
-          id: '1',
-          accountId: '1',
-          type: 'expense',
-          amount: 1200,
-          title: 'Lunch at restaurant',
-          category: 'Food & Dining',
-          description: 'Lunch at restaurant',
-          date: new Date(year, month, 15).toISOString(),
-          icon: 'restaurant',
-          color: '#FF6B6B',
-        },
-        {
-          id: '2',
-          accountId: '1',
-          type: 'expense',
-          amount: 500,
-          title: 'Fuel for car',
-          category: 'Transportation',
-          description: 'Fuel for car',
-          date: new Date(year, month, 20).toISOString(),
-          icon: 'car',
-          color: '#4ECDC4',
-        },
-        {
-          id: '3',
-          accountId: '1',
-          type: 'income',
-          amount: 25000,
-          title: 'Freelance work',
-          category: 'Freelance',
-          description: 'Monthly freelance payment',
-          date: new Date(year, month, 1).toISOString(),
-          icon: 'laptop',
-          color: '#F7DC6F',
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -541,19 +424,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error adding transaction:', error);
-      console.log('🔍 TransactionService: Falling back to mock response');
-      
-      // Fallback to mock response if cloud database is unavailable
-      console.log('Adding transaction (mock):', transaction);
-      
-      // Update daily reminder service even in fallback case
-      try {
-        await DailyReminderService.getInstance().updateLastTransactionDate();
-      } catch (error) {
-        console.error('Failed to update daily reminder service (fallback):', error);
-      }
-      
-      return { success: true, id: Date.now().toString() };
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -589,11 +460,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error updating transaction:', error);
-      console.log('🔍 TransactionService: Falling back to mock response');
-      
-      // Fallback to mock response if cloud database is unavailable
-      console.log('Updating transaction (mock):', id, transaction);
-      return { success: true };
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -628,11 +495,7 @@ export default {
       }
     } catch (error) {
       console.error('🔍 TransactionService: Error deleting transaction:', error);
-      console.log('🔍 TransactionService: Falling back to mock response');
-      
-      // Fallback to mock response if cloud database is unavailable
-      console.log('Deleting transaction (mock):', id);
-      return { success: true };
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -641,8 +504,8 @@ export default {
   },
 
   async backfillAccountIds() {
-    // Mock implementation
-    return Promise.resolve();
+    // This should be handled by the backend
+    throw new Error('backfillAccountIds not implemented - use backend API');
   }
 };
 

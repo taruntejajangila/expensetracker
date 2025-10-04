@@ -42,7 +42,7 @@ export const generateRefreshToken = (userId: string): string => {
 // JWT token verification
 export const verifyToken = (token: string, secret: string): any => {
   try {
-    return jwt.verify(token, secret);
+    return jwt.verify(token, secret, { clockTolerance: 10 });
   } catch (error) {
     logger.error('Token verification failed:', error);
     return null;

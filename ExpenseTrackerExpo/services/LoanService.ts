@@ -1,7 +1,7 @@
 // LoanService connected to backend API
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.29.14:5001/api';
+const API_BASE_URL = 'http://192.168.1.4:5000/api';
 
 const getAuthToken = async () => {
   try {
@@ -103,48 +103,7 @@ export const LoanService = {
     } catch (error) {
       console.error('🔍 LoanService: Error fetching loans:', error);
       
-      // Fallback to mock data if backend is not available
-      console.log('🔍 LoanService: Falling back to mock data');
-      return [
-        {
-          id: '1',
-          name: 'Car Loan',
-          principal: 25000, // Changed from principalAmount to principal
-          interestRate: 4.5,
-          tenureMonths: 60, // Changed from termMonths to tenureMonths
-          monthlyPayment: 465.25,
-          remainingBalance: 18500,
-          emiStartDate: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString(), // Changed from startDate to emiStartDate
-          nextPaymentDate: new Date(Date.now() + 1 * 30 * 24 * 60 * 60 * 1000).toISOString(), // Added nextPaymentDate
-          endDate: new Date(Date.now() + 54 * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          lender: 'Chase Bank',
-          type: 'auto',
-          status: 'active',
-          color: '#007AFF',
-          icon: 'car',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Student Loan',
-          principal: 15000, // Changed from principalAmount to principal
-          interestRate: 3.2,
-          tenureMonths: 120, // Changed from termMonths to tenureMonths
-          monthlyPayment: 145.50,
-          remainingBalance: 12000,
-          emiStartDate: new Date(Date.now() - 12 * 30 * 24 * 60 * 60 * 1000).toISOString(), // Changed from startDate to emiStartDate
-          nextPaymentDate: new Date(Date.now() + 1 * 30 * 24 * 60 * 60 * 1000).toISOString(), // Added nextPaymentDate
-          endDate: new Date(Date.now() + 108 * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          lender: 'Federal Student Aid',
-          type: 'student',
-          status: 'active',
-          color: '#34C759',
-          icon: 'school',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ];
+      throw error; // No fallback - cloud storage is required
     }
   },
 
@@ -299,14 +258,13 @@ export const LoanService = {
   },
 
   async getLocalLoanCount() {
-    // Mock implementation
-    return 0;
+    // This should be handled by the backend
+    throw new Error('getLocalLoanCount not implemented - use backend API');
   },
 
   async clearLocalLoans() {
-    // Mock implementation
-    console.log('Clearing local loans');
-    return { success: true };
+    // This should be handled by the backend
+    throw new Error('clearLocalLoans not implemented - use backend API');
   }
 };
 

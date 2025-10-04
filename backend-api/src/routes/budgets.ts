@@ -11,7 +11,7 @@ const pool = getPool();
 const validateBudgetInput = [
   body('name').notEmpty().withMessage('Budget name is required'),
   body('amount').isNumeric().withMessage('Amount must be a number'),
-  body('categoryId').isUUID().withMessage('Category ID must be a valid UUID'),
+  body('categoryId').notEmpty().withMessage('Category ID is required'),
   body('period').isIn(['monthly', 'yearly']).withMessage('Period must be monthly or yearly'),
   body('startDate').isISO8601().withMessage('Start date must be a valid date'),
   body('endDate').isISO8601().withMessage('End date must be a valid date'),
@@ -20,7 +20,7 @@ const validateBudgetInput = [
 const validateBudgetUpdate = [
   body('name').optional().notEmpty().withMessage('Budget name cannot be empty if provided'),
   body('amount').optional().isNumeric().withMessage('Amount must be a number if provided'),
-  body('categoryId').optional().isUUID().withMessage('Category ID must be a valid UUID if provided'),
+  body('categoryId').optional().notEmpty().withMessage('Category ID cannot be empty if provided'),
   body('period').optional().isIn(['monthly', 'yearly']).withMessage('Period must be monthly or yearly if provided'),
   body('startDate').optional().isISO8601().withMessage('Start date must be a valid date if provided'),
   body('endDate').optional().isISO8601().withMessage('End date must be a valid date if provided'),

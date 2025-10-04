@@ -24,6 +24,7 @@ const { width, height } = Dimensions.get('window');
 const RegisterScreen: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,8 +60,13 @@ const RegisterScreen: React.FC = () => {
 
   const handleRegister = async () => {
     // Validation
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim() || !confirmPassword.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (phone.trim().length !== 10 || !/^[0-9]{10}$/.test(phone.trim())) {
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -76,7 +82,7 @@ const RegisterScreen: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), email.trim(), password, phone.trim());
       Alert.alert('Success', 'Account created successfully! You are now logged in.');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message);
@@ -340,6 +346,32 @@ const RegisterScreen: React.FC = () => {
               </View>
 
               <View style={styles.inputContainer}>
+                <Text style={styles.label} allowFontScaling={false}>Phone Number</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput style={[
+                      styles.input,
+                      focusedInput === 'phone' && styles.inputFocused,
+                    ]}
+                    placeholder="Enter 10-digit phone number"
+                    placeholderTextColor="#999999"
+                    value={phone}
+                    onChangeText={setPhone}
+                    onFocus={() => setFocusedInput('phone')}
+                    onBlur={() => setFocusedInput(null)}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    allowFontScaling={false}
+                  />
+                  <Ionicons 
+                    name="call-outline" 
+                    size={20} 
+                    color="#999999" 
+                    style={styles.inputIcon}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
                 <Text style={styles.label} allowFontScaling={false}>Password</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput style={[
@@ -454,6 +486,7 @@ const RegisterScreen: React.FC = () => {
                 Already have an account?{' '}
                 <Text style={styles.loginLink}
                   onPress={() => navigation.navigate('Login' as never)}
+                  allowFontScaling={false}
                 >
                   Sign In
                 </Text>

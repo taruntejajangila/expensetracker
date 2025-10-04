@@ -190,6 +190,12 @@ export default function UsersPage() {
                     <div>
                       <div className="font-medium text-gray-900">{user.name}</div>
                       <div className="text-sm text-gray-500">{user.email}</div>
+                      {user.phone && (
+                        <div className="text-sm text-gray-500 flex items-center mt-1">
+                          <span className="mr-1">📱</span>
+                          {user.phone}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="py-4 px-4">

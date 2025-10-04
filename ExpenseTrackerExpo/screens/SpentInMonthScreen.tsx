@@ -43,12 +43,17 @@ const SpentInMonthScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const insets = useSafeAreaInsets();
 
-  // Budget data will be fetched from API
-  const [totalBudget, setTotalBudget] = useState(0);
+  // Financial data
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [spentAmount, setSpentAmount] = useState(0);
+  const [remainingBalance, setRemainingBalance] = useState(0);
+  const [safeToSpendPerDay, setSafeToSpendPerDay] = useState(0);
+  const [remainingDays, setRemainingDays] = useState(0);
   const [loading, setLoading] = useState(true);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
-  const progress = totalBudget > 0 ? (spentAmount / totalBudget) * 100 : 0;
+  
+  // Calculate progress based on income vs spent
+  const progress = monthlyIncome > 0 ? (spentAmount / monthlyIncome) * 100 : 0;
   const radius = 80;
   const strokeWidth = 12;
   const circumference = 2 * Math.PI * radius;
@@ -90,9 +95,8 @@ const SpentInMonthScreen: React.FC = () => {
       console.log('🔍 SpentInMonthScreen: Total monthly expenses:', monthlyExpenses);
       setSpentAmount(monthlyExpenses);
       
-      // Set a realistic budget (you can adjust this or make it user-configurable)
-      // For demo: Use monthly income + some buffer, or set a default budget
-      const monthlyIncome = monthlyTransactions
+      // Calculate monthly income
+      const totalMonthlyIncome = monthlyTransactions
         .filter(transaction => transaction.type === 'income')
         .reduce((total, transaction) => {
           const amount = parseFloat(transaction.amount || 0);
@@ -100,14 +104,31 @@ const SpentInMonthScreen: React.FC = () => {
           return total + amount;
         }, 0);
       
-      console.log('🔍 SpentInMonthScreen: Total monthly income:', monthlyIncome);
+      console.log('🔍 SpentInMonthScreen: Total monthly income:', totalMonthlyIncome);
+      setMonthlyIncome(totalMonthlyIncome);
       
-      // Set budget to monthly income or a default minimum budget of ₹5000
-      const calculatedBudget = Math.max(monthlyIncome, 5000);
-      setTotalBudget(calculatedBudget);
+      // Calculate remaining balance
+      const balance = totalMonthlyIncome - monthlyExpenses;
+      setRemainingBalance(balance);
       
-  
-          // Monthly data calculated
+      // Calculate remaining days in the month
+      const today = new Date();
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const currentDay = today.getDate();
+      const daysRemaining = lastDayOfMonth - currentDay + 1; // +1 to include today
+      setRemainingDays(daysRemaining);
+      
+      // Calculate safe to spend per day
+      const safeDaily = daysRemaining > 0 && balance > 0 ? balance / daysRemaining : 0;
+      setSafeToSpendPerDay(safeDaily);
+      
+      console.log('🔍 SpentInMonthScreen: Financial summary:', {
+        totalMonthlyIncome,
+        monthlyExpenses,
+        remainingBalance: balance,
+        daysRemaining,
+        safeToSpendPerDay: safeDaily
+      });
       
       setLoading(false);
     } catch (error) {
@@ -281,12 +302,12 @@ const SpentInMonthScreen: React.FC = () => {
       color: theme.colors.textSecondary,
       marginBottom: 4,
     },
-         detailValue: {
-       fontSize: 16,
-       fontWeight: 'bold',
-       color: theme.colors.text,
-     },
-     card: {
+    detailValue: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+    },
+    card: {
        backgroundColor: '#FFFFFF',
        borderRadius: 16,
        padding: theme.spacing.lg,
@@ -554,24 +575,24 @@ const SpentInMonthScreen: React.FC = () => {
           
           <View style={styles.progressDetails}>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel} allowFontScaling={false}>Spent</Text>
-              <Text style={[styles.detailValue, { color: '#FF3B30' }]} allowFontScaling={false}>
-                {loading ? '--' : `₹${spentAmount.toLocaleString()}`}
+              <Text style={styles.detailLabel} allowFontScaling={false}>Income</Text>
+              <Text style={[styles.detailValue, { color: '#34C759' }]} allowFontScaling={false}>
+                {loading ? '--' : `₹${monthlyIncome.toLocaleString()}`}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel} allowFontScaling={false}>Remaining</Text>
-              <Text style={[styles.detailValue, { color: '#34C759' }]} allowFontScaling={false}>
-                {loading ? '--' : `₹${(totalBudget - spentAmount).toLocaleString()}`}
+              <Text style={[styles.detailValue, { color: '#007AFF' }]} allowFontScaling={false}>
+                {loading ? '--' : `₹${remainingBalance.toLocaleString()}`}
               </Text>
             </View>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel} allowFontScaling={false}>Total Budget</Text>
-              <Text style={styles.detailValue} allowFontScaling={false}>
-                {loading ? '--' : `₹${totalBudget.toLocaleString()}`}
+              <Text style={styles.detailLabel} allowFontScaling={false}>Safe to Spend</Text>
+              <Text style={[styles.detailValue, { color: '#FF9500' }]} allowFontScaling={false}>
+                {loading ? '--' : `₹${Math.floor(safeToSpendPerDay).toLocaleString()}/day`}
               </Text>
             </View>
-                     </View>
+          </View>
          </View>
          
          {/* Recent Transactions Card - Always show when not loading */}

@@ -19,7 +19,7 @@ import AccountService from '../services/AccountService';
 
 import { InterstitialAdModal } from '../components/InterstitialAdModal';
 import { BannerAd } from '../components/AdMobComponents';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import WheelDatePicker from '../components/WheelDatePicker';
 
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,7 +47,6 @@ const AddTransactionScreen = () => {
   const [category, setCategory] = useState('');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -441,8 +440,14 @@ const AddTransactionScreen = () => {
           setNote('');
           setErrors({}); // Clear errors
         } else {
-          // Navigate back immediately
-          navigation.goBack();
+          // Navigate back with refresh flag to trigger data reload
+          navigation.navigate('MainApp', { 
+            screen: 'MainTabs', 
+            params: { 
+              screen: 'Home',
+              params: { refresh: true }
+            }
+          });
         }
       } catch (error) {
         // Silent failure
@@ -963,46 +968,14 @@ const AddTransactionScreen = () => {
             </View>
           )}
 
-          {/* Date Input */}
+          {/* Date Input - Custom Wheel Date Picker */}
           <View style={styles.inputGroup}>
-            <View style={styles.outlinedInputContainer}>
-                             <Text style={styles.floatingLabel} allowFontScaling={false}>Date</Text>
-              <TouchableOpacity
-                style={styles.dateWrapper}
-                onPress={() => setShowDatePicker(!showDatePicker)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.dateText} allowFontScaling={false}>
-                  {date.getDate().toString().padStart(2, '0')}, {date.toLocaleDateString('en-US', { month: 'long' })} {date.getFullYear()}
-                </Text>
-              </TouchableOpacity>
-              
-              {showDatePicker && (
-                <View style={styles.datePickerContainer}>
-                  {/* Date Picker */}
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    onChange={(event: any, selectedDate?: Date) => {
-                      if (selectedDate) {
-                        setDate(selectedDate);
-                      }
-                      // Close after any selection, even if it's the same date (iOS inline or Android set)
-                      const action = event?.type;
-                      if (action === 'set' || Platform.OS === 'ios') {
-                        setShowDatePicker(false);
-                      }
-                    }}
-                    style={styles.picker}
-                  />
-                  
-                  <Text style={styles.selectedDateText} allowFontScaling={false}>
-                    Selected: {date.getDate().toString().padStart(2, '0')}, {date.toLocaleDateString('en-US', { month: 'long' })} {date.getFullYear()}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <WheelDatePicker
+              selectedDate={date}
+              onDateChange={setDate}
+              label="Date"
+              placeholder="Select transaction date"
+            />
           </View>
 
           {/* Note Input */}
@@ -1284,7 +1257,7 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     left: 12,
     backgroundColor: theme.colors.background,
     paddingHorizontal: 4,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000000',
     zIndex: 1,
@@ -1301,7 +1274,7 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     height: 56,
   },
   currencySymbol: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
     marginRight: 8,
@@ -1310,7 +1283,7 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   amountInput: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
     textAlignVertical: 'center',
@@ -1498,13 +1471,13 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     elevation: 5,
   },
   saveButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
   },
   saveAndAddButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',

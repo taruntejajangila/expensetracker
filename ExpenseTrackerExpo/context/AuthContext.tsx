@@ -6,16 +6,19 @@ interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   avatar?: string;
   createdAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   clearAllUserData: () => Promise<void>;
+  refreshToken: () => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -39,33 +42,123 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         console.log('🔍 AuthContext: Found stored token, validating...');
-        
-        // Validate token with backend using ApiClient
-        const API_BASE_URL = 'http://192.168.29.14:5001/api';
+        const API_BASE_URL = 'http://192.168.1.4:5000/api';
         const apiClient = ApiClient.getInstance();
-        
+
         try {
           const userData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
             'Authorization': `Bearer ${token}`,
           });
-          
+
           if (userData.success && userData.data) {
             const user: User = {
               id: userData.data.id,
               email: userData.data.email,
               name: userData.data.name,
+              phone: userData.data.phone,
               avatar: undefined,
               createdAt: userData.data.createdAt,
             };
             setUser(user);
-            console.log('🔍 AuthContext: User restored from valid token');
+            
+            // Cache user data for offline mode
+            await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
+            console.log('🔍 AuthContext: User restored from valid token and cached for offline mode');
           } else {
-            console.log('🔍 AuthContext: Invalid token response, clearing...');
+            console.log('🔍 AuthContext: Invalid token response, attempting refresh...');
+            // Try one refresh before clearing
+            const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+            if (storedRefreshToken) {
+              const refreshOk = await refreshToken();
+              if (refreshOk) {
+                const newToken = await AsyncStorage.getItem('authToken');
+                if (newToken) {
+                  const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
+                    'Authorization': `Bearer ${newToken}`,
+                  });
+                  if (retryData.success && retryData.data) {
+                    const retryUser: User = {
+                      id: retryData.data.id,
+                      email: retryData.data.email,
+                      name: retryData.data.name,
+                      phone: retryData.data.phone,
+                      avatar: undefined,
+                      createdAt: retryData.data.createdAt,
+                    };
+                    setUser(retryUser);
+                    console.log('🔍 AuthContext: User restored after refresh');
+                    return;
+                  }
+                }
+              }
+            }
+            // If refresh failed
             await AsyncStorage.clear();
             setUser(null);
           }
         } catch (error) {
-          console.log('🔍 AuthContext: Token validation error, clearing...', error);
+          console.log('🔍 AuthContext: Token validation error, checking if it\'s network issue...', error);
+          
+          // Check if it's a network error (no internet)
+          const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+          const isTimeoutError = error instanceof Error && (error.message.includes('timeout') || error.message.includes('network'));
+          
+          if (isNetworkError || isTimeoutError) {
+            console.log('🔍 AuthContext: Network error detected - keeping user logged in with stored data');
+            
+            // Try to get cached user data from AsyncStorage
+            try {
+              const cachedUserData = await AsyncStorage.getItem('cachedUserData');
+              if (cachedUserData) {
+                const user: User = JSON.parse(cachedUserData);
+                setUser(user);
+                console.log('🔍 AuthContext: User restored from cache (offline mode)');
+                return;
+              }
+            } catch (cacheError) {
+              console.log('🔍 AuthContext: No cached user data available');
+            }
+            
+            // If no cached data, but we have a token, assume user is valid (offline mode)
+            console.log('🔍 AuthContext: No internet - user stays logged in (offline mode)');
+            setUser({ 
+              id: 'offline-user', 
+              email: 'offline@user.com', 
+              name: 'Offline User',
+              createdAt: new Date().toISOString()
+            } as User);
+            return;
+          }
+          
+          // If it's not a network error, proceed with normal token refresh
+          console.log('🔍 AuthContext: Non-network error, attempting token refresh...');
+          const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+          if (storedRefreshToken) {
+            const refreshOk = await refreshToken();
+            if (refreshOk) {
+              const newToken = await AsyncStorage.getItem('authToken');
+              if (newToken) {
+                try {
+                  const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
+                    'Authorization': `Bearer ${newToken}`,
+                  });
+                  if (retryData.success && retryData.data) {
+                    const retryUser: User = {
+                      id: retryData.data.id,
+                      email: retryData.data.email,
+                      name: retryData.data.name,
+                      phone: retryData.data.phone,
+                      avatar: undefined,
+                      createdAt: retryData.data.createdAt,
+                    };
+                    setUser(retryUser);
+                    console.log('🔍 AuthContext: User restored after refresh');
+                    return;
+                  }
+                } catch {}
+              }
+            }
+          }
           await AsyncStorage.clear();
           setUser(null);
         }
@@ -86,7 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting login process...');
       
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
       
       // Call the backend login API with retry logic
@@ -108,6 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: userData.id,
           email: userData.email,
           name: userData.name,
+          phone: userData.phone,
           avatar: undefined,
           createdAt: userData.createdAt,
         };
@@ -124,7 +218,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('🔍 AuthContext: Auth tokens stored successfully');
         
         setUser(user);
-        console.log('✅ AuthContext: Login successful - cloud data only');
+        
+        // Cache user data for offline mode
+        await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
+        console.log('✅ AuthContext: Login successful - cloud data only, cached for offline mode');
       } else {
         throw new Error(result.message || 'Login failed');
       }
@@ -136,20 +233,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      console.log('🔄 AuthContext: Attempting token refresh...');
+      
+      const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+      if (!storedRefreshToken) {
+        console.log('🔄 AuthContext: No refresh token found');
+        return false;
+      }
+
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      });
+
+      if (!response.ok) {
+        console.log('🔄 AuthContext: Token refresh failed');
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('🔄 AuthContext: Token refreshed successfully');
+      
+      // Store new access token
+      await AsyncStorage.setItem('authToken', data.data.accessToken);
+      
+      return true;
+    } catch (error) {
+      console.error('🔄 AuthContext: Token refresh error:', error);
+      return false;
+    }
+  };
+
+  const register = async (name: string, email: string, password: string, phone?: string) => {
     try {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting registration process...');
       
-      const API_BASE_URL = 'http://192.168.29.14:5001/api';
+      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
       
       // Call the backend registration API with retry logic
-      const result = await apiClient.post(`${API_BASE_URL}/auth/register`, {
+      const registerData: any = {
         name: name,
         email: email,
         password: password
-      });
+      };
+      
+      if (phone) {
+        registerData.phone = phone;
+      }
+      
+      const result = await apiClient.post(`${API_BASE_URL}/auth/register`, registerData);
 
       console.log('🔍 AuthContext: Registration API success:', result);
 
@@ -234,10 +374,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
+    setUser,
     login,
     register,
     logout,
     clearAllUserData,
+    refreshToken,
     isLoading,
   };
 
@@ -255,4 +397,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
+
 

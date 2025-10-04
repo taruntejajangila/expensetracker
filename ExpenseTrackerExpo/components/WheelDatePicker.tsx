@@ -183,32 +183,41 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
     container: {
       marginBottom: 16,
     },
-    label: {
+    inputWrapper: {
+      position: 'relative',
+    },
+    floatingLabel: {
+      position: 'absolute',
+      top: -8,
+      left: 12,
+      backgroundColor: theme.colors.background,
+      paddingHorizontal: 4,
       fontSize: 12,
-      fontWeight: '500',
+      fontWeight: '600',
       color: theme.colors.text,
-      marginBottom: 8,
+      zIndex: 1,
     },
     dateButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
       backgroundColor: theme.colors.surface,
       borderRadius: 12,
-      borderWidth: 1,
+      borderWidth: 2,
       borderColor: theme.colors.border,
+      minHeight: 40,
     },
     dateText: {
       fontSize: 14,
       color: theme.colors.text,
-      fontWeight: '500',
+      fontWeight: '600',
     },
     placeholderText: {
-      fontSize: 12,
+      fontSize: 14,
       color: theme.colors.textSecondary,
-      fontWeight: '400',
+      fontWeight: '600',
     },
     icon: {
       marginLeft: 8,
@@ -403,10 +412,15 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label} allowFontScaling={false}>{label}</Text>}
-      
-      <TouchableOpacity
-        style={styles.dateButton}
+      <View style={styles.inputWrapper}>
+        {label && (
+          <Text style={styles.floatingLabel} allowFontScaling={false}>
+            {label}
+          </Text>
+        )}
+        
+        <TouchableOpacity
+          style={styles.dateButton}
         onPress={() => {
           if (!disabled) {
             setTempDate(selectedDate);
@@ -442,6 +456,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
           style={styles.icon}
         />
       </TouchableOpacity>
+      </View>
 
       <Modal
         visible={showDatePicker}

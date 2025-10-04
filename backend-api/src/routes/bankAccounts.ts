@@ -38,7 +38,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
     
     const query = `
       SELECT 
-        id, name, bank_name, account_type, balance, currency, 
+        id, account_name, bank_name, account_type, balance, currency, 
         account_number, account_holder_name, is_active as status, updated_at as last_updated,
         created_at, updated_at
       FROM bank_accounts 
@@ -54,9 +54,9 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
       success: true,
       data: result.rows.map((row: any) => ({
         id: row.id,
-        name: row.name,
+        name: row.account_name,
         bankName: row.bank_name,
-        accountHolderName: row.account_holder_name || row.name, // Use account_holder_name if available, fallback to name
+        accountHolderName: row.account_holder_name || row.account_name, // Use account_holder_name if available, fallback to account_name
         type: row.account_type === 'wallet' ? 'cash' : 'bank',
         balance: parseFloat(row.balance),
         currency: row.currency || 'INR',
@@ -88,7 +88,7 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
     
     const query = `
       SELECT 
-        id, name, bank_name, account_type, balance, currency, 
+        id, account_name, bank_name, account_type, balance, currency, 
         account_number, account_holder_name, is_active as status, updated_at as last_updated,
         created_at, updated_at
       FROM bank_accounts 
@@ -110,9 +110,9 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
       success: true,
       data: {
         id: account.id,
-        name: account.name,
+        name: account.account_name,
         bankName: account.bank_name,
-        accountHolderName: account.account_holder_name || account.name, // Use account_holder_name if available, fallback to name
+        accountHolderName: account.account_holder_name || account.account_name, // Use account_holder_name if available, fallback to account_name
         type: account.account_type === 'wallet' ? 'cash' : 'bank',
         balance: parseFloat(account.balance),
         currency: account.currency || 'INR',
@@ -156,12 +156,12 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     
     // Check for duplicate accounts
     const duplicateCheckQuery = `
-      SELECT id, name, bank_name, account_number 
+      SELECT id, account_name, bank_name, account_number 
       FROM bank_accounts 
       WHERE user_id = $1 
       AND (
         (account_number = $2 AND account_number != '') 
-        OR (name = $3)
+        OR (account_name = $3)
         OR (bank_name = $4 AND account_number = $2 AND account_number != '')
       )
     `;
@@ -175,7 +175,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       
       if (duplicates.some((d: any) => d.account_number === accountNumber && d.account_number !== '')) {
         errorMessage += `Account number ${accountNumber} is already in use`;
-      } else if (duplicates.some((d: any) => d.name === name)) {
+      } else if (duplicates.some((d: any) => d.account_name === name)) {
         errorMessage += `Account nickname "${name}" is already in use`;
       } else if (duplicates.some((d: any) => d.bank_name === bankName && d.account_number === accountNumber)) {
         errorMessage += `Account with bank ${bankName} and number ${accountNumber} already exists`;
@@ -191,7 +191,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     
     const query = `
       INSERT INTO bank_accounts (
-        user_id, name, bank_name, account_type, balance, currency,
+        user_id, account_name, bank_name, account_type, balance, currency,
         account_number, account_holder_name, is_active, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING *
@@ -212,9 +212,9 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       message: 'Bank account created successfully',
       data: {
         id: newAccount.id,
-        name: newAccount.name,
+        name: newAccount.account_name,
         bankName: newAccount.bank_name,
-        accountHolderName: newAccount.account_holder_name || newAccount.name, // Use account_holder_name if available, fallback to name
+        accountHolderName: newAccount.account_holder_name || newAccount.account_name, // Use account_holder_name if available, fallback to account_name
         type: newAccount.account_type === 'wallet' ? 'cash' : 'bank',
         balance: parseFloat(newAccount.balance),
         currency: newAccount.currency || 'INR',
@@ -271,13 +271,13 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
      // Check for duplicate accounts (excluding current account)
      if (name !== undefined || bankName !== undefined || accountNumber !== undefined) {
        const duplicateCheckQuery = `
-         SELECT id, name, bank_name, account_number 
+         SELECT id, account_name, bank_name, account_number 
          FROM bank_accounts 
          WHERE user_id = $1 
          AND id != $2
          AND (
            (account_number = $3 AND account_number != '' AND $3 != '') 
-           OR (name = $4 AND $4 != '')
+           OR (account_name = $4 AND $4 != '')
            OR (bank_name = $5 AND account_number = $3 AND account_number != '' AND $3 != '')
          )
        `;
@@ -286,7 +286,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          userId, 
          accountId, 
          accountNumber || checkResult.rows[0].account_number,
-         name || checkResult.rows[0].name,
+         name || checkResult.rows[0].account_name,
          bankName || checkResult.rows[0].bank_name
        ];
        
@@ -298,8 +298,8 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          
          if (duplicates.some((d: any) => d.account_number === (accountNumber || checkResult.rows[0].account_number) && (accountNumber || checkResult.rows[0].account_number) !== '')) {
            errorMessage += `Account number ${accountNumber || checkResult.rows[0].account_number} is already in use`;
-         } else if (duplicates.some((d: any) => d.name === (name || checkResult.rows[0].name))) {
-           errorMessage += `Account nickname "${name || checkResult.rows[0].name}" is already in use`;
+         } else if (duplicates.some((d: any) => d.account_name === (name || checkResult.rows[0].account_name))) {
+           errorMessage += `Account nickname "${name || checkResult.rows[0].account_name}" is already in use`;
          } else if (duplicates.some((d: any) => d.bank_name === (bankName || checkResult.rows[0].bank_name) && d.account_number === (accountNumber || checkResult.rows[0].account_number))) {
            errorMessage += `Account with bank ${bankName || checkResult.rows[0].bank_name} and number ${accountNumber || checkResult.rows[0].account_number} already exists`;
          }
@@ -319,7 +319,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
      let paramIndex = 1;
      
      if (name !== undefined) {
-       updateFields.push(`name = $${paramIndex++}`);
+       updateFields.push(`account_name = $${paramIndex++}`);
        updateValues.push(name);
      }
      if (bankName !== undefined) {
@@ -361,9 +361,9 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          message: 'Bank account updated successfully',
          data: {
            id: currentAccount.id,
-           name: currentAccount.name,
+           name: currentAccount.account_name,
            bankName: currentAccount.bank_name,
-           accountHolderName: currentAccount.account_holder_name || currentAccount.name,
+           accountHolderName: currentAccount.account_holder_name || currentAccount.account_name,
            type: currentAccount.account_type === 'wallet' ? 'cash' : 'bank',
            balance: parseFloat(currentAccount.balance),
            currency: currentAccount.currency || 'INR',
@@ -396,9 +396,9 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
     
     const responseData = {
       id: updatedAccount.id,
-      name: updatedAccount.name,
+      name: updatedAccount.account_name,
       bankName: updatedAccount.bank_name,
-      accountHolderName: updatedAccount.account_holder_name || updatedAccount.name, // Use account_holder_name if available, fallback to name
+      accountHolderName: updatedAccount.account_holder_name || updatedAccount.account_name, // Use account_holder_name if available, fallback to account_name
       type: updatedAccount.account_type === 'wallet' ? 'cash' : 'bank',
       balance: parseFloat(updatedAccount.balance),
       currency: updatedAccount.currency || 'INR',
@@ -482,7 +482,7 @@ router.get('/test/sync', async (req: any, res: any) => {
     
     const query = `
       SELECT 
-        id, name, bank_name, account_type, balance, currency, 
+        id, account_name, bank_name, account_type, balance, currency, 
         account_number, is_active, created_at, updated_at
       FROM bank_accounts 
       WHERE user_id = $1 
@@ -498,7 +498,7 @@ router.get('/test/sync', async (req: any, res: any) => {
       message: 'Test endpoint - accounts retrieved successfully',
       data: result.rows.map((row: any) => ({
         id: row.id,
-        name: row.name,
+        name: row.account_name,
         bankName: row.bank_name,
         accountType: row.account_type,
         balance: parseFloat(row.balance),
