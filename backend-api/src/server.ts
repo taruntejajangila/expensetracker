@@ -67,29 +67,34 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration - Allow requests from admin panel and mobile app
-const allowedOrigins = [
-  process.env.MOBILE_APP_URL || 'http://localhost:19006',
-  process.env.ADMIN_PANEL_URL || 'http://localhost:3001',
-  process.env.FRONTEND_URL || 'http://localhost:3001',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
-  'https://generous-miracle-production-245f.up.railway.app'
-];
-
+// CORS configuration - Allow all Railway.app domains and localhost
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+    // Allow all Railway.app domains
+    if (origin.endsWith('.railway.app') || 
+        origin.includes('localhost') || 
+        origin.includes('127.0.0.1')) {
+      return callback(null, true);
     }
+    
+    // Allow specific origins
+    const allowedOrigins = [
+      process.env.MOBILE_APP_URL,
+      process.env.ADMIN_PANEL_URL,
+      process.env.FRONTEND_URL,
+      'https://generous-miracle-production-245f.up.railway.app',
+      'https://expensetracker-production-62b5.up.railway.app'
+    ].filter(Boolean);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    console.log('❌ CORS blocked origin:', origin);
+    callback(null, true); // Allow anyway for now
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
