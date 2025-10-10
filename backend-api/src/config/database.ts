@@ -47,15 +47,51 @@ if (process.env.DATABASE_URL) {
 // Create connection pool
 const pool = new Pool(dbConfig);
 
-// Test database connection
+// Test database connection and initialize schema
 const testConnection = async (): Promise<void> => {
   try {
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
-    client.release();
     logger.info(`✅ Database connected successfully at ${result.rows[0].now}`);
+    
+    // Initialize database schema
+    await initializeDatabaseSchema(client);
+    
+    client.release();
   } catch (error) {
     logger.error('❌ Database connection failed:', error);
+    throw error;
+  }
+};
+
+// Initialize database schema
+const initializeDatabaseSchema = async (client: any): Promise<void> => {
+  try {
+    // Check if users table exists
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      logger.info('🔧 Initializing database schema...');
+      
+      // Read and execute schema file
+      const fs = require('fs');
+      const path = require('path');
+      const schemaPath = path.join(__dirname, 'database-schema.sql');
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      
+      await client.query(schema);
+      logger.info('✅ Database schema initialized successfully');
+    } else {
+      logger.info('✅ Database schema already exists');
+    }
+  } catch (error) {
+    logger.error('❌ Error initializing database schema:', error);
     throw error;
   }
 };
