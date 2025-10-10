@@ -105,7 +105,7 @@ export const executeTransaction = async (queries: Array<{ query: string; params?
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const results = [];
+    const results: any[] = [];
     
     for (const { query, params = [] } of queries) {
       const result = await client.query(query, params);

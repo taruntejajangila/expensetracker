@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 interface Message {
   id: string;
@@ -56,7 +57,7 @@ export const SimpleTicketProvider: React.FC<TicketProviderProps> = ({ children }
   const fetchTicketDetails = async (ticketId: string): Promise<Ticket | null> => {
     try {
       const apiClient = ApiClient.getInstance();
-      const response = await apiClient.get(`http://192.168.1.4:5000/api/support-tickets/${ticketId}`);
+      const response = await apiClient.get(`${API_BASE_URL}/support-tickets/${ticketId}`);
       
       if (response.success) {
         return response.data;

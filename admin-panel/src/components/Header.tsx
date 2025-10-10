@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { adminAPI } from '../app/services/api'
 
 export default function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -84,7 +85,13 @@ export default function Header() {
                     <span className="mr-2">⚙️</span>
                     Profile Settings
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                  <button 
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      adminAPI.logout();
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
                     <span className="mr-2">🚪</span>
                     Sign Out
                   </button>

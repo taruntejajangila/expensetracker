@@ -1,7 +1,7 @@
 // Admin Panel API Service
 // Connects to the backend API for real data
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+import { API_BASE_URL } from '../../config/api.config';
 
 export interface AdminUser {
   id: string

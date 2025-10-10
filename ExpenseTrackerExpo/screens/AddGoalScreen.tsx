@@ -449,6 +449,8 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
                 setDeadline(d.toISOString());
               }}
               placeholder="Select a deadline"
+              buttonStyle={styles.textInput}
+              textStyle={{ fontSize: 14, fontWeight: '600', color: theme.colors.text }}
             />
           </View>
         </View>

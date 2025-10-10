@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 // Configuration
-const API_BASE_URL = 'http://192.168.1.2:5000/api';
+const API_BASE_URL = 'http://192.168.29.14:5000/api';
 const ADMIN_EMAIL = 'admin@example.com'; // Replace with actual admin email
 const ADMIN_PASSWORD = 'admin123'; // Replace with actual admin password
 

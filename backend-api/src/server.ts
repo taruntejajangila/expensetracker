@@ -54,14 +54,15 @@ const PORT = process.env.PORT || 5000;
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Security middleware
+const serverUrl = process.env.SERVER_URL || 'http://localhost:5000';
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "blob:", "http://192.168.29.14:5000", "http://localhost:5000", "http://127.0.0.1:5000", "*"],
+      imgSrc: ["'self'", "data:", "blob:", serverUrl, "http://localhost:5000", "http://127.0.0.1:5000", "*"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "http://192.168.29.14:5000", "http://localhost:5000", "http://127.0.0.1:5000"],
+      connectSrc: ["'self'", serverUrl, "http://localhost:5000", "http://127.0.0.1:5000"],
     },
   },
 }));
@@ -220,7 +221,9 @@ const startServer = async () => {
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🌐 API Base URL: http://0.0.0.0:${PORT}/api`);
       logger.info(`🏥 Health Check: http://0.0.0.0:${PORT}/health`);
-      logger.info(`🌐 Network Access: http://192.168.29.14:${PORT}/api`);
+      if (process.env.SERVER_URL) {
+        logger.info(`🌐 Network Access: ${process.env.SERVER_URL}/api`);
+      }
     });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);

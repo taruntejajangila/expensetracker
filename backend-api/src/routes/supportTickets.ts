@@ -209,16 +209,41 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
 
     const ticket = ticketResult.rows[0];
 
-    // Get messages for this ticket
+    // Get messages for this ticket (from both user and admin messages)
     const messagesResult = await client.query(
       `SELECT 
-        tm.*,
+        tm.id,
+        tm.ticket_id,
+        tm.user_id,
+        tm.message,
+        tm.is_admin_reply,
+        tm.created_at,
+        tm.updated_at,
         u.name as user_name,
-        u.email as user_email
+        u.email as user_email,
+        'user' as message_type
       FROM ticket_messages tm
       LEFT JOIN users u ON tm.user_id = u.id
       WHERE tm.ticket_id = $1
-      ORDER BY tm.created_at ASC`,
+      
+      UNION ALL
+      
+      SELECT 
+        stm.id,
+        stm.ticket_id,
+        stm.user_id,
+        stm.message,
+        true as is_admin_reply,
+        stm.created_at,
+        stm.updated_at,
+        au.username as user_name,
+        au.email as user_email,
+        'admin' as message_type
+      FROM support_ticket_messages stm
+      LEFT JOIN admin_users au ON stm.admin_id = au.id
+      WHERE stm.ticket_id = $1
+      
+      ORDER BY created_at ASC`,
       [ticketId]
     );
 

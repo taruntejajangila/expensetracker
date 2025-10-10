@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 interface MessageAttachment {
   id: string;
@@ -219,7 +220,7 @@ const TicketDetailScreen: React.FC = () => {
 
         // Use fetch directly for FormData
         const token = await ApiClient.getInstance().getToken();
-        const response = await fetch(`http://192.168.1.4:5000/api/support-tickets/${ticketId}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/support-tickets/${ticketId}/messages`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -240,7 +241,7 @@ const TicketDetailScreen: React.FC = () => {
         // No attachments - use regular API
         const apiClient = ApiClient.getInstance();
         const response = await apiClient.post(
-          `http://192.168.1.4:5000/api/support-tickets/${ticketId}/messages`,
+          `${API_BASE_URL}/support-tickets/${ticketId}/messages`,
           { message: newMessage }
         );
 
@@ -275,7 +276,7 @@ const TicketDetailScreen: React.FC = () => {
             try {
               const apiClient = ApiClient.getInstance();
               const response = await apiClient.patch(
-                `http://192.168.1.4:5000/api/support-tickets/${ticketId}/close`,
+                `${API_BASE_URL}/support-tickets/${ticketId}/close`,
                 {}
               );
 
@@ -832,11 +833,11 @@ const TicketDetailScreen: React.FC = () => {
                   <TouchableOpacity
                     key={attachment.id}
                     style={styles.attachmentThumb}
-                    onPress={() => viewImage(`http://192.168.1.4:5000${attachment.file_path}`)}
+                    onPress={() => viewImage(`${API_BASE_URL.replace('/api', '')}${attachment.file_path}`)}
                     activeOpacity={0.7}
                   >
                     <Image 
-                      source={{ uri: `http://192.168.1.4:5000${attachment.file_path}` }}
+                      source={{ uri: `${API_BASE_URL.replace('/api', '')}${attachment.file_path}` }}
                       style={styles.attachmentImage}
                       resizeMode="cover"
                     />
@@ -899,11 +900,11 @@ const TicketDetailScreen: React.FC = () => {
                     {message.attachments.map((attachment) => (
                       <TouchableOpacity
                         key={attachment.id}
-                        onPress={() => viewImage(`http://192.168.1.4:5000${attachment.file_path}`)}
+                        onPress={() => viewImage(`${API_BASE_URL.replace('/api', '')}${attachment.file_path}`)}
                         activeOpacity={0.8}
                       >
                         <Image 
-                          source={{ uri: `http://192.168.1.4:5000${attachment.file_path}` }}
+                          source={{ uri: `${API_BASE_URL.replace('/api', '')}${attachment.file_path}` }}
                           style={styles.messageAttachmentImage}
                           resizeMode="cover"
                         />

@@ -16,6 +16,7 @@ import {
   Calendar,
   Flag
 } from 'lucide-react'
+import { API_BASE_URL } from '../../config/api.config'
 
 interface Ticket {
   id: string
@@ -66,7 +67,7 @@ export default function SupportTicketsPage() {
       if (priorityFilter !== 'all') params.append('priority', priorityFilter)
 
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

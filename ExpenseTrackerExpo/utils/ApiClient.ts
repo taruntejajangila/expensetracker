@@ -4,6 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { handleNetworkError } from './NetworkErrorHandler';
+import { API_BASE_URL } from '../config/api.config';
 
 interface RetryOptions {
   maxRetries?: number;
@@ -123,7 +124,6 @@ class ApiClient {
 
       console.log('🔄 ApiClient: Refreshing access token...');
       
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface Notification {
   id: string;
@@ -87,7 +88,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         return;
       }
 
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const platform = Platform.OS;
 
       const response = await fetch(`${API_BASE_URL}/notifications/register`, {
@@ -130,7 +130,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         return;
       }
 
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
 
       const result = await apiClient.get(`${API_BASE_URL}/notifications`);
@@ -169,7 +168,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
 
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
 
       const result = await apiClient.post(`${API_BASE_URL}/notifications/${notificationId}/read`);
@@ -221,7 +219,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         return;
       }
 
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
 
       const result = await apiClient.post(`${API_BASE_URL}/notifications/mark-all-read`);

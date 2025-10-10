@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 const EditProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -73,7 +74,7 @@ const EditProfileScreen: React.FC = () => {
       console.log('🔍 EditProfileScreen: Making API call to profile endpoint...');
 
       const response = await apiClient.patch(
-        'http://192.168.1.4:5000/api/auth/profile',
+        `${API_BASE_URL}/auth/profile`,
         updateData
       );
 

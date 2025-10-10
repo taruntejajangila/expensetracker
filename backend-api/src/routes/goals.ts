@@ -114,14 +114,15 @@ router.post('/', async (req: express.Request, res: express.Response) => {
     logger.info(`Creating new goal for user: ${userId}`);
 
     const result = await db.query(
-      `INSERT INTO goals (user_id, title, description, target_amount, current_amount, 
+      `INSERT INTO goals (user_id, name, title, description, target_amount, current_amount, 
                          target_date, status, goal_type, icon, color, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-       RETURNING id, title, description, target_amount, current_amount, target_date, 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+       RETURNING id, name, title, description, target_amount, current_amount, target_date, 
                  status, goal_type, icon, color, created_at, updated_at`,
       [
         userId,
-        name, // Use 'name' from request body for 'title' column
+        name, // Use 'name' for 'name' column (NOT NULL)
+        name, // Use 'name' for 'title' column (for compatibility)
         description || null,
         parseFloat(targetAmount),
         0, // current_amount starts at 0
@@ -317,12 +318,22 @@ router.delete('/:id', async (req: express.Request, res: express.Response) => {
 
     // First check if the goal exists and belongs to the user
     const existingGoal = await db.query(
-      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
+      'SELECT id, current_amount, title FROM goals WHERE id = $1 AND user_id = $2',
       [goalId, userId]
     );
 
     if (existingGoal.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Goal not found' });
+    }
+
+    const goal = existingGoal.rows[0];
+    
+    // Check if goal has money saved - prevent deletion if it does
+    if (parseFloat(goal.current_amount) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete goal "${goal.title}" with ₹${goal.current_amount} saved. Please withdraw all money first, then delete the empty goal.`
+      });
     }
 
     await db.query(

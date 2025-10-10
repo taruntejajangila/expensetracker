@@ -245,7 +245,7 @@ router.post('/send', authenticateToken, async (req: any, res: any) => {
 
       let successCount = 0;
       let errorCount = 0;
-      const errors = [];
+      const errors: any[] = [];
 
       // Send to each user individually
       for (const email of emails) {

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 const ChangePasswordScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -67,7 +68,7 @@ const ChangePasswordScreen: React.FC = () => {
       const apiClient = ApiClient.getInstance();
       
       const response = await apiClient.post(
-        'http://192.168.1.4:5000/api/auth/change-password',
+        `${API_BASE_URL}/auth/change-password`,
         {
           currentPassword,
           newPassword,

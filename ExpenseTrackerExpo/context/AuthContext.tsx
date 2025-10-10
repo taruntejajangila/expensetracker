@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 interface User {
   id: string;
@@ -42,7 +43,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         console.log('🔍 AuthContext: Found stored token, validating...');
-        const API_BASE_URL = 'http://192.168.1.4:5000/api';
         const apiClient = ApiClient.getInstance();
 
         try {
@@ -179,7 +179,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting login process...');
       
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
       
       // Call the backend login API with retry logic
@@ -243,7 +242,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -275,7 +273,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting registration process...');
       
-      const API_BASE_URL = 'http://192.168.1.4:5000/api';
       const apiClient = ApiClient.getInstance();
       
       // Call the backend registration API with retry logic

@@ -53,9 +53,9 @@ router.post('/login', async (req, res) => {
 
     const pool = getPool();
     
-    // Check if user exists and has admin role
+    // Check if admin user exists in admin_users table
     const userResult = await pool.query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1 AND role IN ($2, $3)',
+      'SELECT id, username as name, email, password_hash, role FROM admin_users WHERE email = $1 AND role IN ($2, $3)',
       [email, 'admin', 'super_admin']
     );
 
@@ -1425,7 +1425,7 @@ router.get('/monitoring/performance', authenticateToken, requireAnyRole(['admin'
     };
     
     // Performance alerts
-    const alerts = [];
+    const alerts: any[] = [];
     if (systemResources.cpu_usage > 80) {
       alerts.push({
         level: 'warning',
@@ -2106,7 +2106,7 @@ router.post('/reports/custom', authenticateToken, requireAnyRole(['admin', 'supe
     
     // Build dynamic query based on parameters
     let whereConditions = ['1=1'];
-    let queryParams = [];
+    let queryParams: any[] = [];
     let paramIndex = 1;
     
     if (startDate) {
@@ -2208,7 +2208,7 @@ router.get('/reports/export/transactions', authenticateToken, requireAnyRole(['a
     const pool = getPool();
     
     let whereConditions = ['1=1'];
-    let queryParams = [];
+    let queryParams: any[] = [];
     let paramIndex = 1;
     
     if (startDate) {
@@ -2346,7 +2346,7 @@ router.get('/banners', authenticateToken, requireAnyRole(['admin', 'super_admin'
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     let whereConditions = ['1=1'];
-    let queryParams = [];
+    let queryParams: any[] = [];
     let paramIndex = 1;
 
     if (category) {

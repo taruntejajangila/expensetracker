@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Reminder } from '../types/PaymentTypes';
 
-const API_BASE_URL = 'http://192.168.1.4:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 // Get auth token following existing app pattern
 const getAuthToken = async () => {

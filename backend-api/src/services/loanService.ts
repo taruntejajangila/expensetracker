@@ -381,7 +381,12 @@ class LoanService {
       }
       
       // If principal, rate, or term changed, recalculate everything
-      let amortization = null;
+      let amortization: {
+        monthlyPayment: number;
+        totalInterest: number;
+        totalAmount: number;
+        schedule: LoanAmortizationSchedule[];
+      } | null = null;
       let endDate = currentLoan.endDate;
       
       if (updateData.amount || updateData.interestRate || updateData.termMonths) {

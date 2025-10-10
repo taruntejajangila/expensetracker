@@ -11,7 +11,7 @@ const pool = getPool();
 const validateBudgetInput = [
   body('name').notEmpty().withMessage('Budget name is required'),
   body('amount').isNumeric().withMessage('Amount must be a number'),
-  body('categoryId').notEmpty().withMessage('Category ID is required'),
+  body('categoryId').optional().isUUID().withMessage('Category ID must be a valid UUID if provided'),
   body('period').isIn(['monthly', 'yearly']).withMessage('Period must be monthly or yearly'),
   body('startDate').isISO8601().withMessage('Start date must be a valid date'),
   body('endDate').isISO8601().withMessage('End date must be a valid date'),
@@ -141,6 +141,17 @@ router.post('/', authenticateToken, validateBudgetInput, async (req: any, res: a
     const userId = req.user.id;
     const { name, amount, categoryId, period, startDate, endDate } = req.body;
     
+    // If no categoryId provided, use a default category or make it optional
+    let finalCategoryId = categoryId;
+    if (!finalCategoryId) {
+      // Try to get a default expense category
+      const defaultCategoryResult = await pool.query(
+        'SELECT id FROM categories WHERE type = $1 AND is_default = true LIMIT 1',
+        ['expense']
+      );
+      finalCategoryId = defaultCategoryResult.rows[0]?.id || null;
+    }
+    
     const query = `
       INSERT INTO budgets (
         user_id, name, amount, spent, category_id, period, 
@@ -151,7 +162,7 @@ router.post('/', authenticateToken, validateBudgetInput, async (req: any, res: a
     `;
     
     const values = [
-      userId, name, amount, 0, categoryId, period, startDate, endDate, 'on-track'
+      userId, name, amount, 0, finalCategoryId, period, startDate, endDate, 'on-track'
     ];
     
     const result = await pool.query(query, values);

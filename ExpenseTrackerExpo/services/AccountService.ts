@@ -1,7 +1,7 @@
 // AccountService connected to backend API
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.1.4:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 // For testing - you can get a real token from your backend login
 const getAuthToken = async () => {
@@ -141,7 +141,15 @@ export default {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse the error message from the response
+        try {
+          const errorData = await response.json();
+          const errorMessage = errorData.message || `HTTP error! status: ${response.status}`;
+          return { success: false, message: errorMessage };
+        } catch (parseError) {
+          // If parsing fails, fall back to generic error
+          return { success: false, message: `HTTP error! status: ${response.status}` };
+        }
       }
 
       const result = await response.json();
@@ -149,7 +157,7 @@ export default {
       if (result.success) {
         return result;
       } else {
-        throw new Error(result.message || 'Failed to delete account');
+        return { success: false, message: result.message || 'Failed to delete account' };
       }
     } catch (error) {
       console.error('Error deleting account:', error);

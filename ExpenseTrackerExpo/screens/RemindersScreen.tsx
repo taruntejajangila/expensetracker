@@ -1404,17 +1404,6 @@ const RemindersScreen: React.FC = () => {
               
               <View style={styles.emptyActionButtons}>
                 <TouchableOpacity
-                  style={[styles.emptyActionButton, styles.primaryActionButton]}
-                  onPress={() => {
-                    // Navigate to Loans screen
-                    (navigation as any).navigate('MainApp', { screen: 'Loans' });
-                  }}
-                >
-                  <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.primaryActionButtonText} allowFontScaling={false}>Add Loan</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
                   style={[styles.emptyActionButton, styles.secondaryActionButton]}
                   onPress={() => setShowAddModal(true)}
                 >

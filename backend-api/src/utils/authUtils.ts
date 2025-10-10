@@ -78,7 +78,8 @@ export const hasRole = (userRole: string, requiredRole: string): boolean => {
   const roleHierarchy = {
     'user': 1,
     'admin': 2,
-    'superadmin': 3
+    'super_admin': 3,
+    'superadmin': 3  // Keep both for compatibility
   };
   
   return roleHierarchy[userRole as keyof typeof roleHierarchy] >= roleHierarchy[requiredRole as keyof typeof roleHierarchy];

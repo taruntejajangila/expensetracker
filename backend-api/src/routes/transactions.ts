@@ -450,8 +450,8 @@ router.put('/:id',
       }
 
       // Build update query dynamically
-      const updateFields = [];
-      const updateValues = [];
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
       let paramCount = 1;
 
       if (updates.amount !== undefined) {

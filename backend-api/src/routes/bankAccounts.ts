@@ -191,14 +191,14 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     
     const query = `
       INSERT INTO bank_accounts (
-        user_id, account_name, bank_name, account_type, balance, currency,
+        user_id, name, account_name, bank_name, account_type, balance, currency,
         account_number, account_holder_name, is_active, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;
     
     const values = [
-      userId, name, bankName, accountType, balance, currency,
+      userId, name, name, bankName, accountType, balance, currency,
       accountNumber, accountHolderName, true
     ];
     
@@ -314,8 +314,8 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
      }
      
      // Build dynamic update query based on provided fields
-     const updateFields = [];
-     const updateValues = [];
+     const updateFields: string[] = [];
+     const updateValues: any[] = [];
      let paramIndex = 1;
      
      if (name !== undefined) {

@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   Paperclip
 } from 'lucide-react'
+import { API_BASE_URL, SERVER_BASE_URL } from '../../../config/api.config'
 
 interface Attachment {
   id: string
@@ -109,7 +110,7 @@ export default function TicketDetailPage() {
       }
       
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets/${ticketId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -264,7 +265,7 @@ export default function TicketDetailPage() {
           formData.append('attachments', file)
         })
 
-        const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets/${ticketId}/reply`, {
+        const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}/reply`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -282,11 +283,13 @@ export default function TicketDetailPage() {
           setIsTyping(false)
           await fetchTicket(true)
         } else {
-          console.error('Failed to send reply')
+          const errorData = await response.json()
+          console.error('Failed to send reply:', errorData.message || 'Unknown error')
+          // You could also show a user-friendly error message here
         }
       } else {
         // Regular JSON request without attachments
-        const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets/${ticketId}/reply`, {
+        const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}/reply`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -300,7 +303,9 @@ export default function TicketDetailPage() {
           setIsTyping(false)
           await fetchTicket(true)
         } else {
-          console.error('Failed to send reply')
+          const errorData = await response.json()
+          console.error('Failed to send reply:', errorData.message || 'Unknown error')
+          // You could also show a user-friendly error message here
         }
       }
     } catch (error) {
@@ -313,7 +318,7 @@ export default function TicketDetailPage() {
   const updateStatus = async () => {
     try {
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets/${ticketId}/status`, {
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -336,7 +341,7 @@ export default function TicketDetailPage() {
   const updateResolution = async () => {
     try {
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://192.168.1.4:5000/api/admin/support-tickets/${ticketId}/resolution`, {
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}/resolution`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -559,13 +564,13 @@ export default function TicketDetailPage() {
                               key={attachment.id}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setSelectedImage(`http://192.168.1.4:5000${attachment.file_path}`)
+                                setSelectedImage(`${SERVER_BASE_URL}${attachment.file_path}`)
                                 setShowImageModal(true)
                               }}
                               className="relative group"
                             >
                               <img 
-                                src={`http://192.168.1.4:5000${attachment.file_path}`}
+                                src={`${SERVER_BASE_URL}${attachment.file_path}`}
                                 alt={attachment.file_name}
                                 className="w-32 h-32 object-cover rounded border-2 border-white/20"
                               />
@@ -740,13 +745,13 @@ export default function TicketDetailPage() {
                       <button
                         key={attachment.id}
                         onClick={() => {
-                          setSelectedImage(`http://192.168.1.4:5000${attachment.file_path}`)
+                          setSelectedImage(`${SERVER_BASE_URL}${attachment.file_path}`)
                           setShowImageModal(true)
                         }}
                         className="relative group cursor-pointer"
                       >
                         <img 
-                          src={`http://192.168.1.4:5000${attachment.file_path}`}
+                          src={`${SERVER_BASE_URL}${attachment.file_path}`}
                           alt={attachment.file_name}
                           className="w-full h-20 object-cover rounded border border-gray-200"
                         />

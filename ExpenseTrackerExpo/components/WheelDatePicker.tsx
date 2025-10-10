@@ -9,6 +9,9 @@ import {
   Dimensions,
   ScrollView,
   Animated,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +22,8 @@ interface WheelDatePickerProps {
   placeholder?: string;
   label?: string;
   disabled?: boolean;
+  buttonStyle?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
@@ -27,6 +32,8 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
   placeholder = 'Select Date',
   label,
   disabled = false,
+  buttonStyle,
+  textStyle,
 }) => {
   const { theme } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -201,13 +208,13 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      backgroundColor: theme.colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: '#FFFFFF',
       borderRadius: 12,
       borderWidth: 2,
-      borderColor: theme.colors.border,
-      minHeight: 40,
+      borderColor: '#E9ECEF',
+      minHeight: 48,
     },
     dateText: {
       fontSize: 14,
@@ -420,7 +427,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
         )}
         
         <TouchableOpacity
-          style={styles.dateButton}
+          style={[styles.dateButton, buttonStyle]}
         onPress={() => {
           if (!disabled) {
             setTempDate(selectedDate);
@@ -444,7 +451,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
         disabled={disabled}
       >
         <Text
-          style={selectedDate ? styles.dateText : styles.placeholderText}
+          style={[selectedDate ? styles.dateText : styles.placeholderText, textStyle]}
           allowFontScaling={false}
         >
           {selectedDate ? formatInputDate(selectedDate) : placeholder}

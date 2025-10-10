@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { API_BASE_URL } from '../config/api.config';
 
 interface CustomNotificationData {
   id: string;
@@ -182,7 +183,7 @@ class NotificationNavigationService {
       // Get auth token
       const authToken = await AsyncStorage.getItem('authToken');
       
-      const response = await fetch(`http://192.168.1.4:5000/api/notifications/custom/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/notifications/custom/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

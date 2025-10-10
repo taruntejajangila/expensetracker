@@ -132,13 +132,18 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
           style: 'destructive',
           onPress: async () => {
             try {
-              await GoalService.deleteGoal(goal.id);
-              Alert.alert('Success', 'Goal deleted successfully!', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-              ]);
-            } catch (error) {
+              const result = await GoalService.deleteGoal(goal.id);
+              
+              if (result.success) {
+                Alert.alert('Success', 'Goal deleted successfully!', [
+                  { text: 'OK', onPress: () => navigation.goBack() }
+                ]);
+              } else {
+                Alert.alert('Error', result.message || 'Failed to delete goal. Please try again.');
+              }
+            } catch (error: any) {
               console.error('Error deleting goal:', error);
-              Alert.alert('Error', 'Failed to delete goal. Please try again.');
+              Alert.alert('Error', error.message || 'Failed to delete goal. Please try again.');
             }
           }
         }
@@ -302,6 +307,8 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
                 setDeadline(d.toISOString());
               }}
               placeholder="Select a deadline"
+              buttonStyle={styles.textInput}
+              textStyle={{ fontSize: 14, fontWeight: '600', color: theme.colors.text }}
             />
           </View>
         </View>

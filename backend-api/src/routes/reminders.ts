@@ -24,6 +24,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         category,
         source_type,
         source_id,
+        type,
         created_at,
         updated_at
       FROM reminders
@@ -84,8 +85,8 @@ router.post('/', authenticateToken, [
     const insertQuery = `
       INSERT INTO reminders (
         user_id, title, description, due_date, reminder_time,
-        priority, category, source_type, source_id, is_completed
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        priority, category, source_type, source_id, is_completed, type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
 
@@ -99,7 +100,8 @@ router.post('/', authenticateToken, [
       category || null,
       sourceType,
       sourceId || null,
-      false
+      false,
+      'general'
     ]);
 
     logger.info(`Created reminder ${result.rows[0].id} for user ${userId}`);
@@ -149,8 +151,8 @@ router.put('/:id', authenticateToken, [
     const updates = req.body;
 
     // Build dynamic update query
-    const updateFields = [];
-    const values = [];
+    const updateFields: string[] = [];
+    const values: any[] = [];
     let paramIndex = 1;
 
     Object.keys(updates).forEach(key => {

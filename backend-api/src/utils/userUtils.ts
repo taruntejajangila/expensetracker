@@ -102,12 +102,23 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   const client = await pool.connect();
   
   try {
-    const result = await client.query(
+    // First check regular users table
+    const userResult = await client.query(
       'SELECT id, name, email, phone, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true',
       [userId]
     );
     
-    return result.rows.length > 0 ? result.rows[0] : null;
+    if (userResult.rows.length > 0) {
+      return userResult.rows[0];
+    }
+    
+    // If not found in users table, check admin_users table
+    const adminResult = await client.query(
+      'SELECT id, username as name, email, NULL as phone, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
+      [userId]
+    );
+    
+    return adminResult.rows.length > 0 ? adminResult.rows[0] : null;
   } finally {
     client.release();
   }
@@ -136,8 +147,8 @@ export const updateUserProfile = async (userId: string, updates: Partial<Pick<Us
   const client = await pool.connect();
   
   try {
-    const updateFields = [];
-    const values = [];
+    const updateFields: string[] = [];
+    const values: any[] = [];
     let paramCount = 1;
     
     if (updates.name) {

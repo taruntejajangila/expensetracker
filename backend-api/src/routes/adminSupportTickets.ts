@@ -185,16 +185,41 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
 
     const ticket = ticketResult.rows[0];
 
-    // Get messages for this ticket
+    // Get messages for this ticket (from both user and admin messages)
     const messagesResult = await client.query(
       `SELECT 
-        tm.*,
+        tm.id,
+        tm.ticket_id,
+        tm.user_id,
+        tm.message,
+        tm.is_admin_reply,
+        tm.created_at,
+        tm.updated_at,
         u.name as user_name,
-        u.email as user_email
+        u.email as user_email,
+        'user' as message_type
       FROM ticket_messages tm
       LEFT JOIN users u ON tm.user_id = u.id
       WHERE tm.ticket_id = $1
-      ORDER BY tm.created_at ASC`,
+      
+      UNION ALL
+      
+      SELECT 
+        stm.id,
+        stm.ticket_id,
+        stm.user_id,
+        stm.message,
+        true as is_admin_reply,
+        stm.created_at,
+        stm.updated_at,
+        au.username as user_name,
+        au.email as user_email,
+        'admin' as message_type
+      FROM support_ticket_messages stm
+      LEFT JOIN admin_users au ON stm.admin_id = au.id
+      WHERE stm.ticket_id = $1
+      
+      ORDER BY created_at ASC`,
       [ticketId]
     );
 
@@ -359,10 +384,32 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       });
     }
 
-    // Add message
+    // Validate ticket ID format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(ticketId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid ticket ID format'
+      });
+    }
+
+    // Check if ticket exists
+    const ticketCheck = await client.query(
+      'SELECT id FROM support_tickets WHERE id = $1',
+      [ticketId]
+    );
+
+    if (ticketCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found'
+      });
+    }
+
+    // Add message (admin replies go to support_ticket_messages table)
     const result = await client.query(
-      `INSERT INTO ticket_messages (ticket_id, user_id, message, is_admin_reply)
-       VALUES ($1, $2, $3, true)
+      `INSERT INTO support_ticket_messages (ticket_id, admin_id, message, is_internal)
+       VALUES ($1, $2, $3, false)
        RETURNING *`,
       [ticketId, adminId, message]
     );

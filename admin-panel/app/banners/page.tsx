@@ -19,6 +19,7 @@ import {
   Settings,
   Smartphone
 } from 'lucide-react'
+import { API_BASE_URL, SERVER_BASE_URL } from '../../config/api.config'
 
 interface Banner {
   id: number
@@ -79,7 +80,7 @@ export default function BannersPage() {
         ...(statusFilter && { status: statusFilter })
       })
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/admin/banners?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/banners?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -100,7 +101,7 @@ export default function BannersPage() {
   // Fetch categories
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/admin/banners/categories`, {
+      const response = await fetch(`${API_BASE_URL}/admin/banners/categories`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -123,7 +124,7 @@ export default function BannersPage() {
   // Toggle banner status
   const toggleBannerStatus = async (bannerId: number) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/admin/banners/${bannerId}/toggle`, {
+      const response = await fetch(`${API_BASE_URL}/admin/banners/${bannerId}/toggle`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
@@ -144,7 +145,7 @@ export default function BannersPage() {
     if (!confirm('Are you sure you want to delete this banner?')) return
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/admin/banners/${bannerId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/banners/${bannerId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -284,7 +285,7 @@ export default function BannersPage() {
                         <div className="w-16 h-12 rounded-lg overflow-hidden mr-4 bg-gray-100">
                           {banner.image_url ? (
                             <img 
-                              src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${banner.image_url}`}
+                              src={`${SERVER_BASE_URL}${banner.image_url}`}
                               alt={banner.title}
                               className="w-full h-full object-cover"
                             />
@@ -460,7 +461,7 @@ function BannerModal({
     setImageError(false);
     
     if (banner?.image_url && !imageFile) {
-      const fullImageUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${banner.image_url}`;
+      const fullImageUrl = `${SERVER_BASE_URL}${banner.image_url}`;
       setImagePreview(fullImageUrl);
     } else if (!banner?.image_url) {
       setImagePreview(null);
@@ -485,7 +486,7 @@ function BannerModal({
     const formData = new FormData()
     formData.append('image', file)
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/admin/banners/upload`, {
+    const response = await fetch(`${API_BASE_URL}/admin/banners/upload`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -526,7 +527,7 @@ function BannerModal({
       
       const method = banner ? 'PUT' : 'POST'
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}${url}`, {
+      const response = await fetch(`${API_BASE_URL}${url}`, {
         method,
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
@@ -681,7 +682,7 @@ function BannerModal({
                   <div className="border border-gray-300 rounded-lg p-4 bg-white">
                     {!imageError ? (
                       <img
-                        src={imagePreview || (banner?.image_url ? `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${banner.image_url}` : '')}
+                        src={imagePreview || (banner?.image_url ? `${SERVER_BASE_URL}${banner.image_url}` : '')}
                         alt="Banner preview"
                         className="w-full h-32 object-cover rounded-md"
                         onError={() => {
@@ -847,7 +848,7 @@ function BannerModal({
                             <div className="text-xs text-gray-500 mb-2">Banner Carousel</div>
                             <div className="relative overflow-hidden rounded-xl bg-gray-100">
                               <img
-                                src={imagePreview || (formData.image_url ? `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${formData.image_url}` : '')}
+                                src={imagePreview || (formData.image_url ? `${SERVER_BASE_URL}${formData.image_url}` : '')}
                                 alt="Banner preview"
                                 className="w-full h-24 object-cover"
                                 onError={(e) => {

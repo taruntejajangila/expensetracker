@@ -975,6 +975,8 @@ const AddTransactionScreen = () => {
               onDateChange={setDate}
               label="Date"
               placeholder="Select transaction date"
+              buttonStyle={styles.dropdownButton}
+              textStyle={styles.dateText}
             />
           </View>
 

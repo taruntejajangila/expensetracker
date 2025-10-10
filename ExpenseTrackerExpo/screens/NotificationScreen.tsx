@@ -17,6 +17,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationNavigationService from '../services/NotificationNavigationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api.config';
 
 const NotificationScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -62,7 +63,6 @@ const NotificationScreen: React.FC = () => {
             return;
           }
 
-          const API_BASE_URL = 'http://192.168.1.4:5000/api';
           const response = await fetch(`${API_BASE_URL}/notifications/custom/${notification.data.customNotificationId}`, {
             method: 'GET',
             headers: {

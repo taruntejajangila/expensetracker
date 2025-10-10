@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.1.4:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface Category {
   id: string;
@@ -58,12 +58,46 @@ export const categoryService = {
       if (result.success) {
         console.log('🔍 CategoryService: Successfully fetched categories:', result.data.length);
         
+        // Map emoji icons to Ionicons names
+        const emojiToIoniconMap: { [key: string]: string } = {
+          '💰': 'wallet',
+          '🍽️': 'restaurant',
+          '🚗': 'car',
+          '🛍️': 'bag',
+          '🎬': 'film',
+          '💡': 'bulb',
+          '🏥': 'medical',
+          '📚': 'book',
+          '✈️': 'airplane',
+          '🏠': 'home',
+          '🍕': 'pizza',
+          '☕': 'cafe',
+          '🎵': 'musical-notes',
+          '🎮': 'game-controller',
+          '💊': 'medical',
+          '🚌': 'bus',
+          '⛽': 'car',
+          '🎯': 'target',
+          '🏃': 'fitness',
+          '💻': 'laptop',
+          '📱': 'phone-portrait',
+          '🛒': 'cart',
+          '🎨': 'color-palette',
+          '🏖️': 'beach',
+          '🎪': 'happy',
+          '🔧': 'construct',
+          '📊': 'bar-chart',
+          '💳': 'card',
+          '🎁': 'gift',
+          '🏆': 'trophy'
+        };
+
         // Map API response to Category interface
         const categories: Category[] = result.data.map((cat: any) => ({
           id: cat.id.toString(),
           name: cat.name,
           type: cat.type,
-          icon: cat.icon || 'ellipsis-horizontal',
+          icon: emojiToIoniconMap[cat.icon] || cat.icon || 'ellipsis-horizontal',
           color: cat.color || '#A9A9A9',
           isDefault: cat.is_default || false,
           createdAt: cat.created_at,
@@ -162,7 +196,14 @@ export const categoryService = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse the error message from the response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        } catch (parseError) {
+          // If parsing fails, fall back to generic error
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const result = await response.json();

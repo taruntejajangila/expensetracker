@@ -37,7 +37,6 @@ const EditLoanScreen: React.FC = () => {
     const [typeOpen, setTypeOpen] = useState(false);
     const [emiStartDate, setEmiStartDate] = useState('');
     const [emiDate, setEmiDate] = useState<Date | null>(null);
-    const [showEmiDatePicker, setShowEmiDatePicker] = useState(false);
 
     const styles = createStyles(theme);
 
@@ -207,16 +206,6 @@ const EditLoanScreen: React.FC = () => {
         }
     };
 
-    const handleEmiDateChange = (event: any, selectedDate?: Date) => {
-        setShowEmiDatePicker(false);
-        if (selectedDate) {
-            setEmiDate(selectedDate);
-            const y = selectedDate.getFullYear();
-            const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
-            const d = String(selectedDate.getDate()).padStart(2, '0');
-            setEmiStartDate(`${y}-${m}-${d}`);
-        }
-    };
 
     if (isLoading) {
         return (
@@ -416,30 +405,19 @@ const EditLoanScreen: React.FC = () => {
         {/* EMI Start Date */}
         <View style={styles.formGroup}>
           <Text style={styles.label} allowFontScaling={false}>EMI Start Date<Text style={styles.required} allowFontScaling={false}>*</Text></Text>
-          <TouchableOpacity
-            style={[styles.input, styles.dateInput]}
-            activeOpacity={0.8}
-            onPress={() => setShowEmiDatePicker(true)}
-          >
-            <Text style={{ fontSize: 16, color: emiStartDate ? '#111827' : '#9CA3AF' }} allowFontScaling={false}>
-              {emiStartDate || 'YYYY-MM-DD'}
-            </Text>
-          </TouchableOpacity>
-          {showEmiDatePicker && (
-            <WheelDatePicker
-              selectedDate={emiDate || new Date()}
-              onDateChange={(d: Date) => {
-                setEmiDate(d);
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                setEmiStartDate(`${y}-${m}-${day}`);
-                setShowEmiDatePicker(false);
-              }}
-              label="EMI Start Date"
-              placeholder="Select date"
-            />
-          )}
+          <WheelDatePicker
+            selectedDate={emiDate || new Date()}
+            onDateChange={(d: Date) => {
+              setEmiDate(d);
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              setEmiStartDate(`${y}-${m}-${day}`);
+            }}
+            placeholder="Select date"
+            buttonStyle={[styles.input, styles.dateInput]}
+            textStyle={{ fontSize: 16, color: theme.colors.text, fontWeight: '600' }}
+          />
         </View>
 
         {/* Monthly amount (EMI or Interest) */}
@@ -447,8 +425,8 @@ const EditLoanScreen: React.FC = () => {
           <Text style={styles.label} allowFontScaling={false}>{monthlyLabel}</Text>
           <View style={styles.inputWithAdornment}>
             <Text style={styles.adornment} allowFontScaling={false}>₹</Text>
-            <View style={[styles.inputFlex, styles.readonlyValueContainer]}>
-              <Text style={styles.readonlyValueText} allowFontScaling={false}>{formattedMonthly}</Text>
+            <View style={styles.inputFlex}>
+              <Text style={{ fontSize: 14, color: '#111827', fontWeight: '500' }} allowFontScaling={false}>{formattedMonthly}</Text>
             </View>
           </View>
         </View>
@@ -478,13 +456,13 @@ const EditLoanScreen: React.FC = () => {
 const createStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
+        backgroundColor: '#FFFFFF',
     },
 
     // Header Styles
     headerContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     headerContent: {
         flexDirection: 'row',
@@ -516,32 +494,30 @@ const createStyles = (theme: any) => StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         textAlign: 'center',
+        color: '#111827',
     },
     headerSubtitle: {
         fontSize: 12,
         fontWeight: '400',
         textAlign: 'center',
-        opacity: 0.8,
+        color: '#6B7280',
         marginTop: 2,
     },
     saveButton: {
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#10B981',
-        borderRadius: 22,
+        borderRadius: 24,
         shadowColor: '#10B981',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
     },
     saveButtonDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: '#D1D5DB',
         shadowOpacity: 0,
         elevation: 0,
     },
@@ -550,8 +526,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     },
     content: {
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 24,
+        paddingTop: 24,
+        paddingBottom: 32,
     },
     loadingContainer: {
         flex: 1,
@@ -582,39 +558,47 @@ const createStyles = (theme: any) => StyleSheet.create({
         textAlign: 'center',
     },
     formGroup: {
-        marginBottom: 20,
+        marginBottom: 24,
     },
     firstFormGroup: {
-        marginTop: 16,
+        marginTop: 8,
     },
     label: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.text,
+        color: '#111827',
         marginBottom: 8,
     },
     required: {
         color: '#EF4444',
+        fontWeight: '700',
     },
     input: {
-        borderWidth: 2,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 16,
-        color: theme.colors.text,
+        borderWidth: 1,
+        borderColor: '#000000',
+        borderRadius: 16,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        fontSize: 14,
+        color: '#111827',
         backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     helperText: {
-        marginTop: 6,
-        fontSize: 12,
+        marginTop: 8,
+        fontSize: 13,
         color: '#6B7280',
+        fontWeight: '500',
     },
     row: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: 16,
+        gap: 20,
     },
     rowItem: {
         flex: 1,
@@ -623,37 +607,48 @@ const createStyles = (theme: any) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     inputWithAdornment: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#000000',
+        borderRadius: 16,
         backgroundColor: '#FFFFFF',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     inputFlex: {
         flex: 1,
         borderWidth: 0,
         backgroundColor: 'transparent',
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        fontSize: 14,
+        color: '#111827',
     },
     adornment: {
-        paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: 14,
         color: '#6B7280',
         fontWeight: '500',
+        marginRight: 8,
     },
     typeChipsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 4,
+        gap: 12,
+        marginBottom: 8,
     },
     chip: {
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 999,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: '#E5E7EB',
         backgroundColor: '#FFFFFF',
@@ -669,22 +664,31 @@ const createStyles = (theme: any) => StyleSheet.create({
     },
     chipTextActive: {
         color: '#007AFF',
+        fontWeight: '700',
     },
     segmentedInline: {
         flexDirection: 'row',
-        borderWidth: 2,
-        borderColor: '#E9ECEF',
+        borderWidth: 1,
+        borderColor: '#000000',
         borderRadius: 12,
         backgroundColor: '#FFFFFF',
         padding: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        alignSelf: 'flex-start',
     },
     segmentedInlineOption: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 8,
+        alignItems: 'center',
+        minWidth: 60,
     },
     segmentedInlineOptionActive: {
-        backgroundColor: '#007AFF1A',
+        backgroundColor: '#007AFF',
     },
     segmentedInlineOptionText: {
         fontSize: 12,
@@ -692,7 +696,8 @@ const createStyles = (theme: any) => StyleSheet.create({
         fontWeight: '600',
     },
     segmentedInlineOptionTextActive: {
-        color: '#007AFF',
+        color: '#FFFFFF',
+        fontWeight: '700',
     },
     dateInput: {
         flexDirection: 'row',
@@ -700,36 +705,45 @@ const createStyles = (theme: any) => StyleSheet.create({
         justifyContent: 'space-between',
     },
     readonlyValueContainer: {
+        flex: 1,
         paddingVertical: 16,
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         backgroundColor: '#F8FAFC',
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E2E8F0',
+        alignItems: 'center',
     },
     readonlyValueText: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#111827',
         fontWeight: '600',
-        textAlign: 'center',
     },
     actionsRow: {
         flexDirection: 'row',
         gap: 16,
-        marginTop: 16,
+        marginTop: 32,
+        paddingTop: 24,
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
     },
     cancelButton: {
         flex: 1,
-        borderRadius: 12,
-        height: 48,
+        borderRadius: 16,
+        height: 56,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#E9ECEF',
+        borderWidth: 1.5,
+        borderColor: '#D1D5DB',
         backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     cancelButtonText: {
-        color: '#111827',
+        color: '#374151',
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.3,
@@ -738,13 +752,20 @@ const createStyles = (theme: any) => StyleSheet.create({
         flex: 1,
         borderRadius: 16,
         overflow: 'hidden',
+        shadowColor: '#667eea',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
     },
     saveButtonDisabled: {
         opacity: 0.6,
+        shadowOpacity: 0,
+        elevation: 0,
     },
     saveButtonGradient: {
         flex: 1,
-        height: 48,
+        height: 56,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -752,7 +773,7 @@ const createStyles = (theme: any) => StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '700',
-        letterSpacing: 0.3,
+        letterSpacing: 0.4,
     },
 });
 

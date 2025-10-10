@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { setNetworkErrorHandler } from '../utils/NetworkErrorHandler';
+import { API_BASE_URL } from '../config/api.config';
 
 interface NetworkContextType {
   isConnected: boolean;
@@ -171,7 +172,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       // Fallback: Try to reach our backend API with cache-busting
       const timestamp = Date.now();
       const response = await Promise.race([
-        fetch(`http://192.168.1.4:5000/api/auth/me?t=${timestamp}`, {
+        fetch(`${API_BASE_URL}/auth/me?t=${timestamp}`, {
           method: 'HEAD',
           cache: 'no-cache',
           headers: {

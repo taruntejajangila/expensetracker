@@ -1,7 +1,9 @@
 // Admin Panel API Service
 // Connects to the backend API for real data
+// NOTE: This file is from old src/ directory and may not be in use
+// The active file is: app/services/api.ts
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://192.168.29.14:5001/api'
+import { API_BASE_URL } from '../../../config/api.config';
 
 export interface AdminUser {
   id: string

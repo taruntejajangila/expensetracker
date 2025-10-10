@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.1.4:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface Budget {
   id: string;
@@ -156,7 +156,14 @@ export default {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse the error message from the response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        } catch (parseError) {
+          // If parsing fails, fall back to generic error
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const result = await response.json();

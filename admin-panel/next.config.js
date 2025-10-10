@@ -2,7 +2,9 @@
 const nextConfig = {
   env: {
     CUSTOM_KEY: 'my-value',
-    NEXT_PUBLIC_API_URL: 'http://localhost:5000/api',
+    // API URL will be loaded from .env.local file
+    // For local development: http://192.168.29.14:5000/api
+    // For production: https://your-backend.railway.app/api
   },
 }
 

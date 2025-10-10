@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 const CreateTicketScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -261,7 +262,7 @@ const CreateTicketScreen: React.FC = () => {
 
         // Use fetch directly for FormData
         const token = await ApiClient.getInstance().getToken();
-        const response = await fetch('http://192.168.1.4:5000/api/support-tickets', {
+        const response = await fetch(`${API_BASE_URL}/support-tickets`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -297,7 +298,7 @@ const CreateTicketScreen: React.FC = () => {
       } else {
         // No attachments - use regular API client
         const apiClient = ApiClient.getInstance();
-        const response = await apiClient.post('http://192.168.1.4:5000/api/support-tickets', formData);
+        const response = await apiClient.post(`${API_BASE_URL}/support-tickets`, formData);
 
         if (response.success) {
           Alert.alert(

@@ -14,6 +14,7 @@ import {
   BarChart3,
   Trash2
 } from 'lucide-react'
+import { API_BASE_URL } from '../../config/api.config'
 
 interface NotificationStats {
   totalTokens: number
@@ -140,7 +141,7 @@ export default function NotificationsPage() {
         throw new Error('No admin token found')
       }
 
-      const response = await fetch('http://192.168.1.4:5000/api/admin/users', {
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -176,7 +177,7 @@ export default function NotificationsPage() {
         return
       }
 
-      const response = await fetch('http://192.168.1.4:5000/api/notifications/history?days=7&limit=20', {
+      const response = await fetch(`${API_BASE_URL}/notifications/history?days=7&limit=20`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -284,7 +285,7 @@ export default function NotificationsPage() {
       }
 
       // Send directly to backend API
-      const response = await fetch('http://192.168.1.4:5000/api/notifications/send', {
+      const response = await fetch(`${API_BASE_URL}/notifications/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

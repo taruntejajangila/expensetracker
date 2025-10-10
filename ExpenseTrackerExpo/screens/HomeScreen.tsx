@@ -28,6 +28,7 @@ import OfflineBanner from '../components/OfflineBanner';
 import OfflineScreen from '../components/OfflineScreen';
 import { BannerAd, showInterstitialAd } from '../components/AdMobComponents';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from '../config/api.config';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 
@@ -80,7 +81,7 @@ const HomeScreen: React.FC = () => {
     try {
       console.log('🔍 HomeScreen: Loading banners...');
       // Load banners from the public API endpoint
-      const response = await fetch('http://192.168.1.4:5000/api/banners/public');
+      const response = await fetch(`${API_BASE_URL}/banners/public`);
       console.log('🔍 HomeScreen: Banner response status:', response.status);
       if (response.ok) {
         const bannerResponse = await response.json();
@@ -90,7 +91,7 @@ const HomeScreen: React.FC = () => {
           const transformedBanners = bannerResponse.data.map((banner: any) => ({
             ...banner,
             imageUrl: banner.image_url 
-              ? `http://192.168.1.4:5000${banner.image_url}`
+              ? `${API_BASE_URL.replace('/api', '')}${banner.image_url}`
               : null
           }));
           console.log('🔍 HomeScreen: Transformed banners:', transformedBanners);

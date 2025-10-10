@@ -74,8 +74,7 @@ const BankAccountDetailScreen: React.FC = () => {
                 Alert.alert('Delete Account', 'Are you sure you want to delete this account?', [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Delete', style: 'destructive', onPress: () => {
-                    // Handle delete - we'll need to implement this
-                                            // Delete account
+                    handleDeleteAccount();
                   }}
                 ]);
               }}
@@ -375,12 +374,18 @@ const BankAccountDetailScreen: React.FC = () => {
 
   const handleDeleteAccount = async () => {
     try {
-      await AccountService.deleteAccount(account.id);
-      Alert.alert('Success', 'Account deleted successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete account. Please try again.');
+      const result = await AccountService.deleteAccount(account.id);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Account deleted successfully', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to delete account. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
     }
   };
 

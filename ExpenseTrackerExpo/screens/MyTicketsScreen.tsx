@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTicketContext } from '../contexts/SimpleTicketContext';
 import ApiClient from '../utils/ApiClient';
+import { API_BASE_URL } from '../config/api.config';
 
 interface Ticket {
   id: string;
@@ -43,8 +44,8 @@ const MyTicketsScreen: React.FC = () => {
     try {
       const apiClient = ApiClient.getInstance();
       const url = statusFilter === 'all' 
-        ? 'http://192.168.1.4:5000/api/support-tickets/my-tickets'
-        : `http://192.168.1.4:5000/api/support-tickets/my-tickets?status=${statusFilter}`;
+        ? `${API_BASE_URL}/support-tickets/my-tickets`
+        : `${API_BASE_URL}/support-tickets/my-tickets?status=${statusFilter}`;
       
       const response = await apiClient.get(url);
 

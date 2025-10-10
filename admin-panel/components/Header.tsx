@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Bell, Search, User, LogOut, Settings } from 'lucide-react'
+import { adminAPI } from '../app/services/api'
 
 export default function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -87,7 +88,13 @@ export default function Header() {
                     <Settings className="h-4 w-4 mr-2" />
                     Profile Settings
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                  <button 
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      adminAPI.logout();
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </button>

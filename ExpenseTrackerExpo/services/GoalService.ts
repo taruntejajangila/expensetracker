@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.1.4:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 // Helper function to get auth token
 const getAuthToken = async (): Promise<string | null> => {
@@ -291,14 +291,12 @@ export default {
     }
   },
 
-  async deleteGoal(id: string): Promise<{ success: boolean }> {
+  async deleteGoal(id: string): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log('🔍 GoalService: Deleting goal from cloud database...');
       const token = await getAuthToken();
       
       if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true };
+        return { success: false, message: 'No authentication token' };
       }
 
       const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
@@ -310,16 +308,20 @@ export default {
       });
 
       if (response.ok) {
-        console.log('🔍 GoalService: Successfully deleted goal');
         return { success: true };
       } else {
-        const errorData = await response.json();
-        console.error('🔍 GoalService: Error deleting goal:', errorData);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse the error message from the response
+        try {
+          const errorData = await response.json();
+          return { success: false, message: errorData.message || `HTTP error! status: ${response.status}` };
+        } catch (parseError) {
+          // If parsing fails, fall back to generic error
+          return { success: false, message: `HTTP error! status: ${response.status}` };
+        }
       }
     } catch (error) {
-      console.error('🔍 GoalService: Error deleting goal:', error);
-      return { success: false };
+      console.error('Error deleting goal:', error);
+      return { success: false, message: error.message };
     }
   },
 

@@ -83,7 +83,7 @@ router.post('/', [
   body('name').notEmpty().withMessage('Loan name is required'),
   body('loanType').isIn(['personal', 'home', 'car', 'business', 'student', 'other']).withMessage('Invalid loan type'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Principal amount must be greater than 0'),
-  body('interestRate').isFloat({ min: 0, max: 1 }).withMessage('Interest rate must be between 0 and 1'),
+  body('interestRate').isFloat({ min: 0, max: 100 }).withMessage('Interest rate must be between 0 and 100 (percentage)'),
   body('termMonths').isInt({ min: 1 }).withMessage('Loan term must be at least 1 month'),
   body('startDate').isISO8601().withMessage('Start date must be a valid date'),
   body('lender').optional().isString().withMessage('Lender name must be a string'),
@@ -109,7 +109,8 @@ router.post('/', [
     
     const loanData = {
       ...req.body,
-      startDate: new Date(req.body.startDate)
+      startDate: new Date(req.body.startDate),
+      interestRate: req.body.interestRate / 100 // Convert percentage to decimal
     };
     
     const loan = await loanService.createLoan(userId, loanData);
@@ -136,7 +137,7 @@ router.put('/:id', [
   body('name').optional().notEmpty().withMessage('Loan name cannot be empty'),
   body('loanType').optional().isIn(['personal', 'home', 'car', 'business', 'student', 'other']).withMessage('Invalid loan type'),
   body('amount').optional().isFloat({ min: 0.01 }).withMessage('Principal amount must be greater than 0'),
-  body('interestRate').optional().isFloat({ min: 0, max: 1 }).withMessage('Interest rate must be between 0 and 1'),
+  body('interestRate').optional().isFloat({ min: 0, max: 100 }).withMessage('Interest rate must be between 0 and 100 (percentage)'),
   body('termMonths').optional().isInt({ min: 1 }).withMessage('Loan term must be at least 1 month'),
   body('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
   body('status').optional().isIn(['active', 'paid_off', 'defaulted', 'refinanced']).withMessage('Invalid status'),
