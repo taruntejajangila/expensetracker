@@ -67,22 +67,36 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration
+// CORS configuration - Allow requests from admin panel and mobile app
+const allowedOrigins = [
+  process.env.MOBILE_APP_URL || 'http://localhost:19006',
+  process.env.ADMIN_PANEL_URL || 'http://localhost:3001',
+  process.env.FRONTEND_URL || 'http://localhost:3001',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'https://generous-miracle-production-245f.up.railway.app'
+];
+
 app.use(cors({
-  origin: [
-    process.env.MOBILE_APP_URL || 'http://localhost:19006',
-    process.env.ADMIN_PANEL_URL || 'http://localhost:3001',
-    process.env.FRONTEND_URL || 'http://localhost:3001',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'https://generous-miracle-production-245f.up.railway.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Rate limiting - More generous for development
