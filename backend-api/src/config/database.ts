@@ -3,14 +3,22 @@ import { logger } from '../utils/logger';
 
 // Debug: Log environment variables
 logger.info('🔍 Environment Variables Debug:');
+logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? '***SET***' : 'NOT SET'}`);
 logger.info(`DB_USER: ${process.env.DB_USER}`);
 logger.info(`DB_HOST: ${process.env.DB_HOST}`);
 logger.info(`DB_NAME: ${process.env.DB_NAME}`);
 logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`);
 logger.info(`DB_PORT: ${process.env.DB_PORT}`);
 
-// Database configuration
-const dbConfig: PoolConfig = {
+// Database configuration - Use DATABASE_URL if available, otherwise use individual variables
+const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+  maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
+} : {
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'expense_tracker_db',
@@ -24,13 +32,17 @@ const dbConfig: PoolConfig = {
 };
 
 // Debug: Log the actual config being used
-logger.info('🔍 Database Config (without password):', {
-  user: dbConfig.user,
-  host: dbConfig.host,
-  database: dbConfig.database,
-  port: dbConfig.port,
-  passwordSet: !!dbConfig.password
-});
+if (process.env.DATABASE_URL) {
+  logger.info('🔍 Database Config: Using DATABASE_URL connection string');
+} else {
+  logger.info('🔍 Database Config (without password):', {
+    user: dbConfig.user,
+    host: dbConfig.host,
+    database: dbConfig.database,
+    port: dbConfig.port,
+    passwordSet: !!dbConfig.password
+  });
+}
 
 // Create connection pool
 const pool = new Pool(dbConfig);
