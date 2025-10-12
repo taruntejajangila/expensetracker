@@ -96,7 +96,7 @@ export const authenticateUser = async (loginData: LoginUserData): Promise<User |
   }
 };
 
-// Get user by ID
+// Get user by ID - Fixed for Railway deployment to handle both users and admin_users tables
 export const getUserById = async (userId: string): Promise<User | null> => {
   const pool = getPool();
   const client = await pool.connect();
@@ -113,6 +113,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     }
     
     // If not found in users table, check admin_users table
+    // Note: admin_users has 'username' column, not 'name', so we map it after the query
     const adminResult = await client.query(
       'SELECT id, username, email, NULL as phone, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
       [userId]
@@ -120,7 +121,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     
     if (adminResult.rows.length > 0) {
       const adminUser = adminResult.rows[0];
-      // Map username to name to match the expected interface
+      // Map username to name to match the expected User interface
       return {
         ...adminUser,
         name: adminUser.username
