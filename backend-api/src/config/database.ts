@@ -313,19 +313,40 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // Banner categories table
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS banner_categories (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      color VARCHAR(7) DEFAULT '#6C5CE7',
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
   // Banners table
   await client.query(`
     CREATE TABLE IF NOT EXISTS banners (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       title VARCHAR(255) NOT NULL,
+      subtitle VARCHAR(255),
       description TEXT,
       image_url VARCHAR(2048),
+      target_url VARCHAR(2048),
       action_url VARCHAR(2048),
       action_text VARCHAR(100),
+      background_color VARCHAR(7) DEFAULT '#6C5CE7',
+      text_color VARCHAR(7) DEFAULT '#FFFFFF',
+      icon VARCHAR(100),
+      category_id UUID REFERENCES banner_categories(id) ON DELETE SET NULL,
       position VARCHAR(20) DEFAULT 'top' CHECK (position IN ('top', 'middle', 'bottom')),
       is_active BOOLEAN DEFAULT true,
+      sort_order INTEGER DEFAULT 0,
       start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       end_date TIMESTAMP WITH TIME ZONE,
+      created_by UUID REFERENCES admin_users(id) ON DELETE SET NULL,
+      updated_by UUID REFERENCES admin_users(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
@@ -343,7 +364,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   `);
 
   // Create triggers
-  const tables = ['users', 'categories', 'credit_cards', 'bank_accounts', 'transactions', 'budgets', 'goals', 'loans', 'notification_tokens', 'reminders', 'support_tickets', 'banners'];
+  const tables = ['users', 'categories', 'credit_cards', 'bank_accounts', 'transactions', 'budgets', 'goals', 'loans', 'notification_tokens', 'reminders', 'support_tickets', 'banner_categories', 'banners'];
   for (const table of tables) {
     await client.query(`
       DROP TRIGGER IF EXISTS trigger_${table}_updated_at ON ${table};
@@ -368,6 +389,17 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       (uuid_generate_v4(), NULL, 'Freelance', 'briefcase', '#85C1E9', 'income', true),
       (uuid_generate_v4(), NULL, 'Investment', 'trending-up', '#F8C471', 'income', true),
       (uuid_generate_v4(), NULL, 'Other Income', 'plus-circle', '#BB8FCE', 'income', true)
+    ON CONFLICT DO NOTHING
+  `);
+
+  // Insert default banner categories
+  await client.query(`
+    INSERT INTO banner_categories (id, name, description, color, is_active) VALUES
+      (uuid_generate_v4(), 'Promotional', 'Special offers and promotions', '#FF6B6B', true),
+      (uuid_generate_v4(), 'Announcement', 'Important announcements', '#4ECDC4', true),
+      (uuid_generate_v4(), 'Feature', 'New features and updates', '#45B7D1', true),
+      (uuid_generate_v4(), 'Tips', 'Financial tips and advice', '#96CEB4', true),
+      (uuid_generate_v4(), 'Event', 'Special events and campaigns', '#FFEAA7', true)
     ON CONFLICT DO NOTHING
   `);
 
