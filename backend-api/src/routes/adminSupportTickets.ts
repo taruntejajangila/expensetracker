@@ -65,14 +65,12 @@ router.get('/', authenticateToken, isAdmin, async (req: Request, res: Response) 
     let query = `
       SELECT 
         st.*,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
-        admin.name as assigned_to_name,
         (SELECT COUNT(*) FROM ticket_messages WHERE ticket_id = st.id) as message_count,
         (SELECT created_at FROM ticket_messages WHERE ticket_id = st.id ORDER BY created_at DESC LIMIT 1) as last_message_at
       FROM support_tickets st
       LEFT JOIN users u ON st.user_id = u.id
-      LEFT JOIN users admin ON st.assigned_to = admin.id
       WHERE 1=1
     `;
 
