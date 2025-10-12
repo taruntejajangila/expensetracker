@@ -2,7 +2,7 @@ import { getPool } from '../config/database';
 import { hashPassword, comparePassword } from './authUtils';
 import { logger } from './logger';
 
-// Version: Fixed getUserById for Railway deployment - v2
+// Version: Fixed getUserById for Railway deployment - v3 (FORCE RESTART)
 
 export interface User {
   id: string;
@@ -116,10 +116,12 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     
     // If not found in users table, check admin_users table
     // Use a simpler query to avoid PostgreSQL column alias issues
+    logger.info(`🔍 Checking admin_users table for userId: ${userId}`);
     const adminResult = await client.query(
       'SELECT id, username, email, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
       [userId]
     );
+    logger.info(`🔍 Admin query result: ${adminResult.rows.length} rows found`);
     
     if (adminResult.rows.length > 0) {
       const adminUser = adminResult.rows[0];
