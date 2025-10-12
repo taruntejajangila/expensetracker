@@ -432,7 +432,7 @@ function BannerModal({
     description: string
     image_url: string
     target_url: string
-    category_id: number | null
+    category_id: string | null
     is_active: boolean
     sort_order: number
     start_date: string
@@ -724,7 +724,7 @@ function BannerModal({
                   </label>
                                             <select
                             value={formData.category_id || ''}
-                            onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : null })}
+                            onChange={(e) => setFormData({ ...formData, category_id: e.target.value || null })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <option value="">No category</option>
