@@ -114,11 +114,20 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     
     // If not found in users table, check admin_users table
     const adminResult = await client.query(
-      'SELECT id, username as name, email, NULL as phone, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
+      'SELECT id, username, email, NULL as phone, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
       [userId]
     );
     
-    return adminResult.rows.length > 0 ? adminResult.rows[0] : null;
+    if (adminResult.rows.length > 0) {
+      const adminUser = adminResult.rows[0];
+      // Map username to name to match the expected interface
+      return {
+        ...adminUser,
+        name: adminUser.username
+      };
+    }
+    
+    return null;
   } finally {
     client.release();
   }
