@@ -44,9 +44,9 @@ router.get('/',
         SELECT 
           t.id,
           t.amount,
-          t.type,
+          t.transaction_type,
           t.description,
-          t.date,
+          t.transaction_date,
           t.created_at,
           t.tags,
           t.from_account,
@@ -65,7 +65,7 @@ router.get('/',
         LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
         LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
         WHERE t.user_id = $1
-        ORDER BY t.date DESC, t.created_at DESC
+        ORDER BY t.transaction_date DESC, t.created_at DESC
         LIMIT $2 OFFSET $3
       `;
       
@@ -308,9 +308,9 @@ router.get('/recent',
         SELECT 
           t.id,
           t.amount,
-          t.type,
+          t.transaction_type,
           t.description,
-          t.date,
+          t.transaction_date,
           t.created_at,
           t.tags,
           t.from_account,
@@ -329,7 +329,7 @@ router.get('/recent',
         LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
         LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
         WHERE t.user_id = $1
-        ORDER BY t.date DESC, t.created_at DESC
+        ORDER BY t.transaction_date DESC, t.created_at DESC
         LIMIT $2
       `;
       
@@ -383,9 +383,9 @@ router.get('/:id',
         SELECT 
           t.id,
           t.amount,
-          t.type,
+          t.transaction_type,
           t.description,
-          t.date,
+          t.transaction_date,
           t.created_at,
           c.name as category,
           c.icon as categoryIcon,

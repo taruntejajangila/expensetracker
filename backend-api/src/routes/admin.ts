@@ -374,7 +374,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     let accountsResult = { rows: [] };
     try {
       accountsResult = await pool.query(`
-        SELECT id, name, account_type as type, balance, currency, bank_name, account_number, is_active, created_at, updated_at
+        SELECT id, account_name as name, account_type as type, balance, currency, bank_name, account_number, is_active, created_at, updated_at
         FROM bank_accounts 
         WHERE user_id = $1
         ORDER BY created_at DESC
