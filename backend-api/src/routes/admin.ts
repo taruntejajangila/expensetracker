@@ -1271,7 +1271,7 @@ router.get('/monitoring/anomalies', authenticateToken, requireAnyRole(['admin', 
         t.transaction_type,
         t.description,
         t.created_at,
-        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         c.name as category_name,
         ROUND((t.amount - ts.avg_amount) / NULLIF(ts.std_amount, 0), 2) as z_score
