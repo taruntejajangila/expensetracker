@@ -170,6 +170,16 @@ router.post('/',
       
       const categoryId = categoryResult.rows[0].id;
 
+      // Validate account IDs - only accept valid UUIDs or null
+      const isValidUUID = (str: string) => {
+        if (!str) return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+
+      const toAccountId = (req.body.toAccount && isValidUUID(req.body.toAccount)) ? req.body.toAccount : null;
+      const fromAccountId = (req.body.fromAccount && isValidUUID(req.body.fromAccount)) ? req.body.fromAccount : null;
+
       // Insert transaction into database with account information
       const insertQuery = `
         INSERT INTO transactions (user_id, amount, transaction_type, category_id, description, transaction_date, to_account_id, from_account_id, tags, created_at, updated_at)
@@ -184,8 +194,8 @@ router.post('/',
         categoryId,
         description || '',
         new Date(date),
-        req.body.toAccount || null,
-        req.body.fromAccount || null,
+        toAccountId,
+        fromAccountId,
         req.body.tags || []
       ]);
 
