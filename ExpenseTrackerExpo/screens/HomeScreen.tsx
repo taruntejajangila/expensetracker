@@ -88,12 +88,24 @@ const HomeScreen: React.FC = () => {
         console.log('🔍 HomeScreen: Banner response data:', bannerResponse);
         if (bannerResponse.success && bannerResponse.data) {
           // Transform banner data to include full image URLs
-          const transformedBanners = bannerResponse.data.map((banner: any) => ({
-            ...banner,
-            imageUrl: banner.image_url 
-              ? `${API_BASE_URL.replace('/api', '')}${banner.image_url}`
-              : null
-          }));
+          const transformedBanners = bannerResponse.data.map((banner: any) => {
+            let imageUrl = null;
+            
+            if (banner.image_url) {
+              // Check if it's already a full URL (Cloudinary or external)
+              if (banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://')) {
+                imageUrl = banner.image_url;
+              } else {
+                // For relative paths (local storage fallback)
+                imageUrl = `${API_BASE_URL.replace('/api', '')}${banner.image_url}`;
+              }
+            }
+            
+            return {
+              ...banner,
+              imageUrl
+            };
+          });
           console.log('🔍 HomeScreen: Transformed banners:', transformedBanners);
           setBanners(transformedBanners);
           setCurrentBannerIndex(0);
