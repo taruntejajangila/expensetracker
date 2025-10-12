@@ -2,6 +2,8 @@ import { getPool } from '../config/database';
 import { hashPassword, comparePassword } from './authUtils';
 import { logger } from './logger';
 
+// Version: Fixed getUserById for Railway deployment - v2
+
 export interface User {
   id: string;
   name: string;
@@ -113,18 +115,24 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     }
     
     // If not found in users table, check admin_users table
-    // Note: admin_users has 'username' column, not 'name', so we map it after the query
+    // Use a simpler query to avoid PostgreSQL column alias issues
     const adminResult = await client.query(
-      'SELECT id, username, email, NULL as phone, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
+      'SELECT id, username, email, role, is_active, created_at, updated_at FROM admin_users WHERE id = $1 AND is_active = true',
       [userId]
     );
     
     if (adminResult.rows.length > 0) {
       const adminUser = adminResult.rows[0];
-      // Map username to name to match the expected User interface
+      // Map the admin user data to match the User interface
       return {
-        ...adminUser,
-        name: adminUser.username
+        id: adminUser.id,
+        name: adminUser.username, // Map username to name
+        email: adminUser.email,
+        phone: null, // admin_users don't have phone
+        role: adminUser.role,
+        is_active: adminUser.is_active,
+        created_at: adminUser.created_at,
+        updated_at: adminUser.updated_at
       };
     }
     
