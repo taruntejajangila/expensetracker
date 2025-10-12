@@ -184,6 +184,8 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
       credit_card_id UUID REFERENCES credit_cards(id) ON DELETE SET NULL,
       bank_account_id UUID REFERENCES bank_accounts(id) ON DELETE SET NULL,
+      from_account_id UUID REFERENCES bank_accounts(id) ON DELETE SET NULL,
+      to_account_id UUID REFERENCES bank_accounts(id) ON DELETE SET NULL,
       amount DECIMAL(12,2) NOT NULL,
       description TEXT NOT NULL,
       transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer')),
