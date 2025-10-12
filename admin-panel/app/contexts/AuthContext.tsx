@@ -31,9 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('adminToken')
     const userData = localStorage.getItem('adminUser')
     
+    console.log('🔍 AuthContext useEffect - Initial check:', { token: !!token, userData: !!userData })
+    
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData)
+        console.log('🔍 AuthContext useEffect - Setting user from localStorage:', parsedUser)
         setUser(parsedUser)
       } catch (error) {
         console.error('Error parsing user data:', error)
@@ -42,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     
+    console.log('🔍 AuthContext useEffect - Setting isLoading to false')
     setIsLoading(false)
   }, [])
 

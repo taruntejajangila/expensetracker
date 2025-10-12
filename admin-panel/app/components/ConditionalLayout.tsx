@@ -15,9 +15,15 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const pathname = usePathname()
   const router = useRouter()
   
+  // Debug logging
+  console.log('🔍 ConditionalLayout:', { isAuthenticated, isLoading, pathname })
+  
   // If not authenticated, redirect to login page
   useEffect(() => {
+    console.log('🔍 ConditionalLayout useEffect:', { isAuthenticated, isLoading, pathname })
+    
     if (!isLoading && !isAuthenticated && pathname !== '/login') {
+      console.log('🔍 Redirecting to login - not authenticated')
       router.push('/login')
     }
   }, [isAuthenticated, isLoading, pathname, router])
