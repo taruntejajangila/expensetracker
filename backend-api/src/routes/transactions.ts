@@ -210,23 +210,23 @@ router.post('/',
         toAccount: newTransaction.to_account_id
       };
 
-      // Update account balance(s) based on transaction type
+      // Update account balance(s) based on transaction type (only if valid UUIDs)
       if (type === 'transfer') {
         // For transfers, update both from and to accounts
-        if (req.body.fromAccount && req.body.toAccount) {
+        if (fromAccountId && toAccountId) {
           // Deduct from source account (should be a bank account for credit card bill payments)
           const updateFromQuery = `
             UPDATE bank_accounts 
             SET balance = balance - $1, updated_at = NOW()
             WHERE id = $2 AND user_id = $3
           `;
-          await req.app.locals.db.query(updateFromQuery, [parseFloat(amount), req.body.fromAccount, userId]);
+          await req.app.locals.db.query(updateFromQuery, [parseFloat(amount), fromAccountId, userId]);
           
           // Check if destination account is a credit card
           const creditCardCheckQuery = `
             SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
           `;
-          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [req.body.toAccount, userId]);
+          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [toAccountId, userId]);
           
           if (creditCardCheck.rows.length > 0) {
             // Destination is a credit card - reduce the balance (payment reduces debt)
@@ -236,7 +236,7 @@ router.post('/',
               SET balance = balance - $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
-            await req.app.locals.db.query(updateCreditQuery, [parseFloat(amount), req.body.toAccount, userId]);
+            await req.app.locals.db.query(updateCreditQuery, [parseFloat(amount), toAccountId, userId]);
           } else {
             // Destination is a bank account
             const updateToQuery = `
@@ -244,26 +244,23 @@ router.post('/',
               SET balance = balance + $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
-            await req.app.locals.db.query(updateToQuery, [parseFloat(amount), req.body.toAccount, userId]);
+            await req.app.locals.db.query(updateToQuery, [parseFloat(amount), toAccountId, userId]);
           }
         }
-      } else if (req.body.toAccount || req.body.fromAccount) {
-        // For income/expense, update single account
-        const accountId = req.body.toAccount || req.body.fromAccount;
+      } else if (toAccountId || fromAccountId) {
+        // For income/expense, update single account (only if valid UUID)
+        const accountId = toAccountId || fromAccountId;
         const isIncome = type === 'income';
         const balanceChange = isIncome ? parseFloat(amount) : -parseFloat(amount);
         
-        if (accountId === 'cash-wallet') {
-          // Update cash wallet balance
-          const updateCashQuery = `
-            UPDATE bank_accounts 
-            SET balance = balance + $1, updated_at = NOW()
-            WHERE user_id = $2 AND account_type = 'wallet'
-          `;
-          await req.app.locals.db.query(updateCashQuery, [balanceChange, userId]);
-        } else if (accountId.startsWith('credit-')) {
-          // Update credit card balance (if frontend still sends with prefix)
-          const creditCardId = accountId.replace('credit-', '');
+        // Check if this account ID exists in credit_cards table
+        const creditCardCheckQuery = `
+          SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
+        `;
+        const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountId, userId]);
+        
+        if (creditCardCheck.rows.length > 0) {
+          // This is a credit card
           // For credit cards, balance represents debt, so:
           // - Income: reduce debt (subtract amount)
           // - Expense: increase debt (add amount)
@@ -273,35 +270,15 @@ router.post('/',
             SET balance = balance + $1, updated_at = NOW()
             WHERE id = $2 AND user_id = $3
           `;
-          await req.app.locals.db.query(updateCreditQuery, [creditCardBalanceChange, creditCardId, userId]);
+          await req.app.locals.db.query(updateCreditQuery, [creditCardBalanceChange, accountId, userId]);
         } else {
-          // Check if this account ID exists in credit_cards table (frontend removed prefix)
-          const creditCardCheckQuery = `
-            SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
+          // This is a regular bank account
+          const updateBankQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
           `;
-          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountId, userId]);
-          
-          if (creditCardCheck.rows.length > 0) {
-            // This is a credit card (frontend removed the prefix)
-            // For credit cards, balance represents debt, so:
-            // - Income: reduce debt (subtract amount)
-            // - Expense: increase debt (add amount)
-            const creditCardBalanceChange = isIncome ? -parseFloat(amount) : parseFloat(amount);
-            const updateCreditQuery = `
-              UPDATE credit_cards 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(updateCreditQuery, [creditCardBalanceChange, accountId, userId]);
-          } else {
-            // This is a regular bank account
-            const updateBankQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(updateBankQuery, [balanceChange, accountId, userId]);
-          }
+          await req.app.locals.db.query(updateBankQuery, [balanceChange, accountId, userId]);
         }
       }
 
