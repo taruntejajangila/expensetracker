@@ -240,8 +240,10 @@ export default {
   },
 
   async ensureDefaultWallet() {
-    // This should be handled by the backend
-    throw new Error('ensureDefaultWallet not implemented - use backend API');
+    // With cloud backend, users create accounts manually via the app UI
+    // No automatic wallet creation - return null
+    console.log('ℹ️ ensureDefaultWallet: Using backend API - create accounts manually');
+    return null;
   },
 
   async adjustAccountBalance(accountId: string, delta: number) {
