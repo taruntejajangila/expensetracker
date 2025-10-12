@@ -285,7 +285,9 @@ export default function BannersPage() {
                         <div className="w-16 h-12 rounded-lg overflow-hidden mr-4 bg-gray-100">
                           {banner.image_url ? (
                             <img 
-                              src={`${SERVER_BASE_URL}${banner.image_url}`}
+                              src={banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://') 
+                                ? banner.image_url 
+                                : `${SERVER_BASE_URL}${banner.image_url}`}
                               alt={banner.title}
                               className="w-full h-full object-cover"
                             />
@@ -461,7 +463,10 @@ function BannerModal({
     setImageError(false);
     
     if (banner?.image_url && !imageFile) {
-      const fullImageUrl = `${SERVER_BASE_URL}${banner.image_url}`;
+      // Check if it's already a full URL (Cloudinary)
+      const fullImageUrl = (banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://'))
+        ? banner.image_url
+        : `${SERVER_BASE_URL}${banner.image_url}`;
       setImagePreview(fullImageUrl);
     } else if (!banner?.image_url) {
       setImagePreview(null);
@@ -682,7 +687,11 @@ function BannerModal({
                   <div className="border border-gray-300 rounded-lg p-4 bg-white">
                     {!imageError ? (
                       <img
-                        src={imagePreview || (banner?.image_url ? `${SERVER_BASE_URL}${banner.image_url}` : '')}
+                        src={imagePreview || (banner?.image_url 
+                          ? (banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://') 
+                            ? banner.image_url 
+                            : `${SERVER_BASE_URL}${banner.image_url}`)
+                          : '')}
                         alt="Banner preview"
                         className="w-full h-32 object-cover rounded-md"
                         onError={() => {
@@ -848,7 +857,11 @@ function BannerModal({
                             <div className="text-xs text-gray-500 mb-2">Banner Carousel</div>
                             <div className="relative overflow-hidden rounded-xl bg-gray-100">
                               <img
-                                src={imagePreview || (formData.image_url ? `${SERVER_BASE_URL}${formData.image_url}` : '')}
+                                src={imagePreview || (formData.image_url 
+                                  ? (formData.image_url.startsWith('http://') || formData.image_url.startsWith('https://') 
+                                    ? formData.image_url 
+                                    : `${SERVER_BASE_URL}${formData.image_url}`)
+                                  : '')}
                                 alt="Banner preview"
                                 className="w-full h-24 object-cover"
                                 onError={(e) => {
