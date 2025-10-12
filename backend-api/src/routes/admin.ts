@@ -2050,7 +2050,7 @@ router.get('/reports/financial', authenticateToken, requireAnyRole(['admin', 'su
     // Get user spending ranking
     const userSpendingQuery = `
       SELECT 
-        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         COUNT(t.id) as transaction_count,
         SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
@@ -2156,7 +2156,7 @@ router.post('/reports/custom', authenticateToken, requireAnyRole(['admin', 'supe
         t.transaction_type,
         t.description,
         t.created_at,
-        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         c.name as category_name,
         c.color as category_color
