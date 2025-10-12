@@ -50,6 +50,9 @@ logger.info(`DB_PORT: ${process.env.DB_PORT}`);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - Required for Railway deployment
+app.set('trust proxy', 1);
+
 // Serve static files (for uploaded images) - BEFORE security middleware
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
