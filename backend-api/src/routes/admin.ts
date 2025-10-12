@@ -921,14 +921,14 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
     
     logger.info(`Admin trends analytics requested for last ${months} months by user: ${req.user?.id}`);
 
-    // 1. Monthly User Growth
+    // 1. Monthly User Growth (users table has no role column)
     const userGrowth = await pool.query(`
       SELECT 
         TO_CHAR(created_at, 'YYYY-MM-01') as month,
         COUNT(*) as new_users,
         COUNT(*) OVER (ORDER BY TO_CHAR(created_at, 'YYYY-MM-01')) as cumulative_users
       FROM users
-      WHERE role = 'user' AND created_at >= $1
+      WHERE created_at >= $1
       GROUP BY TO_CHAR(created_at, 'YYYY-MM-01')
       ORDER BY month
     `, [startDate]);
