@@ -67,41 +67,13 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration - Allow all Railway.app domains and localhost
+// CORS configuration - Allow all origins (for development/testing)
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Allow all Railway.app domains
-    if (origin.endsWith('.railway.app') || 
-        origin.includes('localhost') || 
-        origin.includes('127.0.0.1')) {
-      return callback(null, true);
-    }
-    
-    // Allow specific origins
-    const allowedOrigins = [
-      process.env.MOBILE_APP_URL,
-      process.env.ADMIN_PANEL_URL,
-      process.env.FRONTEND_URL,
-      'https://generous-miracle-production-245f.up.railway.app',
-      'https://expensetracker-production-62b5.up.railway.app'
-    ].filter(Boolean);
-    
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    console.log('❌ CORS blocked origin:', origin);
-    callback(null, true); // Allow anyway for now
-  },
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
 // Rate limiting - More generous for development
