@@ -39,7 +39,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
     const query = `
       SELECT 
         id, account_name, bank_name, account_type, balance, currency, 
-        account_number, account_holder_name, is_active as status, updated_at as last_updated,
+        account_number, is_active as status, updated_at as last_updated,
         created_at, updated_at
       FROM bank_accounts 
       WHERE user_id = $1 
@@ -56,7 +56,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         id: row.id,
         name: row.account_name,
         bankName: row.bank_name,
-        accountHolderName: row.account_holder_name || row.account_name, // Use account_holder_name if available, fallback to account_name
+        accountHolderName: row.account_name, // Use account_holder_name if available, fallback to account_name
         type: row.account_type === 'wallet' ? 'cash' : 'bank',
         balance: parseFloat(row.balance),
         currency: row.currency || 'INR',
@@ -89,7 +89,7 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
     const query = `
       SELECT 
         id, account_name, bank_name, account_type, balance, currency, 
-        account_number, account_holder_name, is_active as status, updated_at as last_updated,
+        account_number, is_active as status, updated_at as last_updated,
         created_at, updated_at
       FROM bank_accounts 
       WHERE id = $1 AND user_id = $2
@@ -192,7 +192,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     const query = `
       INSERT INTO bank_accounts (
         user_id, name, account_name, bank_name, account_type, balance, currency,
-        account_number, account_holder_name, is_active, created_at, updated_at
+        account_number, is_active, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;

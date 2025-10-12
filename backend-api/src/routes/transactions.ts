@@ -49,21 +49,16 @@ router.get('/',
           t.transaction_date,
           t.created_at,
           t.tags,
-          t.from_account,
-          t.to_account,
+          t.bank_account_id,
           c.name as category,
           c.icon as categoryIcon,
           c.color as categoryColor,
-          fa.account_name as from_account_name,
-          fa.bank_name as from_bank_name,
-          fa.account_number as from_account_number,
-          ta.account_name as to_account_name,
-          ta.bank_name as to_bank_name,
-          ta.account_number as to_account_number
+          ba.account_name,
+          ba.bank_name,
+          ba.account_number
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
-        LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
-        LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
+        LEFT JOIN bank_accounts ba ON t.bank_account_id = ba.id
         WHERE t.user_id = $1
         ORDER BY t.transaction_date DESC, t.created_at DESC
         LIMIT $2 OFFSET $3
@@ -84,17 +79,11 @@ router.get('/',
       // Map transactions with bank account information
       const mappedTransactions = result.rows.map((row: any) => ({
         ...row,
-        fromAccount: row.from_account ? {
-          id: row.from_account,
-          name: row.from_account_name,
-          bankName: row.from_bank_name,
-          accountNumber: row.from_account_number
-        } : null,
-        toAccount: row.to_account ? {
-          id: row.to_account,
-          name: row.to_account_name,
-          bankName: row.to_bank_name,
-          accountNumber: row.to_account_number
+        bankAccount: row.bank_account_id ? {
+          id: row.bank_account_id,
+          name: row.account_name,
+          bankName: row.bank_name,
+          accountNumber: row.account_number
         } : null
       }));
 
@@ -308,26 +297,21 @@ router.get('/recent',
         SELECT 
           t.id,
           t.amount,
-          t.transaction_type,
+          t.transaction_type as type,
           t.description,
-          t.transaction_date,
+          t.transaction_date as date,
           t.created_at,
           t.tags,
-          t.from_account,
-          t.to_account,
+          t.bank_account_id,
           c.name as category,
           c.icon as categoryIcon,
           c.color as categoryColor,
-          fa.account_name as from_account_name,
-          fa.bank_name as from_bank_name,
-          fa.account_number as from_account_number,
-          ta.account_name as to_account_name,
-          ta.bank_name as to_bank_name,
-          ta.account_number as to_account_number
+          ba.account_name,
+          ba.bank_name,
+          ba.account_number
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
-        LEFT JOIN bank_accounts fa ON t.from_account::uuid = fa.id
-        LEFT JOIN bank_accounts ta ON t.to_account::uuid = ta.id
+        LEFT JOIN bank_accounts ba ON t.bank_account_id = ba.id
         WHERE t.user_id = $1
         ORDER BY t.transaction_date DESC, t.created_at DESC
         LIMIT $2
@@ -338,17 +322,11 @@ router.get('/recent',
       // Map transactions with bank account information
       const mappedTransactions = result.rows.map((row: any) => ({
         ...row,
-        fromAccount: row.from_account ? {
-          id: row.from_account,
-          name: row.from_account_name,
-          bankName: row.from_bank_name,
-          accountNumber: row.from_account_number
-        } : null,
-        toAccount: row.to_account ? {
-          id: row.to_account,
-          name: row.to_account_name,
-          bankName: row.to_bank_name,
-          accountNumber: row.to_account_number
+        bankAccount: row.bank_account_id ? {
+          id: row.bank_account_id,
+          name: row.account_name,
+          bankName: row.bank_name,
+          accountNumber: row.account_number
         } : null
       }));
 
