@@ -1589,7 +1589,7 @@ router.get('/monitoring/transactions/realtime', authenticateToken, requireAnyRol
         t.transaction_type,
         t.description,
         t.created_at,
-        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         c.name as category_name,
         c.color as category_color
@@ -1608,8 +1608,8 @@ router.get('/monitoring/transactions/realtime', authenticateToken, requireAnyRol
       SELECT 
         DATE_TRUNC('hour', created_at) as hour,
         COUNT(*) as transaction_count,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
+        SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as total_expense
       FROM transactions
       WHERE created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE_TRUNC('hour', created_at)
@@ -1625,8 +1625,8 @@ router.get('/monitoring/transactions/realtime', authenticateToken, requireAnyRol
     const currentHourQuery = `
       SELECT 
         COUNT(*) as transaction_count,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
+        SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as total_expense
       FROM transactions
       WHERE created_at >= $1
     `;
@@ -2018,8 +2018,8 @@ router.get('/reports/financial', authenticateToken, requireAnyRole(['admin', 'su
     // Get financial summary for the period
     const financialSummaryQuery = `
       SELECT 
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expenses,
+        SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as total_expenses,
         COUNT(*) as total_transactions,
         COUNT(DISTINCT user_id) as active_users
       FROM transactions
