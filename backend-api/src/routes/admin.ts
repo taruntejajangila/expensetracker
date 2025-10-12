@@ -119,11 +119,10 @@ router.get('/live-traffic', authenticateToken, requireAnyRole(['admin', 'super_a
   try {
     const pool = getPool();
     
-    // Get total registered users
+    // Get total registered users (users table doesn't have role column)
     const totalUsersResult = await pool.query(`
       SELECT COUNT(*) as total_users
       FROM users u
-      WHERE u.role = 'user'
     `);
 
     // Use real data from the database
@@ -207,8 +206,8 @@ router.get('/stats', authenticateToken, requireAnyRole(['admin', 'super_admin'])
   try {
     const pool = getPool();
     
-    // Get total mobile app users count (exclude admin users)
-    const usersResult = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = \'user\'');
+    // Get total mobile app users count (users table doesn't have role column)
+    const usersResult = await pool.query('SELECT COUNT(*) as total FROM users');
     const totalUsers = parseInt(usersResult.rows[0].total);
 
     // Get active users (users with any transactions - more meaningful for mobile app)
@@ -216,7 +215,6 @@ router.get('/stats', authenticateToken, requireAnyRole(['admin', 'super_admin'])
       SELECT COUNT(DISTINCT u.id) as active 
       FROM users u
       INNER JOIN transactions t ON u.id = t.user_id
-      WHERE u.role = 'user'
     `);
     const activeUsers = parseInt(activeUsersResult.rows[0].active);
 
@@ -263,17 +261,16 @@ router.get('/users', authenticateToken, requireAnyRole(['admin', 'super_admin'])
     const usersResult = await pool.query(`
       SELECT 
         u.id,
-        u.name,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
-        u.role,
+        'user' as role,
         u.created_at as "createdAt",
         u.last_login as "lastLoginAt",
         COUNT(t.id) as "transactionCount",
         MAX(t.created_at) as "lastTransactionAt"
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      WHERE u.role = 'user'  -- Only show mobile app users, exclude admin users
-      GROUP BY u.id, u.name, u.email, u.role, u.created_at, u.last_login
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at, u.last_login
       ORDER BY u.created_at DESC
     `);
 
@@ -675,45 +672,45 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
       SELECT 
         'transactions' as feature,
         COUNT(DISTINCT user_id) as users_with_feature,
-        (SELECT COUNT(*) FROM users WHERE role = 'user') as total_users
+        (SELECT COUNT(*) FROM users) as total_users
       FROM transactions
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+      WHERE user_id IN (SELECT id FROM users)
       
       UNION ALL
       
       SELECT 
         'budgets' as feature,
         COUNT(DISTINCT user_id) as users_with_feature,
-        (SELECT COUNT(*) FROM users WHERE role = 'user') as total_users
+        (SELECT COUNT(*) FROM users) as total_users
       FROM budgets
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+      WHERE user_id IN (SELECT id FROM users)
       
       UNION ALL
       
       SELECT 
         'goals' as feature,
         COUNT(DISTINCT user_id) as users_with_feature,
-        (SELECT COUNT(*) FROM users WHERE role = 'user') as total_users
+        (SELECT COUNT(*) FROM users) as total_users
       FROM goals
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+      WHERE user_id IN (SELECT id FROM users)
       
       UNION ALL
       
       SELECT 
         'loans' as feature,
         COUNT(DISTINCT user_id) as users_with_feature,
-        (SELECT COUNT(*) FROM users WHERE role = 'user') as total_users
+        (SELECT COUNT(*) FROM users) as total_users
       FROM loans
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+      WHERE user_id IN (SELECT id FROM users)
       
       UNION ALL
       
       SELECT 
         'credit_cards' as feature,
         COUNT(DISTINCT user_id) as users_with_feature,
-        (SELECT COUNT(*) FROM users WHERE role = 'user') as total_users
+        (SELECT COUNT(*) FROM users) as total_users
       FROM credit_cards
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+      WHERE user_id IN (SELECT id FROM users)
     `);
 
     // 3. User Engagement Metrics
@@ -749,14 +746,14 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
       SELECT COUNT(DISTINCT user_id) as daily_active_users
       FROM transactions 
       WHERE DATE(created_at) = CURRENT_DATE
-        AND user_id IN (SELECT id FROM users WHERE role = 'user')
+        AND user_id IN (SELECT id FROM users)
     `);
 
     const wau = await pool.query(`
       SELECT COUNT(DISTINCT user_id) as weekly_active_users
       FROM transactions 
       WHERE created_at >= NOW() - INTERVAL '7 days'
-        AND user_id IN (SELECT id FROM users WHERE role = 'user')
+        AND user_id IN (SELECT id FROM users)
     `);
 
     // 5. Session Duration (estimated based on transaction patterns)
@@ -771,7 +768,7 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
           MIN(created_at) as min_time,
           MAX(created_at) as max_time
         FROM transactions
-        WHERE user_id IN (SELECT id FROM users WHERE role = 'user')
+        WHERE user_id IN (SELECT id FROM users)
         GROUP BY user_id, DATE(created_at)
       ) session_data
       WHERE max_time > min_time
@@ -958,7 +955,7 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         'budgets' as feature,
         COUNT(DISTINCT user_id) as users
       FROM budgets
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user') 
+      WHERE user_id IN (SELECT id FROM users) 
         AND created_at >= $1
       GROUP BY TO_CHAR(created_at, 'YYYY-MM-01')
       
@@ -969,7 +966,7 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         'goals' as feature,
         COUNT(DISTINCT user_id) as users
       FROM goals
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user') 
+      WHERE user_id IN (SELECT id FROM users) 
         AND created_at >= $1
       GROUP BY TO_CHAR(created_at, 'YYYY-MM-01')
       
@@ -980,7 +977,7 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         'loans' as feature,
         COUNT(DISTINCT user_id) as users
       FROM loans
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user') 
+      WHERE user_id IN (SELECT id FROM users) 
         AND created_at >= $1
       GROUP BY TO_CHAR(created_at, 'YYYY-MM-01')
       
@@ -991,7 +988,7 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         'credit_cards' as feature,
         COUNT(DISTINCT user_id) as users
       FROM credit_cards
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user') 
+      WHERE user_id IN (SELECT id FROM users) 
         AND created_at >= $1
       GROUP BY TO_CHAR(created_at, 'YYYY-MM-01')
       
@@ -1005,7 +1002,7 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         COUNT(*) as transaction_count,
         COUNT(DISTINCT user_id) as active_users
       FROM transactions
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'user') 
+      WHERE user_id IN (SELECT id FROM users) 
         AND created_at >= $1
       GROUP BY EXTRACT(HOUR FROM created_at)
       ORDER BY transaction_count DESC
@@ -1656,7 +1653,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
   try {
     const pool = getPool();
     
-    // Get active alerts
+    // Get active alerts (users table has first_name + last_name, not name; no role column)
     const alertsQuery = `
       SELECT 
         'large_transaction' as alert_type,
@@ -1664,7 +1661,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
         'warning' as severity,
         t.created_at as triggered_at,
         t.amount as value,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         t.description as details
       FROM transactions t
@@ -1684,13 +1681,12 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
         'info' as severity,
         u.created_at as triggered_at,
         EXTRACT(DAYS FROM NOW() - MAX(t.created_at)) as value,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         'No transactions in last 30 days' as details
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      WHERE u.role = 'user'
-      GROUP BY u.id, u.name, u.email, u.created_at
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at
       HAVING MAX(t.created_at) IS NULL 
          OR EXTRACT(DAYS FROM NOW() - MAX(t.created_at)) > 30
       
@@ -1702,7 +1698,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
         'warning' as severity,
         t.created_at as triggered_at,
         b.amount as value,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         CONCAT('Budget: ', b.name, ' exceeded by ', 
                ROUND(((COALESCE(SUM(t.amount), 0) - b.amount) / b.amount) * 100, 2), '%') as details
@@ -1713,7 +1709,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
         AND t.type = 'expense'
         AND t.created_at >= b.start_date 
         AND t.created_at <= b.end_date
-      GROUP BY b.id, b.name, b.amount, u.name, u.email, t.created_at
+      GROUP BY b.id, b.name, b.amount, u.first_name, u.last_name, u.email, t.created_at
       HAVING COALESCE(SUM(t.amount), 0) > b.amount
       
       ORDER BY triggered_at DESC
