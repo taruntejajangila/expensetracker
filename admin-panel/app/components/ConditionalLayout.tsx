@@ -22,8 +22,24 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   useEffect(() => {
     console.log('🔍 ConditionalLayout useEffect:', { isAuthenticated, isLoading, pathname })
     
+    // Store debug info in localStorage
+    localStorage.setItem('debug_conditional_layout', JSON.stringify({
+      timestamp: new Date().toISOString(),
+      isAuthenticated,
+      isLoading,
+      pathname,
+      step: 'conditional_layout_check'
+    }))
+    
     if (!isLoading && !isAuthenticated && pathname !== '/login') {
       console.log('🔍 Redirecting to login - not authenticated')
+      localStorage.setItem('debug_redirect_to_login', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        isAuthenticated,
+        isLoading,
+        pathname,
+        step: 'redirect_to_login'
+      }))
       router.push('/login')
     }
   }, [isAuthenticated, isLoading, pathname, router])

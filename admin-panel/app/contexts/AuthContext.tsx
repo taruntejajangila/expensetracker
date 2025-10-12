@@ -52,6 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log('🔐 AuthContext: Starting login process')
+      
+      // Store debug info in localStorage (won't be cleared by page refresh)
+      localStorage.setItem('debug_login_start', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        email,
+        step: 'login_start'
+      }))
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/login`, {
         method: 'POST',
         headers: {
@@ -62,6 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json()
       console.log('🔐 AuthContext: API response:', data)
+      
+      localStorage.setItem('debug_api_response', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        success: data.success,
+        message: data.message,
+        step: 'api_response'
+      }))
 
       if (data.success) {
         console.log('🔐 AuthContext: Login successful, storing data')
@@ -74,6 +89,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('adminToken', token)
         localStorage.setItem('adminUser', JSON.stringify(user))
         
+        // Store debug info
+        localStorage.setItem('debug_token_stored', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          tokenLength: token.length,
+          user,
+          step: 'token_stored'
+        }))
+        
         // Verify storage
         const storedToken = localStorage.getItem('adminToken')
         const storedUser = localStorage.getItem('adminUser')
@@ -82,13 +105,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setUser(user)
         console.log('🔐 AuthContext: User state updated:', user)
+        
+        localStorage.setItem('debug_login_success', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          user,
+          step: 'login_success'
+        }))
+        
         return true
       } else {
         console.log('🔐 AuthContext: Login failed:', data.message)
+        localStorage.setItem('debug_login_failed', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          message: data.message,
+          step: 'login_failed'
+        }))
         return false
       }
     } catch (error) {
       console.error('🔐 AuthContext: Login error:', error)
+      localStorage.setItem('debug_login_error', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        step: 'login_error'
+      }))
       return false
     }
   }
