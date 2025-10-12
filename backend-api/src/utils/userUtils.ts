@@ -47,22 +47,39 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
     // Hash password
     const hashedPassword = await hashPassword(userData.password);
     
-    // Insert new user
+    // Insert new user (users table has first_name, last_name, password - not name, password_hash)
+    // Split name into first and last name
+    const nameParts = userData.name.trim().split(' ');
+    const firstName = nameParts[0] || 'User';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
     const result = await client.query(
-      `INSERT INTO users (name, email, password_hash, phone, role, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, email, phone, role, is_active, created_at, updated_at`,
+      `INSERT INTO users (first_name, last_name, email, password, phone, is_verified, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, first_name, last_name, email, phone, is_active, created_at, updated_at`,
       [
-        userData.name,
+        firstName,
+        lastName,
         userData.email,
         hashedPassword,
         userData.phone || null,
-        userData.role || 'user',
-        true
+        false, // is_verified - default false for mobile users
+        true   // is_active
       ]
     );
     
-    return result.rows[0];
+    const user = result.rows[0];
+    // Map to User interface
+    return {
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      email: user.email,
+      phone: user.phone,
+      role: 'user',
+      is_active: user.is_active,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
   } finally {
     client.release();
   }
@@ -74,8 +91,9 @@ export const authenticateUser = async (loginData: LoginUserData): Promise<User |
   const client = await pool.connect();
   
   try {
+    // users table has first_name, last_name, password (not name, password_hash)
     const result = await client.query(
-      'SELECT id, name, email, phone, role, is_active, password_hash FROM users WHERE email = $1 AND is_active = true',
+      'SELECT id, first_name, last_name, email, phone, is_active, password FROM users WHERE email = $1 AND is_active = true',
       [loginData.email]
     );
     
@@ -84,15 +102,23 @@ export const authenticateUser = async (loginData: LoginUserData): Promise<User |
     }
     
     const user = result.rows[0];
-    const isPasswordValid = await comparePassword(loginData.password, user.password_hash);
+    const isPasswordValid = await comparePassword(loginData.password, user.password);
     
     if (!isPasswordValid) {
       return null;
     }
     
-    // Remove password hash from response
-    delete user.password_hash;
-    return user;
+    // Map to User interface
+    return {
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      email: user.email,
+      phone: user.phone,
+      role: 'user',
+      is_active: user.is_active,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
   } finally {
     client.release();
   }
@@ -161,12 +187,27 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   const client = await pool.connect();
   
   try {
+    // users table has first_name, last_name (not name)
     const result = await client.query(
-      'SELECT id, name, email, phone, role, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true',
+      'SELECT id, first_name, last_name, email, phone, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true',
       [email]
     );
     
-    return result.rows.length > 0 ? result.rows[0] : null;
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const user = result.rows[0];
+    return {
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      email: user.email,
+      phone: user.phone,
+      role: 'user',
+      is_active: user.is_active,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
   } finally {
     client.release();
   }
@@ -183,9 +224,14 @@ export const updateUserProfile = async (userId: string, updates: Partial<Pick<Us
     let paramCount = 1;
     
     if (updates.name) {
-      updateFields.push(`name = $${paramCount}`);
-      values.push(updates.name);
-      paramCount++;
+      // Split name into first_name and last_name
+      const nameParts = updates.name.trim().split(' ');
+      const firstName = nameParts[0] || 'User';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      updateFields.push(`first_name = $${paramCount}`, `last_name = $${paramCount + 1}`);
+      values.push(firstName, lastName);
+      paramCount += 2;
     }
     
     if (updates.phone) {
@@ -203,11 +249,25 @@ export const updateUserProfile = async (userId: string, updates: Partial<Pick<Us
     
     const result = await client.query(
       `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${paramCount} AND is_active = true
-       RETURNING id, name, email, phone, role, is_active, created_at, updated_at`,
+       RETURNING id, first_name, last_name, email, phone, is_active, created_at, updated_at`,
       values
     );
     
-    return result.rows.length > 0 ? result.rows[0] : null;
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const user = result.rows[0];
+    return {
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      email: user.email,
+      phone: user.phone,
+      role: 'user',
+      is_active: user.is_active,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
   } finally {
     client.release();
   }
