@@ -104,14 +104,25 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   const client = await pool.connect();
   
   try {
-    // First check regular users table
+    // First check regular users table (users table has first_name + last_name, not name)
     const userResult = await client.query(
-      'SELECT id, name, email, phone, role, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true',
+      'SELECT id, first_name, last_name, email, phone, is_active, created_at, updated_at FROM users WHERE id = $1 AND is_active = true',
       [userId]
     );
     
     if (userResult.rows.length > 0) {
-      return userResult.rows[0];
+      const user = userResult.rows[0];
+      // Map users table fields to User interface
+      return {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`, // Combine first_name + last_name
+        email: user.email,
+        phone: user.phone,
+        role: 'user', // users table doesn't have role, default to 'user'
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      };
     }
     
     // If not found in users table, check admin_users table
