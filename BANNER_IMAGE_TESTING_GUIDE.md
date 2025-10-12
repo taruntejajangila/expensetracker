@@ -13,8 +13,8 @@ Complete testing guide to verify banner images are working correctly after Cloud
 - Look for:
   ```
   ✅ Cloudinary configured successfully
-     Cloud Name: dbqkjbrdd
-     API Key: 428386923358324
+     Cloud Name: your_cloud_name
+     API Key: your_api_key
      API Secret Length: 27 chars
   ✅ Database connected successfully
   🚀 Server running on port 8080

@@ -188,15 +188,16 @@ After deployment, check Railway backend logs for:
 Make sure these are set in Railway Backend Service:
 
 ```env
-CLOUDINARY_CLOUD_NAME=dbqkjbrdd
-CLOUDINARY_API_KEY=428386923358324
-CLOUDINARY_API_SECRET=Iem2-fTM4D-eEX969hn4ccdFHyo
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 **⚠️ IMPORTANT:**
 - ✅ No spaces before or after the `=` sign
 - ✅ No quotes around values
-- ✅ Copy the EXACT API Secret from Cloudinary Dashboard
+- ✅ Copy the EXACT credentials from Cloudinary Dashboard → Settings → Access Keys
+- ⚠️ NEVER commit actual credentials to Git
 
 ---
 
