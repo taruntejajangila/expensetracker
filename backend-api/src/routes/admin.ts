@@ -10,23 +10,9 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/banners');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `banner-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
+// Configure multer for image uploads (using memory storage for Cloudinary)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(), // Store in memory for Cloudinary upload
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
@@ -2770,7 +2756,7 @@ router.get('/banners/:id/analytics', authenticateToken, requireAnyRole(['admin',
 });
 
 
-// POST /api/admin/banners/upload - Upload banner image
+// POST /api/admin/banners/upload - Upload banner image to Cloudinary
 router.post('/banners/upload', authenticateToken, requireAnyRole(['admin', 'super_admin']), upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -2780,16 +2766,33 @@ router.post('/banners/upload', authenticateToken, requireAnyRole(['admin', 'supe
       });
     }
 
-    // Generate the public URL for the uploaded image
-    const imageUrl = `/uploads/banners/${req.file.filename}`;
+    // Upload to Cloudinary for persistent cloud storage
+    const { uploadToCloudinary } = require('../config/cloudinary');
     
-    logger.info(`Banner image uploaded by user: ${req.user?.id}, file: ${req.file.filename}`);
-    
-    return res.json({
-      success: true,
-      message: 'Image uploaded successfully',
-      imageUrl: imageUrl
-    });
+    try {
+      const result = await uploadToCloudinary(req.file.buffer, 'expense-tracker/banners');
+      
+      logger.info(`Banner image uploaded to Cloudinary by user: ${req.user?.id}, URL: ${result.url}`);
+      
+      return res.json({
+        success: true,
+        message: 'Image uploaded successfully',
+        imageUrl: result.url, // Full Cloudinary URL
+        publicId: result.publicId // For deletion later
+      });
+    } catch (cloudinaryError) {
+      logger.error('Cloudinary upload failed:', cloudinaryError);
+      
+      // Fallback to local storage if Cloudinary fails
+      const imageUrl = `/uploads/banners/${req.file.filename}`;
+      logger.warn(`Using local storage fallback: ${imageUrl}`);
+      
+      return res.json({
+        success: true,
+        message: 'Image uploaded successfully (local storage)',
+        imageUrl: imageUrl
+      });
+    }
   } catch (error) {
     logger.error('Error uploading banner image:', error);
     return res.status(500).json({
