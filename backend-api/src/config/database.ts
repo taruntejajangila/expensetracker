@@ -132,6 +132,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       type VARCHAR(20) DEFAULT 'expense' CHECK (type IN ('income', 'expense', 'transfer')),
       is_default BOOLEAN DEFAULT false,
       is_active BOOLEAN DEFAULT true,
+      sort_order INTEGER DEFAULT 999,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       UNIQUE(user_id, name)
