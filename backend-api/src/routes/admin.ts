@@ -306,15 +306,15 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     // Get basic user info
     const userResult = await pool.query(`
       SELECT 
-        u.id, u.name, u.email, u.role,
+        u.id, CONCAT(u.first_name, ' ', u.last_name) as name, u.email, 'user' as role,
         u.created_at as "createdAt",
         u.last_login as "lastLoginAt",
         COUNT(t.id) as "transactionCount",
         MAX(t.created_at) as "lastTransactionAt"
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      WHERE u.id = $1 AND u.role = 'user'
-      GROUP BY u.id, u.name, u.email, u.role, u.created_at, u.last_login
+      WHERE u.id = $1 
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at, u.last_login
     `, [id]);
 
     if (userResult.rows.length === 0) {
@@ -334,7 +334,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
           t.id, 
           t.description, 
           t.amount, 
-          t.type, 
+          t.transaction_type, 
           c.name as category_name,
           t.created_at
         FROM transactions t
@@ -361,7 +361,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
         count: categoriesResult.rows.length,
         categories: categoriesResult.rows.map((cat: any) => ({
           name: cat.name,
-          type: cat.type,
+          type: cat.transaction_type,
           is_default: cat.is_default,
           created_at: cat.created_at
         }))
@@ -657,11 +657,11 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
         DATE(t.created_at) as date,
         COUNT(DISTINCT t.user_id) as active_users,
         COUNT(t.id) as total_transactions,
-        COUNT(CASE WHEN t.type = 'income' THEN 1 END) as income_count,
-        COUNT(CASE WHEN t.type = 'expense' THEN 1 END) as expense_count
+        COUNT(CASE WHEN t.transaction_type = 'income' THEN 1 END) as income_count,
+        COUNT(CASE WHEN t.transaction_type = 'expense' THEN 1 END) as expense_count
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
-      WHERE u.role = 'user' 
+      WHERE TRUE 
         AND t.created_at >= $1
       GROUP BY DATE(t.created_at)
       ORDER BY date DESC
@@ -717,7 +717,7 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
     const userEngagement = await pool.query(`
       SELECT 
         u.id,
-        u.name,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
         COUNT(t.id) as transaction_count,
         COUNT(b.id) as budget_count,
@@ -736,8 +736,8 @@ router.get('/analytics/usage', authenticateToken, requireAnyRole(['admin', 'supe
       LEFT JOIN goals g ON u.id = g.user_id
       LEFT JOIN loans l ON u.id = l.user_id
       LEFT JOIN credit_cards cc ON u.id = cc.user_id
-      WHERE u.role = 'user'
-      GROUP BY u.id, u.name, u.email
+      WHERE TRUE
+      GROUP BY u.id, u.first_name, u.last_name, u.email
       ORDER BY transaction_count DESC
     `);
 
@@ -939,11 +939,11 @@ router.get('/analytics/trends', authenticateToken, requireAnyRole(['admin', 'sup
         TO_CHAR(t.created_at, 'YYYY-MM-01') as month,
         COUNT(t.id) as transaction_count,
         COUNT(DISTINCT t.user_id) as active_users,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
-      WHERE u.role = 'user' AND t.created_at >= $1
+      WHERE TRUE AND t.created_at >= $1
       GROUP BY TO_CHAR(t.created_at, 'YYYY-MM-01')
       ORDER BY month
     `, [startDate]);
@@ -1051,15 +1051,15 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
       SELECT 
         COUNT(t.id) as total_transactions,
         COUNT(DISTINCT t.user_id) as active_users,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
-        AVG(CASE WHEN t.type = 'income' THEN t.amount ELSE NULL END) as avg_income,
-        AVG(CASE WHEN t.type = 'expense' THEN t.amount ELSE NULL END) as avg_expense,
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
+        AVG(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE NULL END) as avg_income,
+        AVG(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE NULL END) as avg_expense,
         MAX(t.amount) as highest_transaction,
         MIN(t.amount) as lowest_transaction
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
-      WHERE u.role = 'user' AND t.created_at >= $1
+      WHERE TRUE AND t.created_at >= $1
     `, [startDate]);
 
     // 2. Category-wise Spending Analysis
@@ -1069,14 +1069,14 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
         c.icon as category_icon,
         c.color as category_color,
         COUNT(t.id) as transaction_count,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_spent,
-        AVG(CASE WHEN t.type = 'expense' THEN t.amount ELSE NULL END) as avg_spent,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_spent,
+        AVG(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE NULL END) as avg_spent,
         COUNT(DISTINCT t.user_id) as users_using_category
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
       INNER JOIN categories c ON t.category_id = c.id
-      WHERE u.role = 'user' 
-        AND t.type = 'expense'
+      WHERE TRUE 
+        AND t.transaction_type = 'expense'
         AND t.created_at >= $1
       GROUP BY c.id, c.name, c.icon, c.color
       ORDER BY total_spent DESC
@@ -1089,13 +1089,13 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
         TO_CHAR(t.created_at, 'YYYY-MM-01') as month,
         COUNT(t.id) as transaction_count,
         COUNT(DISTINCT t.user_id) as active_users,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
-        (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-         SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) as net_savings
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
+        (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+         SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) as net_savings
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
-      WHERE u.role = 'user' AND t.created_at >= $1
+      WHERE TRUE AND t.created_at >= $1
       GROUP BY TO_CHAR(t.created_at, 'YYYY-MM-01')
       ORDER BY month
     `, [startDate]);
@@ -1108,16 +1108,16 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
         c.color as category_color,
         COUNT(DISTINCT b.user_id) as users_with_budget,
         AVG(b.amount) as avg_budget_amount,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_actual_spent,
-        AVG(CASE WHEN t.type = 'expense' THEN t.amount ELSE NULL END) as avg_actual_spent,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_actual_spent,
+        AVG(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE NULL END) as avg_actual_spent,
         CASE 
-          WHEN SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) > 0 
-          THEN (AVG(b.amount) / NULLIF(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0)) * 100
+          WHEN SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) > 0 
+          THEN (AVG(b.amount) / NULLIF(SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END), 0)) * 100
           ELSE 0 
         END as budget_utilization_percentage
       FROM categories c
       LEFT JOIN budgets b ON c.id = b.category_id
-      LEFT JOIN transactions t ON c.id = t.category_id AND t.type = 'expense' AND t.created_at >= $1
+      LEFT JOIN transactions t ON c.id = t.category_id AND t.transaction_type = 'expense' AND t.created_at >= $1
       WHERE c.type = 'expense'
       GROUP BY c.id, c.name, c.icon, c.color
       HAVING COUNT(DISTINCT b.user_id) > 0
@@ -1128,32 +1128,32 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
     const financialHealth = await pool.query(`
       SELECT 
         u.id,
-        u.name,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
         COUNT(t.id) as transaction_count,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
-        (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-         SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) as net_savings,
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
+        (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+         SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) as net_savings,
         CASE 
-          WHEN SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) > 0 
-          THEN (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) / 
-                SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) * 100
+          WHEN SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) > 0 
+          THEN (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) / 
+                SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) * 100
           ELSE 0 
         END as savings_rate_percentage,
         CASE 
-          WHEN (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-                SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) > 0 
+          WHEN (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+                SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) > 0 
           THEN 'healthy'
-          WHEN (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-                SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) = 0 
+          WHEN (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+                SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) = 0 
           THEN 'balanced'
           ELSE 'at_risk'
         END as financial_health_status
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id AND t.created_at >= $1
-      WHERE u.role = 'user'
-      GROUP BY u.id, u.name, u.email
+      WHERE TRUE
+      GROUP BY u.id, u.first_name, u.last_name, u.email
       HAVING COUNT(t.id) > 0
       ORDER BY savings_rate_percentage DESC
     `, [startDate]);
@@ -1171,8 +1171,8 @@ router.get('/analytics/financial', authenticateToken, requireAnyRole(['admin', '
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
       INNER JOIN categories c ON t.category_id = c.id
-      WHERE u.role = 'user' 
-        AND t.type = 'income'
+      WHERE TRUE 
+        AND t.transaction_type = 'income'
         AND t.created_at >= $1
       GROUP BY c.id, c.name, c.icon, c.color
       ORDER BY total_income DESC
@@ -1217,15 +1217,15 @@ router.get('/analytics/financial/summary', authenticateToken, requireAnyRole(['a
     const summary = await pool.query(`
       SELECT 
         COUNT(DISTINCT t.user_id) as active_users,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
-        (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-         SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) as net_savings,
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
+        (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+         SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) as net_savings,
         COUNT(t.id) as total_transactions,
-        AVG(CASE WHEN t.type = 'expense' THEN t.amount ELSE NULL END) as avg_expense
+        AVG(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE NULL END) as avg_expense
       FROM transactions t
       INNER JOIN users u ON t.user_id = u.id
-      WHERE u.role = 'user' 
+      WHERE TRUE 
         AND t.created_at >= NOW() - INTERVAL '30 days'
     `);
 
@@ -1268,10 +1268,10 @@ router.get('/monitoring/anomalies', authenticateToken, requireAnyRole(['admin', 
       SELECT 
         t.id,
         t.amount,
-        t.type,
+        t.transaction_type,
         t.description,
         t.created_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
         u.email as user_email,
         c.name as category_name,
         ROUND((t.amount - ts.avg_amount) / NULLIF(ts.std_amount, 0), 2) as z_score
@@ -1299,7 +1299,7 @@ router.get('/monitoring/anomalies', authenticateToken, requireAnyRole(['admin', 
           AVG(t.amount) as avg_amount
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
-        WHERE t.type = 'expense'
+        WHERE t.transaction_type = 'expense'
           AND t.created_at >= NOW() - INTERVAL '30 days'
         GROUP BY c.name, DATE(t.created_at)
       ),
@@ -1332,15 +1332,15 @@ router.get('/monitoring/anomalies', authenticateToken, requireAnyRole(['admin', 
     const inactiveUsersQuery = `
       SELECT 
         u.id,
-        u.name,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
         u.created_at as join_date,
         MAX(t.created_at) as last_transaction,
         EXTRACT(DAYS FROM NOW() - MAX(t.created_at)) as days_inactive
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      WHERE u.role = 'user'
-      GROUP BY u.id, u.name, u.email, u.created_at
+      WHERE TRUE
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at
       HAVING MAX(t.created_at) IS NULL 
          OR EXTRACT(DAYS FROM NOW() - MAX(t.created_at)) > 30
       ORDER BY days_inactive DESC
@@ -1475,7 +1475,7 @@ router.get('/monitoring/activity', authenticateToken, requireAnyRole(['admin', '
     const userActivityQuery = `
       SELECT 
         u.id,
-        u.name,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
         u.created_at as join_date,
         COUNT(t.id) as total_transactions,
@@ -1491,8 +1491,8 @@ router.get('/monitoring/activity', authenticateToken, requireAnyRole(['admin', '
         END as activity_status
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      WHERE u.role = 'user'
-      GROUP BY u.id, u.name, u.email, u.created_at
+      WHERE TRUE
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at
       ORDER BY last_activity DESC NULLS LAST
     `;
     
@@ -1586,10 +1586,10 @@ router.get('/monitoring/transactions/realtime', authenticateToken, requireAnyRol
       SELECT 
         t.id,
         t.amount,
-        t.type,
+        t.transaction_type,
         t.description,
         t.created_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
         u.email as user_email,
         c.name as category_name,
         c.color as category_color
@@ -1706,7 +1706,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
       JOIN users u ON b.user_id = u.id
       JOIN transactions t ON b.category_id = t.category_id 
         AND t.user_id = b.user_id 
-        AND t.type = 'expense'
+        AND t.transaction_type = 'expense'
         AND t.created_at >= b.start_date 
         AND t.created_at <= b.end_date
       GROUP BY b.id, b.name, b.amount, u.first_name, u.last_name, u.email, t.created_at
@@ -1741,7 +1741,7 @@ router.get('/alerts', authenticateToken, requireAnyRole(['admin', 'super_admin']
         SELECT 'info' as severity
         FROM users u
         LEFT JOIN transactions t ON u.id = t.user_id
-        WHERE u.role = 'user'
+        WHERE TRUE
         GROUP BY u.id
         HAVING MAX(t.created_at) IS NULL 
            OR EXTRACT(DAYS FROM NOW() - MAX(t.created_at)) > 30
@@ -2038,7 +2038,7 @@ router.get('/reports/financial', authenticateToken, requireAnyRole(['admin', 'su
         AVG(t.amount) as avg_amount
       FROM transactions t
       JOIN categories c ON t.category_id = c.id
-      WHERE t.type = 'expense'
+      WHERE t.transaction_type = 'expense'
         AND t.created_at >= ${dateFilter}
       GROUP BY c.name, c.color
       ORDER BY total_amount DESC
@@ -2050,18 +2050,18 @@ router.get('/reports/financial', authenticateToken, requireAnyRole(['admin', 'su
     // Get user spending ranking
     const userSpendingQuery = `
       SELECT 
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
         u.email as user_email,
         COUNT(t.id) as transaction_count,
-        SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
-        (SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) - 
-         SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END)) as net_amount
+        SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_expense,
+        (SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) - 
+         SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END)) as net_amount
       FROM users u
       JOIN transactions t ON u.id = t.user_id
       WHERE t.created_at >= ${dateFilter}
-        AND u.role = 'user'
-      GROUP BY u.id, u.name, u.email
+        
+      GROUP BY u.id, u.first_name, u.last_name, u.email
       ORDER BY net_amount DESC
       LIMIT 10
     `;
@@ -2126,7 +2126,7 @@ router.post('/reports/custom', authenticateToken, requireAnyRole(['admin', 'supe
     }
     
     if (transactionTypes && transactionTypes.length > 0) {
-      whereConditions.push(`t.type = ANY($${paramIndex++})`);
+      whereConditions.push(`t.transaction_type = ANY($${paramIndex++})`);
       queryParams.push(transactionTypes);
     }
     
@@ -2144,7 +2144,7 @@ router.post('/reports/custom', authenticateToken, requireAnyRole(['admin', 'supe
     if (groupBy === 'category') {
       groupByClause = 'GROUP BY c.name, c.color ORDER BY total_amount DESC';
     } else if (groupBy === 'user') {
-      groupByClause = 'GROUP BY u.name, u.email ORDER BY total_amount DESC';
+      groupByClause = 'GROUP BY u.first_name, u.last_name, u.email ORDER BY total_amount DESC';
     } else if (groupBy === 'date') {
       groupByClause = 'GROUP BY DATE(t.created_at) ORDER BY date DESC';
     }
@@ -2153,10 +2153,10 @@ router.post('/reports/custom', authenticateToken, requireAnyRole(['admin', 'supe
       SELECT 
         t.id,
         t.amount,
-        t.type,
+        t.transaction_type,
         t.description,
         t.created_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
         u.email as user_email,
         c.name as category_name,
         c.color as category_color
@@ -2221,10 +2221,10 @@ router.get('/reports/export/transactions', authenticateToken, requireAnyRole(['a
       SELECT 
         t.id,
         t.amount,
-        t.type,
+        t.transaction_type,
         t.description,
         t.created_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as name as user_name,
         u.email as user_email,
         c.name as category_name,
         t.location,
