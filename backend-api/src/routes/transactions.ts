@@ -537,7 +537,7 @@ router.delete('/:id',
       logger.info(`Deleting transaction ${id} for user: ${userId}`);
 
       // Check if transaction exists and belongs to user
-      const checkQuery = 'SELECT id, amount, type, description, to_account, from_account FROM transactions WHERE id = $1 AND user_id = $2';
+      const checkQuery = 'SELECT id, amount, transaction_type, description, to_account_id, from_account_id FROM transactions WHERE id = $1 AND user_id = $2';
       const checkResult = await req.app.locals.db.query(checkQuery, [id, userId]);
       
       if (checkResult.rows.length === 0) {
@@ -548,56 +548,37 @@ router.delete('/:id',
       }
 
       const transaction = checkResult.rows[0];
-      const { amount, type, to_account, from_account } = transaction;
+      const { amount, transaction_type, to_account_id, from_account_id } = transaction;
 
       // Reverse the account balance changes before deleting the transaction
       // For income transactions, we need to subtract the amount from the to_account
       // For expense transactions, we need to add the amount back to the from_account
-      const balanceChange = type === 'income' ? -parseFloat(amount) : parseFloat(amount);
-      const accountToUpdate = type === 'income' ? to_account : from_account;
+      const balanceChange = transaction_type === 'income' ? -parseFloat(amount) : parseFloat(amount);
+      const accountToUpdate = transaction_type === 'income' ? to_account_id : from_account_id;
 
       if (accountToUpdate) {
-        if (accountToUpdate === 'cash-wallet') {
-          // Update cash wallet balance
-          const updateCashQuery = `
-            UPDATE bank_accounts 
-            SET balance = balance + $1, updated_at = NOW()
-            WHERE user_id = $2 AND account_type = 'wallet'
-          `;
-          await req.app.locals.db.query(updateCashQuery, [balanceChange, userId]);
-        } else if (accountToUpdate.startsWith('credit-')) {
-          // Update credit card balance (if still has prefix)
-          const creditCardId = accountToUpdate.replace('credit-', '');
+        // Check if this account ID exists in credit_cards table
+        const creditCardCheckQuery = `
+          SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
+        `;
+        const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountToUpdate, userId]);
+        
+        if (creditCardCheck.rows.length > 0) {
+          // This is a credit card
           const updateCreditQuery = `
             UPDATE credit_cards 
             SET balance = balance + $1, updated_at = NOW()
             WHERE id = $2 AND user_id = $3
           `;
-          await req.app.locals.db.query(updateCreditQuery, [balanceChange, creditCardId, userId]);
+          await req.app.locals.db.query(updateCreditQuery, [balanceChange, accountToUpdate, userId]);
         } else {
-          // Check if this account ID exists in credit_cards table
-          const creditCardCheckQuery = `
-            SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true
+          // This is a regular bank account
+          const updateBankQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
           `;
-          const creditCardCheck = await req.app.locals.db.query(creditCardCheckQuery, [accountToUpdate, userId]);
-          
-          if (creditCardCheck.rows.length > 0) {
-            // This is a credit card
-            const updateCreditQuery = `
-              UPDATE credit_cards 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(updateCreditQuery, [balanceChange, accountToUpdate, userId]);
-          } else {
-            // This is a regular bank account
-            const updateBankQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(updateBankQuery, [balanceChange, accountToUpdate, userId]);
-          }
+          await req.app.locals.db.query(updateBankQuery, [balanceChange, accountToUpdate, userId]);
         }
       }
 
