@@ -128,7 +128,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
         id: adminUser.id,
         name: adminUser.username, // Map username to name
         email: adminUser.email,
-        phone: null, // admin_users don't have phone
+        phone: undefined, // admin_users don't have phone
         role: adminUser.role,
         is_active: adminUser.is_active,
         created_at: adminUser.created_at,
