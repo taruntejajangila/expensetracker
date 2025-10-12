@@ -1,22 +1,33 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { logger } from '../utils/logger';
 
+// Trim environment variables to remove any accidental spaces
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: cloudName,
+  api_key: apiKey,
+  api_secret: apiSecret,
   secure: true
 });
 
 // Verify configuration
 const verifyCloudinaryConfig = () => {
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  if (!cloudName || !apiKey || !apiSecret) {
     logger.warn('⚠️ Cloudinary is not configured. Image uploads will fail.');
     logger.warn('Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
     return false;
   }
+  
+  // Debug log (masked)
   logger.info('✅ Cloudinary configured successfully');
+  logger.info(`   Cloud Name: ${cloudName}`);
+  logger.info(`   API Key: ${apiKey}`);
+  logger.info(`   API Secret Length: ${apiSecret.length} chars`);
+  
   return true;
 };
 
@@ -30,11 +41,8 @@ export const uploadToCloudinary = async (
       {
         folder: folder,
         resource_type: 'image',
-        transformation: [
-          { width: 1200, height: 630, crop: 'limit' }, // Limit max size
-          { quality: 'auto:good' }, // Optimize quality
-          { fetch_format: 'auto' } // Auto format (WebP for modern browsers)
-        ]
+        // Don't apply transformations during upload - apply them via URL instead
+        // This avoids signature calculation issues
       },
       (error, result) => {
         if (error) {
@@ -42,8 +50,19 @@ export const uploadToCloudinary = async (
           reject(error);
         } else if (result) {
           logger.info(`Image uploaded to Cloudinary: ${result.secure_url}`);
+          
+          // Apply transformations via URL for optimized delivery
+          const optimizedUrl = cloudinary.url(result.public_id, {
+            width: 1200,
+            height: 630,
+            crop: 'limit',
+            quality: 'auto:good',
+            fetch_format: 'auto',
+            secure: true
+          });
+          
           resolve({
-            url: result.secure_url,
+            url: optimizedUrl || result.secure_url,
             publicId: result.public_id
           });
         } else {
