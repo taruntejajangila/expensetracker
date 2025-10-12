@@ -2367,16 +2367,15 @@ router.get('/banners', authenticateToken, requireAnyRole(['admin', 'super_admin'
         b.*,
         bc.name as category_name,
         bc.color as category_color,
-        u1.name as created_by_name,
-        u2.name as updated_by_name,
-        COALESCE(analytics.total_views, 0) as total_views,
-        COALESCE(analytics.total_clicks, 0) as total_clicks,
-        COALESCE(analytics.click_through_rate, 0) as click_through_rate
+        au1.username as created_by_name,
+        au2.username as updated_by_name,
+        0 as total_views,
+        0 as total_clicks,
+        0 as click_through_rate
       FROM banners b
       LEFT JOIN banner_categories bc ON b.category_id = bc.id
-      LEFT JOIN users u1 ON b.created_by = u1.id
-      LEFT JOIN users u2 ON b.updated_by = u2.id
-      LEFT JOIN banner_analytics_summary analytics ON b.id = analytics.banner_id
+      LEFT JOIN admin_users au1 ON b.created_by = au1.id
+      LEFT JOIN admin_users au2 ON b.updated_by = au2.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY b.sort_order ASC, b.created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -2485,6 +2484,12 @@ router.post('/banners', authenticateToken, requireAnyRole(['admin', 'super_admin
       RETURNING *
     `;
 
+    // Validate category_id is a valid UUID or null
+    const isValidUUID = (str: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return str && uuidRegex.test(str);
+    };
+
     const values = [
       title,
       subtitle || null,
@@ -2494,7 +2499,7 @@ router.post('/banners', authenticateToken, requireAnyRole(['admin', 'super_admin
       background_color || '#6C5CE7',
       text_color || '#FFFFFF',
       icon || null,
-      category_id || null,
+      (category_id && isValidUUID(category_id)) ? category_id : null,
       is_active !== undefined ? is_active : true,
       sort_order || 0,
       start_date && start_date.trim() !== '' ? start_date : null,
@@ -2531,12 +2536,12 @@ router.get('/banners/:id', authenticateToken, requireAnyRole(['admin', 'super_ad
         b.*,
         bc.name as category_name,
         bc.color as category_color,
-        u1.name as created_by_name,
-        u2.name as updated_by_name
+        au1.username as created_by_name,
+        au2.username as updated_by_name
       FROM banners b
       LEFT JOIN banner_categories bc ON b.category_id = bc.id
-      LEFT JOIN users u1 ON b.created_by = u1.id
-      LEFT JOIN users u2 ON b.updated_by = u2.id
+      LEFT JOIN admin_users au1 ON b.created_by = au1.id
+      LEFT JOIN admin_users au2 ON b.updated_by = au2.id
       WHERE b.id = $1
     `;
 
