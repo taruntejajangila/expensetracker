@@ -32,11 +32,11 @@ export default function AdminLoginPage() {
       
       if (success) {
         console.log('✅ Login successful, waiting for state update...')
-        // Wait a moment for state to update, then redirect
+        // Wait longer for state to update and ConditionalLayout to recognize authentication
         setTimeout(() => {
           console.log('🔄 Redirecting to dashboard...')
           router.push('/')
-        }, 100)
+        }, 1000) // Increased from 100ms to 1000ms
       } else {
         console.log('❌ Login failed')
         setError('Invalid credentials. Please try again.')

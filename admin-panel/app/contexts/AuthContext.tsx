@@ -106,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(user)
         console.log('🔐 AuthContext: User state updated:', user)
         
+        // Force a small delay to ensure state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         localStorage.setItem('debug_login_success', JSON.stringify({
           timestamp: new Date().toISOString(),
           user,
