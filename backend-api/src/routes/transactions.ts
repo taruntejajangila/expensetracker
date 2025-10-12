@@ -172,9 +172,9 @@ router.post('/',
 
       // Insert transaction into database with account information
       const insertQuery = `
-        INSERT INTO transactions (user_id, amount, type, category_id, description, date, to_account, from_account, tags, created_at, updated_at)
+        INSERT INTO transactions (user_id, amount, transaction_type, category_id, description, transaction_date, to_account_id, from_account_id, tags, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        RETURNING id, amount, type, description, date, to_account, from_account, tags, created_at
+        RETURNING id, amount, transaction_type, description, transaction_date, to_account_id, from_account_id, tags, created_at
       `;
       
       const insertResult = await req.app.locals.db.query(insertQuery, [
@@ -190,6 +190,15 @@ router.post('/',
       ]);
 
       const newTransaction = insertResult.rows[0];
+      
+      // Map to expected response format
+      const mappedTransaction = {
+        ...newTransaction,
+        type: newTransaction.transaction_type,
+        date: newTransaction.transaction_date,
+        fromAccount: newTransaction.from_account_id,
+        toAccount: newTransaction.to_account_id
+      };
 
       // Update account balance(s) based on transaction type
       if (type === 'transfer') {
@@ -289,7 +298,7 @@ router.post('/',
       return res.status(201).json({
         success: true,
         message: 'Transaction created successfully',
-        data: newTransaction
+        data: mappedTransaction
       });
     } catch (error) {
       logger.error('Error creating transaction:', error);
