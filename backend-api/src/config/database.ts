@@ -377,21 +377,21 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     `);
   }
 
-  // Insert default categories
+  // Insert default categories (using Ionicons names)
   await client.query(`
     INSERT INTO categories (id, user_id, name, icon, color, type, is_default) VALUES
-      (uuid_generate_v4(), NULL, 'Food & Dining', 'utensils', '#FF6B6B', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Food & Dining', 'restaurant', '#FF6B6B', 'expense', true),
       (uuid_generate_v4(), NULL, 'Transportation', 'car', '#4ECDC4', 'expense', true),
-      (uuid_generate_v4(), NULL, 'Shopping', 'shopping-bag', '#45B7D1', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Shopping', 'cart', '#45B7D1', 'expense', true),
       (uuid_generate_v4(), NULL, 'Entertainment', 'film', '#96CEB4', 'expense', true),
-      (uuid_generate_v4(), NULL, 'Bills & Utilities', 'file-text', '#FFEAA7', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Bills & Utilities', 'document-text', '#FFEAA7', 'expense', true),
       (uuid_generate_v4(), NULL, 'Healthcare', 'heart', '#DDA0DD', 'expense', true),
       (uuid_generate_v4(), NULL, 'Education', 'book', '#98D8C8', 'expense', true),
-      (uuid_generate_v4(), NULL, 'Travel', 'plane', '#F7DC6F', 'expense', true),
-      (uuid_generate_v4(), NULL, 'Salary', 'dollar-sign', '#82E0AA', 'income', true),
+      (uuid_generate_v4(), NULL, 'Travel', 'airplane', '#F7DC6F', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Salary', 'cash', '#82E0AA', 'income', true),
       (uuid_generate_v4(), NULL, 'Freelance', 'briefcase', '#85C1E9', 'income', true),
       (uuid_generate_v4(), NULL, 'Investment', 'trending-up', '#F8C471', 'income', true),
-      (uuid_generate_v4(), NULL, 'Other Income', 'plus-circle', '#BB8FCE', 'income', true)
+      (uuid_generate_v4(), NULL, 'Other Income', 'add-circle', '#BB8FCE', 'income', true)
     ON CONFLICT DO NOTHING
   `);
 
