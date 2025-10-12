@@ -90,6 +90,36 @@ const optimizedUrl = cloudinary.url(result.public_id, {
 
 ### Mobile App Changes (`ExpenseTrackerExpo/screens/HomeScreen.tsx`)
 
+### Admin Panel Changes (`admin-panel/app/banners/page.tsx`)
+
+```typescript
+// BEFORE:
+// Table display
+<img src={`${SERVER_BASE_URL}${banner.image_url}`} />
+
+// Modal preview
+const fullImageUrl = `${SERVER_BASE_URL}${banner.image_url}`;
+setImagePreview(fullImageUrl);
+
+// AFTER:
+// Table display - check if URL is already full
+<img 
+  src={banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://') 
+    ? banner.image_url 
+    : `${SERVER_BASE_URL}${banner.image_url}`}
+/>
+
+// Modal preview - check if URL is already full
+const fullImageUrl = (banner.image_url.startsWith('http://') || banner.image_url.startsWith('https://'))
+  ? banner.image_url
+  : `${SERVER_BASE_URL}${banner.image_url}`;
+setImagePreview(fullImageUrl);
+```
+
+---
+
+### Mobile App Changes (`ExpenseTrackerExpo/screens/HomeScreen.tsx`)
+
 ```typescript
 // BEFORE:
 const transformedBanners = bannerResponse.data.map((banner: any) => ({
@@ -184,7 +214,8 @@ CLOUDINARY_API_SECRET=Iem2-fTM4D-eEX969hn4ccdFHyo
 
 - ✅ `backend-api/src/config/cloudinary.ts` - Cloudinary SDK configuration
 - ✅ `backend-api/src/routes/admin.ts` - Banner upload endpoint
-- ✅ `ExpenseTrackerExpo/screens/HomeScreen.tsx` - Banner display logic
+- ✅ `ExpenseTrackerExpo/screens/HomeScreen.tsx` - Mobile app banner display logic
+- ✅ `admin-panel/app/banners/page.tsx` - Admin panel banner display logic
 - ✅ `backend-api/env.example` - Environment variable documentation
 - ✅ `CLOUDINARY_SETUP_GUIDE.md` - Complete setup instructions
 
@@ -193,7 +224,8 @@ CLOUDINARY_API_SECRET=Iem2-fTM4D-eEX969hn4ccdFHyo
 ## 📝 **Commits**
 
 1. `e3e4390` - Fix Cloudinary signature error - remove transformations from upload, trim env vars
-2. `c5841af` - Fix banner image display - handle Cloudinary URLs properly
+2. `c5841af` - Fix banner image display - handle Cloudinary URLs properly (Mobile App)
+3. `d0c1d9d` - Fix admin panel banner image display - handle Cloudinary URLs
 
 ---
 
