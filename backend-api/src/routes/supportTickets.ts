@@ -141,7 +141,7 @@ router.get('/my-tickets', authenticateToken, async (req: Request, res: Response)
     let query = `
       SELECT 
         st.*,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         (SELECT COUNT(*) FROM ticket_messages WHERE ticket_id = st.id) as message_count,
         (SELECT created_at FROM ticket_messages WHERE ticket_id = st.id ORDER BY created_at DESC LIMIT 1) as last_message_at
@@ -190,9 +190,9 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
     const ticketResult = await client.query(
       `SELECT 
         st.*,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
-        admin.name as assigned_to_name
+        CONCAT(admin.first_name, ' ', admin.last_name) as assigned_to_name
       FROM support_tickets st
       LEFT JOIN users u ON st.user_id = u.id
       LEFT JOIN users admin ON st.assigned_to = admin.id
@@ -211,7 +211,7 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
 
     // Get messages for this ticket (from both user and admin messages)
     const messagesResult = await client.query(
-      `SELECT 
+      `      SELECT 
         tm.id,
         tm.ticket_id,
         tm.user_id,
@@ -219,7 +219,7 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
         tm.is_admin_reply,
         tm.created_at,
         tm.updated_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         'user' as message_type
       FROM ticket_messages tm
@@ -354,7 +354,7 @@ router.post('/:ticketId/messages', authenticateToken, upload.array('attachments'
 
     // Get ticket and user details for admin notification
     const ticketDetails = await client.query(
-      `SELECT st.*, u.name as user_name, u.email as user_email 
+      `SELECT st.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email 
        FROM support_tickets st 
        JOIN users u ON st.user_id = u.id 
        WHERE st.id = $1`,
