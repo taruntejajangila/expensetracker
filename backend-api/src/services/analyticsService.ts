@@ -61,13 +61,13 @@ class AnalyticsService {
       // Get monthly spending data
       const query = `
         SELECT 
-          DATE_TRUNC('month', date) as month,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_spent,
+          DATE_TRUNC('month', transaction_date) as month,
+          SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as total_spent,
           COUNT(*) as transaction_count
         FROM transactions 
         WHERE user_id = $1 
-          AND date >= NOW() - INTERVAL '${months} months'
-        GROUP BY DATE_TRUNC('month', date)
+          AND transaction_date >= NOW() - INTERVAL '${months} months'
+        GROUP BY DATE_TRUNC('month', transaction_date)
         ORDER BY month ASC
       `;
       
@@ -119,15 +119,15 @@ class AnalyticsService {
           c.name as category_name,
           c.color,
           c.icon,
-          SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as total_spent,
+          SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as total_spent,
           COUNT(*) as transaction_count,
-          AVG(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) as avg_amount
+          AVG(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) as avg_amount
         FROM categories c
         LEFT JOIN transactions t ON c.id = t.category_id AND t.user_id = $1
         WHERE c.is_default = true
-          AND (t.date IS NULL OR t.date >= NOW() - INTERVAL '${months} months')
+          AND (t.transaction_date IS NULL OR t.transaction_date >= NOW() - INTERVAL '${months} months')
         GROUP BY c.id, c.name, c.color, c.icon
-        HAVING SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END) > 0
+        HAVING SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) > 0
         ORDER BY total_spent DESC
       `;
       
@@ -185,18 +185,18 @@ class AnalyticsService {
         SELECT COALESCE(SUM(amount), 0) as total_income
         FROM transactions 
         WHERE user_id = $1 
-          AND type = 'income' 
-          AND date >= $2 
-          AND date <= $3
+          AND transaction_type = 'income' 
+          AND transaction_date >= $2 
+          AND transaction_date <= $3
       `;
       
       const expenseQuery = `
         SELECT COALESCE(SUM(amount), 0) as total_expenses
         FROM transactions 
         WHERE user_id = $1 
-          AND type = 'expense' 
-          AND date >= $2 
-          AND date <= $3
+          AND transaction_type = 'expense' 
+          AND transaction_date >= $2 
+          AND transaction_date <= $3
       `;
       
       const [incomeResult, expenseResult] = await Promise.all([
@@ -264,13 +264,13 @@ class AnalyticsService {
       // Get last 3 months of spending data
       const query = `
         SELECT 
-          DATE_TRUNC('month', date) as month,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_spent
+          DATE_TRUNC('month', transaction_date) as month,
+          SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as total_spent
         FROM transactions 
         WHERE user_id = $1 
-          AND type = 'expense'
-          AND date >= NOW() - INTERVAL '3 months'
-        GROUP BY DATE_TRUNC('month', date)
+          AND transaction_type = 'expense'
+          AND transaction_date >= NOW() - INTERVAL '3 months'
+        GROUP BY DATE_TRUNC('month', transaction_date)
         ORDER BY month DESC
         LIMIT 3
       `;
