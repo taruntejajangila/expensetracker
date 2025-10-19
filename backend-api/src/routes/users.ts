@@ -37,13 +37,13 @@ router.get('/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: result.rows[0]
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to fetch user profile',
       error: (error as Error).message
@@ -128,14 +128,14 @@ router.put('/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Profile updated successfully',
       data: result.rows[0]
     });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to update user profile',
       error: (error as Error).message
