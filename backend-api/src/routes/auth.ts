@@ -297,16 +297,22 @@ router.patch('/profile',
 
       logger.info(`Update profile request for user: ${authUser.id}`, { name, phone });
 
+      // Split name into first_name and last_name
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       // Update user in database
       const updateQuery = `
         UPDATE users 
-        SET name = $1, phone = $2, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-        RETURNING id, name, email, phone, role, created_at, updated_at
+        SET first_name = $1, last_name = $2, phone = $3, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4
+        RETURNING id, email, first_name, last_name, CONCAT(first_name, ' ', last_name) as name, phone, created_at, updated_at
       `;
       
       const result = await pool.query(updateQuery, [
-        name.trim(),
+        firstName,
+        lastName,
         phone && phone.trim() ? phone.trim() : null,
         authUser.id
       ]);
@@ -329,10 +335,12 @@ router.patch('/profile',
         data: {
           id: updatedUser.id,
           name: updatedUser.name,
+          first_name: updatedUser.first_name,
+          last_name: updatedUser.last_name,
           email: updatedUser.email,
           phone: updatedUser.phone,
-          role: updatedUser.role,
-          createdAt: updatedUser.created_at
+          createdAt: updatedUser.created_at,
+          updatedAt: updatedUser.updated_at
         }
       });
     } catch (error) {
