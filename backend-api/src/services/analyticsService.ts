@@ -1,6 +1,8 @@
 import { getPool } from '../config/database';
 import { logger } from '../utils/logger';
 
+// Analytics Service - Fixed column names (transaction_date, transaction_type)
+
 export interface SpendingTrend {
   period: string;
   totalAmount: number;
