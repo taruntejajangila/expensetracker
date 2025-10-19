@@ -12,10 +12,10 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `SELECT 
         id, 
-        name, 
         email, 
         first_name, 
         last_name, 
+        CONCAT(first_name, ' ', last_name) as name,
         phone, 
         avatar_url, 
         date_of_birth, 
@@ -116,7 +116,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
       UPDATE users 
       SET ${updateFields.join(', ')} 
       WHERE id = $${paramIndex}
-      RETURNING id, name, email, first_name, last_name, phone, avatar_url, date_of_birth, currency, language, timezone, is_verified, created_at, updated_at
+      RETURNING id, email, first_name, last_name, CONCAT(first_name, ' ', last_name) as name, phone, avatar_url, date_of_birth, currency, language, timezone, is_verified, created_at, updated_at
     `;
 
     const result = await pool.query(query, values);
