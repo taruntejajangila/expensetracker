@@ -63,8 +63,15 @@ router.put('/profile', authenticateToken, async (req, res) => {
     let paramIndex = 1;
 
     if (name !== undefined) {
-      updateFields.push(`name = $${paramIndex++}`);
-      values.push(name);
+      // Split name into first_name and last_name
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      updateFields.push(`first_name = $${paramIndex++}`);
+      values.push(firstName);
+      updateFields.push(`last_name = $${paramIndex++}`);
+      values.push(lastName);
     }
     if (first_name !== undefined) {
       updateFields.push(`first_name = $${paramIndex++}`);
