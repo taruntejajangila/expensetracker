@@ -60,4 +60,41 @@ router.post('/add-account-holder-name', async (req: express.Request, res: expres
   }
 });
 
+// Fix account type constraint to allow 'salary'
+router.post('/fix-account-type-constraint', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('🔧 Running migration: fix account_type constraint');
+
+    // Drop the existing constraint
+    await pool.query(`
+      ALTER TABLE bank_accounts 
+      DROP CONSTRAINT IF EXISTS bank_accounts_account_type_check;
+    `);
+    
+    logger.info('✅ Dropped old constraint');
+
+    // Add new constraint that allows salary
+    await pool.query(`
+      ALTER TABLE bank_accounts 
+      ADD CONSTRAINT bank_accounts_account_type_check 
+      CHECK (account_type IN ('checking', 'savings', 'investment', 'salary'));
+    `);
+    
+    logger.info('✅ Added new constraint with salary support');
+
+    return res.json({
+      success: true,
+      message: 'Account type constraint updated successfully - now supports salary'
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Constraint fix error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fix constraint',
+      error: error.message
+    });
+  }
+});
+
 export default router;
