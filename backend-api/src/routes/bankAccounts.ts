@@ -482,7 +482,7 @@ router.get('/test/sync', async (req: any, res: any) => {
     
     const query = `
       SELECT 
-        id, account_name, bank_name, account_type, balance, currency, 
+        id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
         account_number, is_active, created_at, updated_at
       FROM bank_accounts 
       WHERE user_id = $1 
@@ -496,10 +496,11 @@ router.get('/test/sync', async (req: any, res: any) => {
     res.json({
       success: true,
       message: 'Test endpoint - accounts retrieved successfully',
-      data: result.rows.map((row: any) => ({
+        data: result.rows.map((row: any) => ({
         id: row.id,
         name: row.account_name,
         bankName: row.bank_name,
+        accountHolderName: row.account_holder_name,
         accountType: row.account_type,
         balance: parseFloat(row.balance),
         currency: row.currency,
