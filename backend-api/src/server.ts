@@ -28,6 +28,7 @@ import bannerRoutes from './routes/banners';
 import reminderRoutes from './routes/reminders';
 import supportTicketsRoutes from './routes/supportTickets';
 import adminSupportTicketsRoutes from './routes/adminSupportTickets';
+import migrateRoutes from './routes/migrate';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -166,6 +167,7 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/support-tickets', supportTicketsRoutes);
 app.use('/api/admin/support-tickets', adminSupportTicketsRoutes);
+app.use('/api/migrate', migrateRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
