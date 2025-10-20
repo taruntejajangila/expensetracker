@@ -56,7 +56,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         id: row.id,
         name: row.account_name,
         bankName: row.bank_name,
-        accountHolderName: row.account_name, // Use account_holder_name if available, fallback to account_name
+        accountHolderName: row.account_holder_name || row.account_name, // Use account_holder_name if available, fallback to account_name
         type: row.account_type === 'wallet' ? 'cash' : 'bank',
         balance: parseFloat(row.balance),
         currency: row.currency || 'INR',
