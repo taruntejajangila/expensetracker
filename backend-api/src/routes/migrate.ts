@@ -226,4 +226,50 @@ router.post('/fix-goals-constraint', async (req: express.Request, res: express.R
   }
 });
 
+// Fix goals constraint with data migration
+router.post('/fix-goals-constraint-with-data', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('🔧 Running migration: fix goals constraint with data migration');
+
+    // First, update any existing invalid goal_type values
+    await pool.query(`
+      UPDATE goals 
+      SET goal_type = 'other' 
+      WHERE goal_type NOT IN ('vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other');
+    `);
+    
+    logger.info('✅ Updated existing invalid goal_type values');
+
+    // Drop the existing constraint
+    await pool.query(`
+      ALTER TABLE goals 
+      DROP CONSTRAINT IF EXISTS goals_goal_type_check;
+    `);
+    
+    logger.info('✅ Dropped old goals constraint');
+
+    // Add new constraint that allows emergency
+    await pool.query(`
+      ALTER TABLE goals 
+      ADD CONSTRAINT goals_goal_type_check 
+      CHECK (goal_type IN ('vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other'));
+    `);
+    
+    logger.info('✅ Added new goals constraint with emergency support');
+
+    return res.json({
+      success: true,
+      message: 'Goals constraint updated successfully with data migration - now supports emergency goal type'
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Goals constraint fix error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fix goals constraint',
+      error: error.message
+    });
+  }
+});
+
 export default router;
