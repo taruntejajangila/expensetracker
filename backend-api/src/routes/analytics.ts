@@ -222,4 +222,76 @@ router.get('/overview', async (req, res) => {
   }
 });
 
+// GET /api/analytics/financial-health - Alias for health-score
+router.get('/financial-health', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    logger.info(`Calculating financial health score for user: ${userId}`);
+    
+    const healthScore = await analyticsService.getFinancialHealthScore(userId);
+    
+    logger.info(`Financial health score calculated successfully for user: ${userId}`);
+    
+    return res.json({
+      success: true,
+      data: healthScore,
+      message: 'Financial health score calculated successfully'
+    });
+  } catch (error) {
+    logger.error('Error calculating financial health score:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to calculate financial health score',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// GET /api/analytics/spending-trends - Alias for trends with period parameter
+router.get('/spending-trends', [
+  body('period').optional().isIn(['week', 'month', 'quarter', 'year']).withMessage('Period must be week, month, quarter, or year')
+], async (req: any, res: any) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const period = req.query.period || 'month';
+    const months = period === 'week' ? 1 : period === 'month' ? 6 : period === 'quarter' ? 12 : 24;
+    
+    logger.info(`Fetching spending trends for user: ${userId}, period: ${period}, months: ${months}`);
+    
+    const trends = await analyticsService.getSpendingTrends(userId, months);
+    
+    logger.info(`Spending trends fetched successfully for user: ${userId}`);
+    
+    return res.json({
+      success: true,
+      data: trends,
+      message: 'Spending trends retrieved successfully'
+    });
+  } catch (error) {
+    logger.error('Error fetching spending trends:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch spending trends',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

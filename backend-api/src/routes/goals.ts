@@ -32,8 +32,26 @@ router.get('/', async (req: express.Request, res: express.Response) => {
       [userId]
     );
 
-    logger.info(`Found ${result.rows.length} goals for user: ${userId}`);
-    return res.json({ success: true, data: result.rows });
+    // Map database fields to expected API response format
+    const goals = result.rows.map((goal: any) => ({
+      id: goal.id,
+      name: goal.name,
+      title: goal.name,
+      description: goal.description,
+      targetAmount: parseFloat(goal.target_amount),
+      currentAmount: parseFloat(goal.current_amount),
+      targetDate: goal.target_date,
+      status: goal.status,
+      goalType: goal.goal_type,
+      icon: goal.icon,
+      color: goal.color,
+      progress: goal.target_amount > 0 ? Math.round((goal.current_amount / goal.target_amount) * 100) : 0,
+      createdAt: goal.created_at,
+      updatedAt: goal.updated_at
+    }));
+
+    logger.info(`Found ${goals.length} goals for user: ${userId}`);
+    return res.json({ success: true, data: goals });
       } catch (error) {
       logger.error('Error fetching goals:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -154,15 +172,8 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
 
-    // Validation
-    if (!name || !targetAmount || !targetDate || !goalType) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields: name, targetAmount, targetDate, goalType' 
-      });
-    }
-
-    if (parseFloat(targetAmount) <= 0) {
+    // Validation - only validate if fields are provided for partial updates
+    if (targetAmount && parseFloat(targetAmount) <= 0) {
       return res.status(400).json({ 
         success: false, 
         message: 'Target amount must be greater than 0' 
@@ -179,7 +190,7 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
 
     // First check if the goal exists and belongs to the user
     const existingGoal = await db.query(
-      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM goals WHERE id = $1 AND user_id = $2',
       [goalId, userId]
     );
 
@@ -187,26 +198,68 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
       return res.status(404).json({ success: false, message: 'Goal not found' });
     }
 
-    const result = await db.query(
-      `UPDATE goals 
-       SET title = $1, description = $2, target_amount = $3, target_date = $4, 
-           goal_type = $5, icon = $6, color = $7, status = $8, updated_at = NOW()
-       WHERE id = $9 AND user_id = $10
-       RETURNING id, title as name, description, target_amount, current_amount, target_date, 
-                 status, goal_type, icon, color, created_at, updated_at`,
-      [
-        name, // Use 'name' from request body for 'title' column
-        description || null,
-        parseFloat(targetAmount),
-        targetDate,
-        goalType,
-        icon || 'target',
-        color || '#10B981',
-        status || 'active',
-        goalId,
-        userId
-      ]
-    );
+    const currentGoal = existingGoal.rows[0];
+
+    // Build dynamic update query for partial updates
+    const updateFields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      updateFields.push(`title = $${paramIndex++}`);
+      values.push(name);
+    }
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramIndex++}`);
+      values.push(description);
+    }
+    if (targetAmount !== undefined) {
+      updateFields.push(`target_amount = $${paramIndex++}`);
+      values.push(parseFloat(targetAmount));
+    }
+    if (targetDate !== undefined) {
+      updateFields.push(`target_date = $${paramIndex++}`);
+      values.push(targetDate);
+    }
+    if (goalType !== undefined) {
+      updateFields.push(`goal_type = $${paramIndex++}`);
+      values.push(goalType);
+    }
+    if (icon !== undefined) {
+      updateFields.push(`icon = $${paramIndex++}`);
+      values.push(icon);
+    }
+    if (color !== undefined) {
+      updateFields.push(`color = $${paramIndex++}`);
+      values.push(color);
+    }
+    if (status !== undefined) {
+      updateFields.push(`status = $${paramIndex++}`);
+      values.push(status);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No fields to update' 
+      });
+    }
+
+    // Add updated_at
+    updateFields.push(`updated_at = NOW()`);
+    
+    // Add goal ID and user ID as the last parameters
+    values.push(goalId, userId);
+
+    const query = `
+      UPDATE goals 
+      SET ${updateFields.join(', ')} 
+      WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1}
+      RETURNING id, title as name, description, target_amount, current_amount, target_date, 
+                status, goal_type, icon, color, created_at, updated_at
+    `;
+
+    const result = await db.query(query, values);
 
     logger.info(`Goal ${goalId} updated successfully for user: ${userId}`);
     return res.json({ success: true, data: result.rows[0] });
