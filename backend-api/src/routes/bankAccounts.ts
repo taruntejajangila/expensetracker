@@ -88,7 +88,7 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
     
     const query = `
       SELECT 
-        id, account_name, bank_name, account_type, balance, currency, 
+        id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
         account_number, is_active as status, updated_at as last_updated,
         created_at, updated_at
       FROM bank_accounts 
