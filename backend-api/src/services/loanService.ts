@@ -441,9 +441,11 @@ class LoanService {
         updateFields.push(`outstanding_balance = $${paramCount++}`);
         values.push(updateData.amount || currentLoan.amount);
       }
-      if (updateData.isActive !== undefined) {
+      if (updateData.status !== undefined) {
+        // Map status to is_active: 'paid_off' = false, others = true
+        const isActive = updateData.status !== 'paid_off';
         updateFields.push(`is_active = $${paramCount++}`);
-        values.push(updateData.isActive);
+        values.push(isActive);
       }
       if (updateData.lender !== undefined) {
         updateFields.push(`lender = $${paramCount++}`);
