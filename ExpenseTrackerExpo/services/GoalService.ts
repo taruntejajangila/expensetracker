@@ -58,21 +58,24 @@ export default {
       if (response.ok) {
         const data = await response.json();
         console.log('🔍 GoalService: Successfully fetched goals:', data.data?.length || 0);
+        if (data.data && data.data.length > 0) {
+          console.log('🔍 GoalService: First goal data:', JSON.stringify(data.data[0], null, 2));
+        }
         
         // Map API response to expected format
         const goals: Goal[] = (data.data || []).map((goal: any) => ({
           id: goal.id,
           name: goal.name,
           description: goal.description,
-          targetAmount: parseFloat(goal.target_amount || 0),
-          currentAmount: parseFloat(goal.current_amount || 0),
-          targetDate: goal.target_date,
+          targetAmount: parseFloat(goal.targetAmount || goal.target_amount || 0),
+          currentAmount: parseFloat(goal.currentAmount || goal.current_amount || 0),
+          targetDate: goal.targetDate || goal.target_date,
           status: goal.status || 'active',
-          goalType: goal.goal_type || 'savings',
+          goalType: goal.goalType || goal.goal_type || 'other',
           icon: goal.icon || 'target',
           color: goal.color || '#007AFF',
-          createdAt: goal.created_at,
-          updatedAt: goal.updated_at,
+          createdAt: goal.createdAt || goal.created_at,
+          updatedAt: goal.updatedAt || goal.updated_at,
         }));
 
         return goals;
@@ -103,22 +106,28 @@ export default {
         return { success: true, id: Date.now().toString() };
       }
 
+      const goalData = {
+        name: goal.name,
+        description: goal.description,
+        targetAmount: goal.targetAmount,
+        currentAmount: goal.currentAmount || 0,
+        targetDate: goal.targetDate,
+        goalType: 'other', // Always use 'other' since it's not visible to users
+        icon: goal.icon || 'target',
+        color: goal.color || '#007AFF',
+      };
+      
+      console.log('🔍 GoalService: Goal data being sent:', goalData);
+      console.log('🔍 GoalService: Original goal.goalType:', goal.goalType);
+      console.log('🔍 GoalService: Final goalType being sent:', goalData.goalType);
+
       const response = await fetch(`${API_BASE_URL}/goals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: goal.name,
-          description: goal.description,
-          targetAmount: goal.targetAmount,
-          currentAmount: goal.currentAmount || 0,
-          targetDate: goal.targetDate,
-          goalType: goal.goalType || 'savings',
-          icon: goal.icon || 'target',
-          color: goal.color || '#007AFF',
-        }),
+        body: JSON.stringify(goalData),
       });
 
       if (response.ok) {

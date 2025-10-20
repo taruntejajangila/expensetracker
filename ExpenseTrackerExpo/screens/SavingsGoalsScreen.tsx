@@ -65,6 +65,11 @@ const SavingsGoalsScreen: React.FC = () => {
 
   const getDaysRemaining = (deadline: string) => {
     try {
+      // Check if deadline is defined
+      if (!deadline) {
+        return 'No deadline';
+      }
+
       const today = new Date();
       let deadlineDate: Date;
       
@@ -100,6 +105,11 @@ const SavingsGoalsScreen: React.FC = () => {
 
   const formatDeadlineDisplay = (deadline: string) => {
     try {
+      // Check if deadline is defined
+      if (!deadline) {
+        return 'No deadline set';
+      }
+
       let deadlineDate: Date;
       
       // Try to parse the deadline - handle both ISO strings and formatted strings
@@ -177,7 +187,7 @@ const SavingsGoalsScreen: React.FC = () => {
         icon: goal.icon,
         color: goal.color,
         deadline: goal.targetDate,
-        category: goal.goalType || 'savings',
+        category: goal.goalType || 'other',
       }));
       
       console.log('🔍 SavingsGoalsScreen: Loaded goals:', mappedGoals.length);
@@ -394,7 +404,12 @@ const SavingsGoalsScreen: React.FC = () => {
                     </View>
                     <View style={styles.goalInfo}>
                       <Text style={styles.goalName} allowFontScaling={false}>{goal.name}</Text>
-                      <Text style={styles.goalCategory} allowFontScaling={false}>{goal.category}</Text>
+                      <Text style={styles.goalTagline} allowFontScaling={false}>
+                        {isCompleted 
+                          ? `🎉 Goal achieved! Congratulations!`
+                          : `You still have ${getDaysRemaining(goal.deadline)} to fulfill your goal`
+                        }
+                      </Text>
                     </View>
                     <View style={styles.goalStatusBadge}>
                       <Text style={[styles.goalStatusText, { color: statusColor }]} allowFontScaling={false}>
@@ -629,7 +644,6 @@ const SavingsGoalsScreen: React.FC = () => {
                     <Text style={styles.modalGoalIconText} allowFontScaling={false}>{currentGoal?.icon}</Text>
                   </View>
                   <Text style={styles.modalGoalName} allowFontScaling={false}>{currentGoal?.name}</Text>
-                  <Text style={styles.modalGoalCategory} allowFontScaling={false}>{currentGoal?.category}</Text>
                 </View>
                 
                 <View style={styles.modalProgressInfo}>
@@ -978,12 +992,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     marginBottom: 2,
     lineHeight: 18,
   },
-  goalCategory: {
+  goalTagline: {
     fontSize: 11,
     color: theme.colors.textSecondary,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontWeight: '400',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   goalStatusBadge: {
     width: 28,

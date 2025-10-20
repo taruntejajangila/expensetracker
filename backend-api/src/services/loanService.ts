@@ -138,18 +138,18 @@ class LoanService {
       const pool = getPool();
       
       // Build dynamic WHERE clause based on available data
-      let whereConditions: string[] = ['user_id = $1', 'status != \'paid_off\''];
+      let whereConditions: string[] = ['user_id = $1', 'is_active = true'];
       let queryParams: any[] = [userId];
       let paramIndex = 2;
       
       // Only check fields that are provided
       if (loanData.name) {
-        whereConditions.push(`LOWER(name) = LOWER($${paramIndex++})`);
+        whereConditions.push(`LOWER(loan_name) = LOWER($${paramIndex++})`);
         queryParams.push(loanData.name);
       }
       
       if (loanData.amount !== undefined) {
-        whereConditions.push(`amount = $${paramIndex++}`);
+        whereConditions.push(`principal_amount = $${paramIndex++}`);
         queryParams.push(loanData.amount);
       }
       
@@ -194,10 +194,10 @@ class LoanService {
         const similarQuery = `
           SELECT * FROM loans 
           WHERE user_id = $1 
-          AND LOWER(name) = LOWER($2)
+          AND LOWER(loan_name) = LOWER($2)
           AND COALESCE(lender, '') = COALESCE($3, '')
-          AND status != 'paid_off'
-          AND ABS(amount - $4) / $4 < 0.1  -- Within 10% of amount
+          AND is_active = true
+          AND ABS(principal_amount - $4) / $4 < 0.1  -- Within 10% of amount
         `;
         
         const similarResult = await pool.query(similarQuery, [
@@ -218,9 +218,9 @@ class LoanService {
         const nameLenderQuery = `
           SELECT * FROM loans 
           WHERE user_id = $1 
-          AND LOWER(name) = LOWER($2)
+          AND LOWER(loan_name) = LOWER($2)
           AND COALESCE(lender, '') = COALESCE($3, '')
-          AND status != 'paid_off'
+          AND is_active = true
         `;
         
         const nameLenderResult = await pool.query(nameLenderQuery, [
@@ -287,10 +287,10 @@ class LoanService {
       
       const query = `
         INSERT INTO loans (
-          user_id, name, loan_type, amount, interest_rate, 
-          term_months, start_date, end_date, monthly_payment, 
-          remaining_balance, lender
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          user_id, loan_name, loan_type, principal_amount, interest_rate, 
+          loan_term_months, start_date, end_date, monthly_payment, 
+          outstanding_balance, lender, account_number
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `;
       
@@ -304,8 +304,9 @@ class LoanService {
         startDate,
         endDate,
         amortization.monthlyPayment,
-        loanData.amount, // Initial remaining balance equals principal
-        loanData.lender || null
+        loanData.amount, // Initial outstanding balance equals principal
+        loanData.lender || null,
+        loanData.accountNumber || null
       ]);
       
       // Create payment schedule
@@ -437,12 +438,12 @@ class LoanService {
       if (amortization) {
         updateFields.push(`monthly_payment = $${paramCount++}`);
         values.push(amortization.monthlyPayment);
-        updateFields.push(`remaining_balance = $${paramCount++}`);
+        updateFields.push(`outstanding_balance = $${paramCount++}`);
         values.push(updateData.amount || currentLoan.amount);
       }
-      if (updateData.status !== undefined) {
-        updateFields.push(`status = $${paramCount++}`);
-        values.push(updateData.status);
+      if (updateData.isActive !== undefined) {
+        updateFields.push(`is_active = $${paramCount++}`);
+        values.push(updateData.isActive);
       }
       if (updateData.lender !== undefined) {
         updateFields.push(`lender = $${paramCount++}`);

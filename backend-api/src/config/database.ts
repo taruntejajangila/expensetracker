@@ -121,6 +121,17 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // Admin users table (referenced by banners.created_by/updated_by)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      role VARCHAR(20) DEFAULT 'admin' CHECK (role IN ('admin','super_admin')),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
   // Categories table
   await client.query(`
     CREATE TABLE IF NOT EXISTS categories (

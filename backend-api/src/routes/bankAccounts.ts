@@ -444,8 +444,8 @@ router.delete('/:id', authenticateToken, async (req: any, res: any) => {
        });
      }
      
-     // Check if account has transactions (prevent deletion if in use)
-     const transactionQuery = 'SELECT id FROM transactions WHERE to_account = $1 OR from_account = $1 LIMIT 1';
+    // Check if account has transactions (prevent deletion if in use)
+    const transactionQuery = 'SELECT id FROM transactions WHERE to_account_id = $1 OR from_account_id = $1 LIMIT 1';
      const transactionResult = await req.app.locals.db.query(transactionQuery, [accountId]);
      
      if (transactionResult.rows.length > 0) {

@@ -30,7 +30,6 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
   const [selectedIcon, setSelectedIcon] = useState('🎯');
   const [selectedColor, setSelectedColor] = useState('#667eea');
   const [deadline, setDeadline] = useState('');
-  const [category, setCategory] = useState('');
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState(new Date());
@@ -100,7 +99,7 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
         icon: selectedIcon,
         color: selectedColor,
         targetDate: deadline,
-        goalType: category.trim() || `${goalName.trim()} Goal`
+        goalType: 'other' // Always use 'other' since goal type is not visible to users
       });
 
       Alert.alert(
@@ -453,17 +452,6 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
               textStyle={{ fontSize: 14, fontWeight: '600', color: theme.colors.text }}
             />
           </View>
-        </View>
-
-        {/* Category Input */}
-        <View style={styles.inputSection}>
-          <Text style={styles.inputLabel} allowFontScaling={false}>Category (Optional)</Text>
-          <TextInput style={styles.textInput}
-            value={category}
-            onChangeText={setCategory}
-            placeholder="e.g., Emergency Fund Goal, Vacation Savings"
-            placeholderTextColor={theme.colors.textSecondary}
-            maxLength={50} allowFontScaling={false} />
         </View>
 
         {/* Save Button */}

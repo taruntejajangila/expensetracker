@@ -123,7 +123,7 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
 
   const handleDeleteGoal = () => {
     Alert.alert(
-      'Delete Goal',
+      '⚠️ Delete Goal',
       `Are you sure you want to delete "${goalName}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -135,15 +135,25 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
               const result = await GoalService.deleteGoal(goal.id);
               
               if (result.success) {
-                Alert.alert('Success', 'Goal deleted successfully!', [
-                  { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
+                Alert.alert(
+                  '✅ Success', 
+                  'Goal deleted successfully!', 
+                  [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
               } else {
-                Alert.alert('Error', result.message || 'Failed to delete goal. Please try again.');
+                Alert.alert(
+                  '⚠️ Cannot Delete Goal', 
+                  result.message || 'Failed to delete goal. Please try again.',
+                  [{ text: 'OK', style: 'cancel' }]
+                );
               }
             } catch (error: any) {
               console.error('Error deleting goal:', error);
-              Alert.alert('Error', error.message || 'Failed to delete goal. Please try again.');
+              Alert.alert(
+                '❌ Error', 
+                error.message || 'Failed to delete goal. Please try again.',
+                [{ text: 'OK', style: 'cancel' }]
+              );
             }
           }
         }
