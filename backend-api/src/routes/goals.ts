@@ -121,14 +121,10 @@ router.post('/', async (req: express.Request, res: express.Response) => {
 
     // Enforce allowed goal types to avoid DB constraint violations
     const allowedGoalTypes = ['vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other'];
-    const normalizedGoalType = String(goalType).toLowerCase();
+    let normalizedGoalType = String(goalType).toLowerCase();
     if (!allowedGoalTypes.includes(normalizedGoalType)) {
-      logger.warn('Invalid goalType received', { userId, goalType });
-      return res.status(400).json({
-        success: false,
-        message: `Invalid goalType: ${goalType}. Allowed goal types are: ${allowedGoalTypes.join(', ')}`,
-        allowedGoalTypes
-      });
+      logger.warn('Invalid goalType received; coercing to "other"', { userId, goalType });
+      normalizedGoalType = 'other';
     }
 
     if (parseFloat(targetAmount) <= 0) {
