@@ -272,4 +272,50 @@ router.post('/fix-goals-constraint-with-data', async (req: express.Request, res:
   }
 });
 
+// POST /api/migrate/fix-goals-constraint-expanded - Fix goals constraint with more goal types
+router.post('/fix-goals-constraint-expanded', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('🔧 Running migration: fix goals constraint with expanded goal types');
+
+    // First, update any existing invalid goal_type values
+    await pool.query(`
+      UPDATE goals 
+      SET goal_type = 'other' 
+      WHERE goal_type NOT IN ('vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other', 'savings', 'investment', 'debt', 'wedding', 'home', 'travel', 'business', 'health');
+    `);
+    
+    logger.info('✅ Updated existing invalid goal_type values');
+
+    // Drop the existing constraint
+    await pool.query(`
+      ALTER TABLE goals 
+      DROP CONSTRAINT IF EXISTS goals_goal_type_check;
+    `);
+    
+    logger.info('✅ Dropped old goals constraint');
+
+    // Add new constraint that allows more goal types
+    await pool.query(`
+      ALTER TABLE goals 
+      ADD CONSTRAINT goals_goal_type_check 
+      CHECK (goal_type IN ('vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other', 'savings', 'investment', 'debt', 'wedding', 'home', 'travel', 'business', 'health'));
+    `);
+    
+    logger.info('✅ Added new goals constraint with expanded goal types');
+
+    return res.json({
+      success: true,
+      message: 'Goals constraint updated successfully with expanded goal types - now supports: vacation, car, house, education, retirement, emergency, other, savings, investment, debt, wedding, home, travel, business, health'
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Goals constraint fix error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fix goals constraint',
+      error: error.message
+    });
+  }
+});
+
 export default router;
