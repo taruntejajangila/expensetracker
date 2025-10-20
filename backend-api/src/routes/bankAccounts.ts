@@ -191,14 +191,14 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     
     const query = `
       INSERT INTO bank_accounts (
-        user_id, name, account_name, bank_name, account_holder_name, account_type, balance, currency,
+        user_id, account_name, bank_name, account_holder_name, account_type, balance, currency,
         account_number, is_active, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING *
     `;
     
     const values = [
-      userId, name, name, bankName, accountHolderName, accountType, balance, currency,
+      userId, name, bankName, accountHolderName, accountType, balance, currency,
       accountNumber, true
     ];
     
