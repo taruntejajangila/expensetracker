@@ -97,4 +97,96 @@ router.post('/fix-account-type-constraint', async (req: express.Request, res: ex
   }
 });
 
+// Debug endpoint to check account_holder_name column
+router.post('/check-account-holder-name-column', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('🔍 Checking account_holder_name column');
+
+    // Check if column exists
+    const checkQuery = `
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'bank_accounts' 
+      AND column_name = 'account_holder_name';
+    `;
+    
+    const checkResult = await pool.query(checkQuery);
+    
+    if (checkResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'Column account_holder_name does not exist'
+      });
+    }
+
+    // Check sample data
+    const sampleQuery = `
+      SELECT id, account_name, account_holder_name, bank_name
+      FROM bank_accounts 
+      ORDER BY created_at DESC 
+      LIMIT 5;
+    `;
+    
+    const sampleResult = await pool.query(sampleQuery);
+
+    return res.json({
+      success: true,
+      message: 'Column exists',
+      columnInfo: checkResult.rows[0],
+      sampleData: sampleResult.rows
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Debug error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Debug failed',
+      error: error.message
+    });
+  }
+});
+
+// Debug endpoint to check raw account data
+router.post('/check-raw-account-data', async (req: express.Request, res: express.Response) => {
+  try {
+    const { accountId } = req.body;
+    
+    if (!accountId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Account ID required'
+      });
+    }
+
+    const query = `
+      SELECT id, account_name, account_holder_name, bank_name, account_type, balance
+      FROM bank_accounts 
+      WHERE id = $1;
+    `;
+    
+    const result = await pool.query(query, [accountId]);
+    
+    if (result.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Raw data retrieved',
+      data: result.rows[0]
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Raw data debug error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Raw data debug failed',
+      error: error.message
+    });
+  }
+});
+
 export default router;
