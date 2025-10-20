@@ -201,8 +201,8 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
     const currentGoal = existingGoal.rows[0];
 
     // Build dynamic update query for partial updates
-    const updateFields = [];
-    const values = [];
+    const updateFields: string[] = [];
+    const values: any[] = [];
     let paramIndex = 1;
 
     if (name !== undefined) {
