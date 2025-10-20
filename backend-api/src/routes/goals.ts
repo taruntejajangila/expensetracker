@@ -108,11 +108,26 @@ router.post('/', async (req: express.Request, res: express.Response) => {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
 
+    // Debug: log incoming payload for diagnostics
+    logger.info('Create Goal payload', { userId, body: req.body });
+
     // Validation
     if (!name || !targetAmount || !targetDate || !goalType) {
       return res.status(400).json({ 
         success: false, 
         message: 'Missing required fields: name, targetAmount, targetDate, goalType' 
+      });
+    }
+
+    // Enforce allowed goal types to avoid DB constraint violations
+    const allowedGoalTypes = ['vacation', 'car', 'house', 'education', 'retirement', 'emergency', 'other'];
+    const normalizedGoalType = String(goalType).toLowerCase();
+    if (!allowedGoalTypes.includes(normalizedGoalType)) {
+      logger.warn('Invalid goalType received', { userId, goalType });
+      return res.status(400).json({
+        success: false,
+        message: `Invalid goalType: ${goalType}. Allowed goal types are: ${allowedGoalTypes.join(', ')}`,
+        allowedGoalTypes
       });
     }
 
@@ -146,7 +161,7 @@ router.post('/', async (req: express.Request, res: express.Response) => {
         0, // current_amount starts at 0
         targetDate,
         'active', // status starts as active
-        goalType,
+        normalizedGoalType,
         icon || 'target',
         color || '#10B981'
       ]
