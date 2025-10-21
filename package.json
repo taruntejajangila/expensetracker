@@ -1,5 +1,36 @@
 {
-  "devDependencies": {
-    "patch-package": "^8.0.0"
+  "name": "expense-tracker-test-suite",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for Expense Tracker app - simulates real user journeys",
+  "main": "test-user-journey.js",
+  "scripts": {
+    "test": "node test-user-journey.js",
+    "test:full": "node test-user-journey.js",
+    "test:quick": "node test-single-feature.js all",
+    "test:auth": "node test-single-feature.js auth",
+    "test:profile": "node test-single-feature.js profile",
+    "test:accounts": "node test-single-feature.js accounts",
+    "test:cards": "node test-single-feature.js cards",
+    "test:transactions": "node test-single-feature.js transactions",
+    "test:budgets": "node test-single-feature.js budgets",
+    "test:goals": "node test-single-feature.js goals",
+    "test:loans": "node test-single-feature.js loans",
+    "test:tickets": "node test-single-feature.js tickets",
+    "test:analytics": "node test-single-feature.js analytics"
+  },
+  "keywords": [
+    "expense-tracker",
+    "testing",
+    "api-testing",
+    "user-journey",
+    "backend-testing",
+    "integration-testing"
+  ],
+  "author": "Expense Tracker Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "date-fns": "^4.1.0",
+    "pg": "^8.16.3"
   }
 }

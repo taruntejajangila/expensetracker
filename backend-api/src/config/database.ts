@@ -309,6 +309,25 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // Notifications table
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL,
+      body TEXT,
+      type VARCHAR(50) DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error', 'reminder', 'alert')),
+      data JSONB,
+      status VARCHAR(20) DEFAULT 'unread' CHECK (status IN ('unread', 'read', 'archived')),
+      read_at TIMESTAMP WITH TIME ZONE,
+      action_url VARCHAR(255),
+      is_read BOOLEAN DEFAULT false,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
   // Support tickets table
   await client.query(`
     CREATE TABLE IF NOT EXISTS support_tickets (
@@ -324,6 +343,19 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       resolution TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  // Ticket messages table
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS ticket_messages (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      is_admin BOOLEAN DEFAULT false,
+      attachments TEXT[],
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `);
 

@@ -120,7 +120,7 @@ export const LoanService = {
                  loan.type === 'business' ? 'business' :
                  loan.type === 'student' ? 'student' : 'other', // Map to valid backend types
         amount: loan.principal, // Map 'principal' to 'amount'
-        interestRate: loan.interestRate > 1 ? loan.interestRate / 100 : loan.interestRate, // Convert percentage to decimal (e.g., 26% -> 0.26, but keep 0.26 as 0.26)
+        interestRate: loan.interestRate, // Keep as percentage number (e.g., 26 for 26% p.a.)
         termMonths: loan.tenureMonths, // Map 'tenureMonths' to 'termMonths'
         startDate: loan.emiStartDate, // Map 'emiStartDate' to 'startDate'
         lender: loan.lender,

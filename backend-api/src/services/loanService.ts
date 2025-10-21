@@ -159,7 +159,7 @@ class LoanService {
       }
       
       if (loanData.termMonths !== undefined) {
-        whereConditions.push(`term_months = $${paramIndex++}`);
+        whereConditions.push(`loan_term_months = $${paramIndex++}`);
         queryParams.push(loanData.termMonths);
       }
       
@@ -408,7 +408,7 @@ class LoanService {
       let paramCount = 1;
       
       if (updateData.name !== undefined) {
-        updateFields.push(`name = $${paramCount++}`);
+        updateFields.push(`loan_name = $${paramCount++}`);
         values.push(updateData.name);
       }
       if (updateData.loanType !== undefined) {
@@ -416,7 +416,7 @@ class LoanService {
         values.push(updateData.loanType);
       }
       if (updateData.amount !== undefined) {
-        updateFields.push(`amount = $${paramCount++}`);
+        updateFields.push(`principal_amount = $${paramCount++}`);
         values.push(updateData.amount);
       }
       if (updateData.interestRate !== undefined) {
@@ -424,7 +424,7 @@ class LoanService {
         values.push(updateData.interestRate);
       }
       if (updateData.termMonths !== undefined) {
-        updateFields.push(`term_months = $${paramCount++}`);
+        updateFields.push(`loan_term_months = $${paramCount++}`);
         values.push(updateData.termMonths);
       }
       if (updateData.startDate !== undefined) {
@@ -591,21 +591,21 @@ class LoanService {
     return {
       id: row.id,
       userId: row.user_id,
-      name: row.name,
+      name: row.loan_name,
       loanType: row.loan_type,
-      amount: parseFloat(row.amount),
+      amount: parseFloat(row.principal_amount),
       interestRate: parseFloat(row.interest_rate),
-      termMonths: parseInt(row.term_months),
+      termMonths: parseInt(row.loan_term_months),
       startDate: row.start_date,
       endDate: row.end_date,
       monthlyPayment: parseFloat(row.monthly_payment || 0),
       totalInterest: 0, // Calculated field
-      totalAmount: parseFloat(row.amount), // Principal amount
-      remainingBalance: parseFloat(row.remaining_balance || row.amount),
-      status: row.status,
+      totalAmount: parseFloat(row.principal_amount), // Principal amount
+      remainingBalance: parseFloat(row.outstanding_balance || row.principal_amount),
+      status: row.is_active ? 'active' : 'paid_off',
       lender: row.lender,
-      accountNumber: row.account_number, // Fixed: was undefined
-      notes: row.notes, // Fixed: was undefined
+      accountNumber: row.account_number,
+      notes: row.notes,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };

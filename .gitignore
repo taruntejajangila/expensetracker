@@ -134,3 +134,58 @@ dist/
 # Lock files (keep package-lock.json but ignore others)
 yarn.lock
 pnpm-lock.yaml
+
+# Test and debug files
+test-*.js
+check-*.js
+debug-*.js
+diagnose-*.js
+fix-*.js
+run-*.js
+create-*.js
+update-*.js
+try-*.js
+add-*.js
+get-*.js
+find-*.js
+manual-*.js
+quick-*.js
+simple-*.js
+working-*.js
+comprehensive-*.js
+*-test.js
+*-migration.js
+*-fix.js
+*.sql
+*.bat
+*.ps1
+
+# Test outputs
+*-output.txt
+*-results.txt
+test-results*.txt
+test-output*.txt
+diagnosis*.txt
+comprehensive-results*.txt
+
+# Temporary markdown guides
+*_GUIDE.md
+*_SUMMARY.md
+*_MANUAL*.md
+*_FIX*.md
+*_STEP*.md
+*_TESTING.md
+*_ISSUES*.md
+*_RESULTS*.md
+START_HERE.md
+QUICK_START.md
+DEBUGGING*.md
+
+# PostgreSQL installers and clients
+postgresql-*
+*.exe
+*.zip
+postgresql-client/
+
+# Temporary source folders
+src/
