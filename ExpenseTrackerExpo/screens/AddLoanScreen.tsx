@@ -187,13 +187,28 @@ const AddLoanScreen: React.FC = () => {
         );
     };
 
+    // Map display loan type to backend loan type
+    const mapLoanTypeToBackend = (displayType: string): string => {
+        const typeMap: {[key: string]: string} = {
+            'Personal Loan': 'personal',
+            'Home Loan': 'home',      // Backend expects 'home' not 'mortgage'
+            'Car Loan': 'car',        // Backend expects 'car' not 'auto'
+            'Business Loan': 'business',
+            'Gold Loan': 'other',
+            'Education Loan': 'student',
+            'Private Money Lending': 'other',
+            'Other': 'other'
+        };
+        return typeMap[displayType] || 'other';
+    };
+
     const handleSaveLoan = async () => {
         if (!isValid) return;
 
         try {
             const loanData = {
                 name: name.trim(),
-                type: type,
+                type: mapLoanTypeToBackend(type), // Map display name to backend code
                 lender: lender.trim(),
                 principal: Number(principal),
                 interestRate: Number(interestRate),

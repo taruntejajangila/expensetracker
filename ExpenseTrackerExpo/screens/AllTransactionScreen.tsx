@@ -429,8 +429,22 @@ const TransactionsTab: React.FC<{
       return 'Invalid Date';
     }
     
-    // Convert to Date object if it's a string
-    const dateObj = new Date(date);
+    // Parse date with time in local timezone (no timezone conversion)
+    let dateObj: Date;
+    if (date.includes('T')) {
+      // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
+      const [datePart, timePart] = date.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
+      dateObj = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
+    } else if (date.includes('-')) {
+      // Date-only format (YYYY-MM-DD) - parse as local date at midnight
+      const [year, month, day] = date.split('-').map(Number);
+      dateObj = new Date(year, month - 1, day);
+    } else {
+      // Fallback to standard Date parsing
+      dateObj = new Date(date);
+    }
     
     // Check if date is valid
     if (isNaN(dateObj.getTime())) {
@@ -444,11 +458,14 @@ const TransactionsTab: React.FC<{
     const transactionDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
 
     if (transactionDate.getTime() === today.getTime()) {
+      // Show time for today's transactions
       return `Today, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
     } else if (transactionDate.getTime() === yesterday.getTime()) {
+      // Show time for yesterday's transactions
       return `Yesterday, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
     } else {
-      return `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+      // Show date and time for older transactions
+      return `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
     }
   };
 

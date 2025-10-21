@@ -80,7 +80,31 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
 };
 
 // Helper function to format date with time
-const formatDateWithTime = (date: Date): string => {
+const formatDateWithTime = (dateString: string | Date): string => {
+  // Parse date with time in local timezone (no timezone conversion)
+  let date: Date;
+  if (typeof dateString === 'string') {
+    if (dateString.includes('T')) {
+      // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
+      const [datePart, timePart] = dateString.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      
+      // Handle timezone marker (Z) by removing it
+      const cleanTimePart = (timePart || '00:00:00').split('Z')[0];
+      const [hours, minutes, seconds] = cleanTimePart.split(':').map(Number);
+      date = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
+    } else if (dateString.includes('-')) {
+      // Date-only format (YYYY-MM-DD) - parse as local date at midnight
+      const [year, month, day] = dateString.split('-').map(Number);
+      date = new Date(year, month - 1, day);
+    } else {
+      // Fallback to standard Date parsing
+      date = new Date(dateString);
+    }
+  } else {
+    date = dateString;
+  }
+  
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
   
@@ -89,6 +113,7 @@ const formatDateWithTime = (date: Date): string => {
   const month = months[date.getMonth()];
   const year = date.getFullYear().toString().slice(-2);
   
+  // Format time
   let hours = date.getHours();
   const minutes = date.getMinutes().toString().padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -109,6 +134,7 @@ const formatDateWithTime = (date: Date): string => {
     }
   };
   
+  // Return date WITH time
   return `${dayName}, ${getOrdinalSuffix(day)} ${month} '${year}, ${timeString}`;
 };
 
@@ -1155,7 +1181,7 @@ const TransactionDetailScreen: React.FC = () => {
                   {/* Date Display - Bottom Center */}
                   <View style={styles.dateOverlay}>
                     <Text style={styles.dateOverlayText} allowFontScaling={false}>
-                      {transaction.createdAt ? formatDateWithTime(transaction.createdAt) : formatDateWithTime(new Date(transaction.date))}
+                      {formatDateWithTime(transaction.date)}
                     </Text>
                   </View>
                 </View>

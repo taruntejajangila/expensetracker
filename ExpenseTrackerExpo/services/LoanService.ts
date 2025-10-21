@@ -114,11 +114,7 @@ export const LoanService = {
       // Map frontend fields to backend API expected format
       const backendLoanData = {
         name: loan.name,
-        loanType: loan.type === 'personal' ? 'personal' : 
-                 loan.type === 'mortgage' || loan.type === 'home' ? 'home' :
-                 loan.type === 'auto' || loan.type === 'car' ? 'car' :
-                 loan.type === 'business' ? 'business' :
-                 loan.type === 'student' ? 'student' : 'other', // Map to valid backend types
+        loanType: loan.type, // Type is already mapped in AddLoanScreen ('personal', 'home', 'car', etc.)
         amount: loan.principal, // Map 'principal' to 'amount'
         interestRate: loan.interestRate, // Keep as percentage number (e.g., 26 for 26% p.a.)
         termMonths: loan.tenureMonths, // Map 'tenureMonths' to 'termMonths'
@@ -171,14 +167,10 @@ export const LoanService = {
       
       if (loan.name !== undefined) backendLoanData.name = loan.name;
       if (loan.type !== undefined) {
-        backendLoanData.loanType = loan.type === 'personal' ? 'personal' : 
-                                   loan.type === 'mortgage' || loan.type === 'home' ? 'home' :
-                                   loan.type === 'auto' || loan.type === 'car' ? 'car' :
-                                   loan.type === 'business' ? 'business' :
-                                   loan.type === 'student' ? 'student' : 'other';
+        backendLoanData.loanType = loan.type; // Type is already mapped in AddLoanScreen/EditLoanScreen
       }
       if (loan.principal !== undefined) backendLoanData.amount = loan.principal;
-      if (loan.interestRate !== undefined) backendLoanData.interestRate = loan.interestRate > 1 ? loan.interestRate / 100 : loan.interestRate; // Smart conversion: percentage -> decimal, decimal stays decimal
+      if (loan.interestRate !== undefined) backendLoanData.interestRate = loan.interestRate; // Send as percentage number (e.g., 26 for 26%)
       if (loan.tenureMonths !== undefined) backendLoanData.termMonths = loan.tenureMonths;
       if (loan.emiStartDate !== undefined) backendLoanData.startDate = loan.emiStartDate;
       if (loan.lender !== undefined) backendLoanData.lender = loan.lender;

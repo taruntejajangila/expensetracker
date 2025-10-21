@@ -391,13 +391,26 @@ const AddTransactionScreen = () => {
         // const isCreditCardPayment = selectedAccountId?.startsWith('credit-');
         // const isCreditCardTransfer = selectedToAccountId?.startsWith('credit-');
 
+        // Format date as ISO string in local timezone to preserve exact date and time
+        const formatDateTimeLocal = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          
+          // Return ISO-like format but without timezone offset (local time)
+          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        };
+
         const transactionData = {
           type,
           amount: parsedAmount,
           title,
           description: title, // Title goes to description field for backend (backend doesn't have separate title field)
           category,
-          date,
+          date: formatDateTimeLocal(date), // Format with date AND time in local timezone
           note,
           tags: note ? [note] : [], // Store notes in tags field
           accountId: getAccountId(selectedAccountId),

@@ -187,5 +187,5 @@ postgresql-*
 *.zip
 postgresql-client/
 
-# Temporary source folders
-src/
+# Temporary source folders at root level only (not backend-api/src or admin-panel/src)
+/src/
