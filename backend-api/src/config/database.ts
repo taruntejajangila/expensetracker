@@ -273,7 +273,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
       loan_name VARCHAR(100) NOT NULL,
-      loan_type VARCHAR(20) DEFAULT 'personal' CHECK (loan_type IN ('personal', 'home', 'car', 'business', 'student', 'other')),
+      loan_type VARCHAR(30) DEFAULT 'Personal Loan' CHECK (loan_type IN ('Personal Loan', 'Home Loan', 'Car Loan', 'Business Loan', 'Gold Loan', 'Education Loan', 'Private Money Lending', 'Other')),
       principal_amount DECIMAL(12,2) NOT NULL,
       outstanding_balance DECIMAL(12,2) NOT NULL,
       interest_rate DECIMAL(5,2) NOT NULL,
