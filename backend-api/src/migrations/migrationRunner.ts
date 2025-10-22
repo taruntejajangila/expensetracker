@@ -54,11 +54,14 @@ export class MigrationRunner {
   private async getMigrationFiles(): Promise<string[]> {
     const files = fs.readdirSync(this.migrationsDir);
     
-    // Filter for migration files (timestamp prefix + .ts or .js)
+    // Filter for migration files (timestamp prefix + .js only in production, .ts in development)
     const migrationFiles = files.filter(file => {
-      return /^\d{14}_.*\.(ts|js)$/.test(file) && 
-             file !== 'migrationRunner.ts' && 
-             file !== 'migrationRunner.js';
+      // Only load .js files (compiled), not .ts or .d.ts files
+      const isJsFile = file.endsWith('.js') && !file.endsWith('.d.ts.js');
+      const hasTimestamp = /^\d{14}_/.test(file);
+      const isNotRunner = file !== 'migrationRunner.js';
+      
+      return isJsFile && hasTimestamp && isNotRunner;
     });
     
     // Sort by timestamp (filename prefix)
