@@ -199,30 +199,42 @@ const AddLoanScreen: React.FC = () => {
             'Private Money Lending': 'other',
             'Other': 'other'
         };
-        return typeMap[displayType] || 'other';
+        const mappedType = typeMap[displayType] || 'other';
+        console.log('🔍 AddLoanScreen: Mapping loan type:', displayType, '->', mappedType);
+        return mappedType;
     };
 
     const handleSaveLoan = async () => {
         if (!isValid) return;
 
         try {
+            const tenureMonths = tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears);
+            const principalAmount = Number(principal);
+            const rate = Number(interestRate);
+            
+            // Calculate EMI
+            const monthlyRate = rate / (12 * 100);
+            const emi = monthlyRate > 0 
+                ? (principalAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1)
+                : principalAmount / tenureMonths;
+            
             const loanData = {
                 name: name.trim(),
-                type: mapLoanTypeToBackend(type), // Map display name to backend code
+                type: mapLoanTypeToBackend(type) as 'personal' | 'home' | 'car' | 'business' | 'student' | 'other', // Map display name to backend code
                 lender: lender.trim(),
-                principal: Number(principal),
-                interestRate: Number(interestRate),
-                term: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
-                termYears: Number(termYears),
-                termUnit: tenureUnit,
+                principal: principalAmount,
+                interestRate: rate,
+                tenureMonths: tenureMonths,
+                monthlyPayment: emi,
+                remainingBalance: principalAmount,
                 emiStartDate: emiStartDate,
-                emiDate: emiDate,
-                monthlyPayment: calculateEMI(),
-                remainingTerm: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
-                currentBalance: Number(principal),
-                gradientColors: ['#667eea', '#764ba2'],
+                endDate: new Date(new Date(emiStartDate).getTime() + tenureMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
+                status: 'active' as const,
+                color: '#007AFF',
+                icon: 'document-text'
             };
 
+            console.log('🔍 AddLoanScreen: Sending loan data:', loanData);
             await LoanService.addLoan(loanData);
             
             // Reset form

@@ -30,7 +30,7 @@ export interface StoredLoan {
   nextPaymentDate?: string; // Added nextPaymentDate
   endDate: string;
   lender: string;
-  type: 'personal' | 'mortgage' | 'auto' | 'student' | 'credit_card' | 'home' | 'car' | 'business';
+  type: 'personal' | 'home' | 'car' | 'business' | 'student' | 'other';
   status: 'active' | 'paid_off' | 'defaulted';
   color: string;
   icon: string;
@@ -125,6 +125,7 @@ export const LoanService = {
         notes: ''
       };
       
+      console.log('🔍 LoanService: Received loan.type:', loan.type);
       console.log('🔍 LoanService: Sending loan data to backend:', backendLoanData);
       
       const response = await fetch(`${API_BASE_URL}/loans`, {
