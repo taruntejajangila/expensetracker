@@ -1,0 +1,21 @@
+📱 Testing Mobile App Connection to Railway...
+API URL: https://expensetracker-production-eb9c.up.railway.app/api
+
+🔍 Test 1: Basic Connectivity
+❌ Health endpoint failed: Request failed with status code 404
+   Status: 404
+   Data: {"success":false,"error":"Route not found","message":"The requested route /api/health was not found on this server","timestamp":"2025-10-19T08:20:10.732Z"}
+
+🔍 Test 2: Authentication Endpoint
+✅ Auth endpoint: 200
+   Data: {"success":true,"message":"Login successful","data":{"user":{"id":"2ea94f59-854e-4c3b-9694-d63f2e286ec6","name":"Test User","email":"test@example.com","phone":null,"role":"user"},"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyZWE5NGY1OS04NTRlLTRjM2ItOTY5NC1kNjNmMmUyODZlYzYiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc2MDg2MjAxMSwiZXhwIjoxNzYwOTQ4NDExfQ.QCG9ttcf7eRXaJ805kqZB_kyqiZWXxMWnlTB1fuji48","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyZWE5NGY1OS04NTRlLTRjM2ItOTY5NC1kNjNmMmUyODZlYzYiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTc2MDg2MjAxMSwiZXhwIjoxNzYxNDY2ODExfQ.2Kn1puGKA-Xkwe-rW74MWTYZGxUA1Me9zlwx00gPH88"}}
+
+🔍 Test 3: Categories Endpoint
+❌ Categories endpoint failed: Request failed with status code 401
+   Status: 401
+   Data: {"success":false,"message":"Access token required"}
+
+📊 Connection Summary:
+   Railway Backend: https://expensetracker-production-eb9c.up.railway.app/api
+   FORCE_CLOUD_MODE: true (as configured)
+   Mobile app will use: Railway Backend
