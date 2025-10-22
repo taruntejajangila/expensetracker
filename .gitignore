@@ -189,3 +189,11 @@ postgresql-client/
 
 # Temporary source folders at root level only (not backend-api/src or admin-panel/src)
 /src/
+
+# Keep migrations README and migration files
+!backend-api/src/migrations/
+!backend-api/src/migrations/*.ts
+!backend-api/src/migrations/*.md
+
+# But keep the quick fix script for now
+!backend-api/fix-railway-constraint-now.js

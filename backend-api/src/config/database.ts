@@ -85,6 +85,13 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
     } else {
       logger.info('✅ Database schema already exists');
     }
+
+    // ALWAYS run migrations (for both new and existing databases)
+    logger.info('🔄 Checking for pending migrations...');
+    const { MigrationRunner } = await import('../migrations/migrationRunner');
+    const migrationRunner = new MigrationRunner(client);
+    await migrationRunner.runMigrations();
+    
   } catch (error) {
     logger.error('❌ Error initializing database schema:', error);
     throw error;
