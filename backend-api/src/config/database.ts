@@ -87,10 +87,16 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
     }
 
     // ALWAYS run migrations (for both new and existing databases)
-    logger.info('🔄 Checking for pending migrations...');
-    const { MigrationRunner } = await import('../migrations/migrationRunner');
-    const migrationRunner = new MigrationRunner(client);
-    await migrationRunner.runMigrations();
+    try {
+      logger.info('🔄 Checking for pending migrations...');
+      const { MigrationRunner } = await import('../migrations/migrationRunner');
+      const migrationRunner = new MigrationRunner(client);
+      await migrationRunner.runMigrations();
+    } catch (migrationError: any) {
+      logger.error('❌ Migration error (non-fatal):', migrationError.message);
+      logger.warn('⚠️  Continuing without migrations - please check and fix');
+      // Don't throw - allow app to start even if migrations fail
+    }
     
   } catch (error) {
     logger.error('❌ Error initializing database schema:', error);
