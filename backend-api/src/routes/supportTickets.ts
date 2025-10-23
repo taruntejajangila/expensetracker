@@ -256,7 +256,7 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
       SELECT 
         stm.id,
         stm.ticket_id,
-        stm.user_id,
+        stm.admin_id as user_id,
         stm.message,
         true as is_admin_reply,
         stm.created_at,
