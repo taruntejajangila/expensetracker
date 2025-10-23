@@ -413,8 +413,8 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
 
     // Add message (admin replies go to support_ticket_messages table)
     const result = await client.query(
-      `INSERT INTO support_ticket_messages (ticket_id, admin_id, message, is_internal)
-       VALUES ($1, $2, $3, false)
+      `INSERT INTO support_ticket_messages (ticket_id, admin_id, message)
+       VALUES ($1, $2, $3)
        RETURNING *`,
       [ticketId, adminId, message]
     );
