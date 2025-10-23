@@ -74,12 +74,13 @@ const SavingsGoalsScreen: React.FC = () => {
       let deadlineDate: Date;
       
       // Try to parse the deadline - handle both ISO strings and formatted strings
-      if (deadline.includes('T') || deadline.includes('Z')) {
+      const deadlineString = typeof deadline === 'string' ? deadline : String(deadline);
+      if (deadlineString.includes('T') || deadlineString.includes('Z')) {
         // ISO date string
-        deadlineDate = new Date(deadline);
+        deadlineDate = new Date(deadlineString);
       } else {
         // Try to parse formatted date string
-        deadlineDate = new Date(deadline);
+        deadlineDate = new Date(deadlineString);
       }
       
       // Check if the date is valid
@@ -113,12 +114,13 @@ const SavingsGoalsScreen: React.FC = () => {
       let deadlineDate: Date;
       
       // Try to parse the deadline - handle both ISO strings and formatted strings
-      if (deadline.includes('T') || deadline.includes('Z')) {
+      const deadlineString = typeof deadline === 'string' ? deadline : String(deadline);
+      if (deadlineString.includes('T') || deadlineString.includes('Z')) {
         // ISO date string
-        deadlineDate = new Date(deadline);
+        deadlineDate = new Date(deadlineString);
       } else {
         // Try to parse formatted date string
-        deadlineDate = new Date(deadline);
+        deadlineDate = new Date(deadlineString);
       }
       
       // Check if the date is valid

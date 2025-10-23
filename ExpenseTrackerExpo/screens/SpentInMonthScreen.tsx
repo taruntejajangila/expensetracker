@@ -234,12 +234,12 @@ const SpentInMonthScreen: React.FC = () => {
       alignItems: 'center',
     },
     headerTitle: {
-      fontSize: theme.fontSize.lg,
+      fontSize: 14,
       fontWeight: '700',
       textAlign: 'center',
     },
     headerSubtitle: {
-      fontSize: theme.fontSize.xs,
+      fontSize: 12,
       fontWeight: '400',
       textAlign: 'center',
       opacity: 0.8,
@@ -278,13 +278,13 @@ const SpentInMonthScreen: React.FC = () => {
       justifyContent: 'center',
     },
     progressText: {
-      fontSize: 24,
+      fontSize: theme.fontSize.lg,
       fontWeight: 'bold',
       color: theme.colors.text,
       marginBottom: 4,
     },
     progressSubtext: {
-      fontSize: 14,
+      fontSize: theme.fontSize.sm,
       color: theme.colors.textSecondary,
       textAlign: 'center',
     },
@@ -298,12 +298,12 @@ const SpentInMonthScreen: React.FC = () => {
       alignItems: 'center',
     },
     detailLabel: {
-      fontSize: 12,
+      fontSize: 10,
       color: theme.colors.textSecondary,
       marginBottom: 4,
     },
     detailValue: {
-      fontSize: 16,
+      fontSize: theme.fontSize.md,
       fontWeight: 'bold',
       color: theme.colors.text,
     },
@@ -327,13 +327,13 @@ const SpentInMonthScreen: React.FC = () => {
        alignItems: 'center',
      },
      cardTitle: {
-       fontSize: 18,
+       fontSize: theme.fontSize.md,
        fontWeight: 'bold',
        color: theme.colors.text,
        marginBottom: theme.spacing.xs,
      },
      cardSubtitle: {
-       fontSize: 14,
+       fontSize: theme.fontSize.sm,
        color: theme.colors.textSecondary,
        textAlign: 'center',
      },
@@ -344,7 +344,7 @@ const SpentInMonthScreen: React.FC = () => {
        marginBottom: theme.spacing.md,
      },
      cardHeaderTitle: {
-       fontSize: 18,
+       fontSize: theme.fontSize.md,
        fontWeight: 'bold',
        color: theme.colors.text,
        textAlign: 'left',
@@ -366,7 +366,7 @@ const SpentInMonthScreen: React.FC = () => {
        elevation: 4,
      },
      addButtonText: {
-       fontSize: 14,
+       fontSize: theme.fontSize.sm,
        fontWeight: 'bold',
        color: '#FFFFFF',
        marginLeft: 6,
@@ -399,24 +399,24 @@ const SpentInMonthScreen: React.FC = () => {
        flex: 1,
      },
      transactionTitle: {
-       fontSize: 14,
+       fontSize: theme.fontSize.sm,
        fontWeight: '600',
        color: theme.colors.text,
        marginBottom: 2,
      },
      transactionCategory: {
-       fontSize: 12,
+       fontSize: 10,
        color: theme.colors.textSecondary,
      },
      transactionAmount: {
-       fontSize: 14,
+       fontSize: theme.fontSize.sm,
        fontWeight: 'bold',
      },
      transactionRight: {
        alignItems: 'flex-end',
      },
      transactionDate: {
-       fontSize: 11,
+       fontSize: 10,
        color: theme.colors.textSecondary,
        marginTop: 2,
      },
@@ -426,7 +426,7 @@ const SpentInMonthScreen: React.FC = () => {
         marginTop: 0,
       },
            viewAllText: {
-        fontSize: 14,
+        fontSize: theme.fontSize.sm,
         fontWeight: '600',
         color: '#007AFF',
       },
@@ -436,7 +436,7 @@ const SpentInMonthScreen: React.FC = () => {
         justifyContent: 'center',
       },
       loadingText: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#999',
       },
       emptyContainer: {
@@ -445,14 +445,14 @@ const SpentInMonthScreen: React.FC = () => {
         justifyContent: 'center',
       },
       emptyText: {
-        fontSize: 18,
+        fontSize: theme.fontSize.md,
         fontWeight: '600',
         color: theme.colors.text,
         marginTop: 16,
         textAlign: 'center',
       },
       emptySubtext: {
-        fontSize: 14,
+        fontSize: theme.fontSize.sm,
         color: theme.colors.textSecondary,
         marginTop: 8,
         textAlign: 'center',

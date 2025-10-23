@@ -429,21 +429,24 @@ const TransactionsTab: React.FC<{
       return 'Invalid Date';
     }
     
+    // Ensure date is a string before calling string methods
+    const dateString = typeof date === 'string' ? date : String(date);
+    
     // Parse date with time in local timezone (no timezone conversion)
     let dateObj: Date;
-    if (date.includes('T')) {
+    if (dateString.includes('T')) {
       // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
-      const [datePart, timePart] = date.split('T');
+      const [datePart, timePart] = dateString.split('T');
       const [year, month, day] = datePart.split('-').map(Number);
       const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
       dateObj = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
-    } else if (date.includes('-')) {
+    } else if (dateString.includes('-')) {
       // Date-only format (YYYY-MM-DD) - parse as local date at midnight
-      const [year, month, day] = date.split('-').map(Number);
+      const [year, month, day] = dateString.split('-').map(Number);
       dateObj = new Date(year, month - 1, day);
     } else {
       // Fallback to standard Date parsing
-      dateObj = new Date(date);
+      dateObj = new Date(dateString);
     }
     
     // Check if date is valid

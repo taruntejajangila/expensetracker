@@ -28,12 +28,10 @@ const DebtPlansScreen: React.FC = () => {
   const [totalDebt, setTotalDebt] = useState(0);
   const [totalEMI, setTotalEMI] = useState(0);
   const [averageInterestRate, setAverageInterestRate] = useState(0);
-  const [localLoanCount, setLocalLoanCount] = useState(0);
 
   // Load user loans on component mount
   useEffect(() => {
     loadUserLoans();
-    checkLocalLoanCount();
   }, []);
 
   // Auto-refresh backend data when screen comes into focus (same as LoansScreen)
@@ -41,32 +39,9 @@ const DebtPlansScreen: React.FC = () => {
     React.useCallback(() => {
       console.log('🔄 Screen focused - refreshing backend loans...');
       loadUserLoans();
-      checkLocalLoanCount();
     }, [])
   );
 
-  // Check local loan count
-  const checkLocalLoanCount = async () => {
-    try {
-      const count = await LoanService.getLocalLoanCount();
-      setLocalLoanCount(count);
-    } catch (error) {
-      console.error('Error checking local loan count:', error);
-    }
-  };
-
-  // Clear local loans
-  const clearLocalLoans = async () => {
-    try {
-      await LoanService.clearLocalLoans();
-      setLocalLoanCount(0);
-      // Reload loans to refresh the display
-      loadUserLoans();
-      console.log('Local loans cleared successfully');
-    } catch (error) {
-      console.error('Error clearing local loans:', error);
-    }
-  };
 
   // Load user loans from backend API (same as LoansScreen)
   const loadUserLoans = async () => {
@@ -384,20 +359,6 @@ const DebtPlansScreen: React.FC = () => {
         )}
         scrollEventThrottle={16}
       >
-        {/* Local Loan Status */}
-        {localLoanCount > 0 && (
-          <View style={styles.localLoanStatus}>
-            <Text style={styles.localLoanStatusText} allowFontScaling={false}>
-              📱 {localLoanCount} loan(s) stored locally
-            </Text>
-            <TouchableOpacity 
-              style={styles.clearLocalButton} 
-              onPress={clearLocalLoans}
-            >
-              <Text style={styles.clearLocalButtonText} allowFontScaling={false}>Clear Local Data</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
       {/* Pay Off Strategy Card */}
       <View style={styles.cardContainer}>
@@ -1130,40 +1091,6 @@ const styles = StyleSheet.create({
   addLoanButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    includeFontPadding: Platform.OS === 'android' ? false : true,
-  },
-  localLoanStatus: {
-    backgroundColor: '#FFF3CD',
-    borderWidth: 1,
-    borderColor: '#FFEAA7',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  localLoanStatusText: {
-    fontSize: 12,
-    color: '#856404',
-    textAlign: 'center',
-    marginBottom: 8,
-    includeFontPadding: Platform.OS === 'android' ? false : true,
-  },
-  clearLocalButton: {
-    backgroundColor: '#DC3545',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    elevation: Platform.OS === 'android' ? 1 : 0,
-    shadowColor: Platform.OS === 'ios' ? '#000' : 'transparent',
-    shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 1 } : { width: 0, height: 0 },
-    shadowOpacity: Platform.OS === 'ios' ? 0.1 : 0,
-    shadowRadius: Platform.OS === 'ios' ? 1 : 0,
-  },
-  clearLocalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
     includeFontPadding: Platform.OS === 'android' ? false : true,

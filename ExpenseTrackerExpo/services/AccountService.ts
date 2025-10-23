@@ -240,10 +240,64 @@ export default {
   },
 
   async ensureDefaultWallet() {
-    // With cloud backend, users create accounts manually via the app UI
-    // No automatic wallet creation - return null
-    console.log('ℹ️ ensureDefaultWallet: Using backend API - create accounts manually');
-    return null;
+    try {
+      console.log('🔍 AccountService: Ensuring default cash wallet exists...');
+      
+      const token = await getAuthToken();
+      if (!token) {
+        console.log('🔍 AccountService: No auth token, cannot create default wallet');
+        return null;
+      }
+
+      // Check if user already has a cash wallet
+      const existingAccounts = await this.getAccounts();
+      const hasCashWallet = existingAccounts.some(acc => acc.type === 'cash');
+      
+      if (hasCashWallet) {
+        console.log('🔍 AccountService: Cash wallet already exists');
+        return existingAccounts.find(acc => acc.type === 'cash');
+      }
+
+      // Create default cash wallet
+      const defaultWalletData = {
+        account_name: 'Cash Wallet',
+        bank_name: 'Cash',
+        account_holder_name: 'Cash Wallet',
+        account_type: 'wallet',
+        balance: 0,
+        currency: 'INR',
+        account_number: '',
+      };
+
+      console.log('🔍 AccountService: Creating default cash wallet...');
+      const result = await this.addAccount(defaultWalletData);
+      
+      if (result.success) {
+        console.log('🔍 AccountService: Default cash wallet created successfully');
+        return {
+          id: result.data.id,
+          name: 'Cash Wallet',
+          bankName: 'Cash',
+          accountHolderName: 'Cash Wallet',
+          type: 'cash',
+          balance: 0,
+          currency: 'INR',
+          icon: 'wallet',
+          color: '#10B981',
+          accountType: 'wallet',
+          accountNumber: '',
+          status: 'Active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        console.error('🔍 AccountService: Failed to create default wallet:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('🔍 AccountService: Error ensuring default wallet:', error);
+      return null;
+    }
   },
 
   async adjustAccountBalance(accountId: string, delta: number) {

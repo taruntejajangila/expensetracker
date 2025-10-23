@@ -25,25 +25,35 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
   // If no icon name, try to get icon based on category
   if (!iconName || iconName === 'undefined' || iconName === 'null') {
     const categoryIconMap: { [key: string]: string } = {
+      // Income Categories (matching database names)
       'Salary': 'cash-outline',
-      'Freelance': 'laptop-outline',
-      'Business Income': 'briefcase-outline',
-      'Rental Income': 'home-outline',
-      'Gift/Donations Received': 'gift-outline',
+      'Freelance': 'briefcase-outline',
+      'Investment': 'trending-up-outline',
       'Other Income': 'add-circle-outline',
+      
+      // Expense Categories (matching database names)
+      'Food & Dining': 'restaurant-outline',
+      'Transportation': 'car-outline',
+      'Shopping': 'bag-outline',
+      'Entertainment': 'film-outline',
+      'Bills & Utilities': 'document-text-outline',
+      'Healthcare': 'heart-outline',
+      'Education': 'book-outline',
+      'Travel': 'airplane-outline',
+      
+      // Legacy mappings for backward compatibility
       'Groceries': 'cart-outline',
       'Dining Out/Food Delivery': 'restaurant-outline',
       'Utilities': 'flash-outline',
       'Rent': 'home-outline',
-      'Shopping': 'bag-outline',
-      'Entertainment': 'film-outline',
-      'Transportation': 'car-outline',
       'Travel/Vacation': 'airplane-outline',
       'Loan/Debt Payments': 'card-outline',
       'Health': 'medical-outline',
-      'Education': 'school-outline',
       'Savings & Investment': 'trending-up-outline',
       'Family & Child': 'people-outline',
+      'Investments': 'trending-up-outline',
+      
+      // Transfer Categories
       'Transfer': 'swap-vertical-outline',
       'Account Transfer': 'card-outline',
       'Money Transfer': 'send-outline',
@@ -81,6 +91,11 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
 
 // Helper function to format date with time
 const formatDateWithTime = (dateString: string | Date): string => {
+  // Handle undefined or null
+  if (!dateString) {
+    return 'Invalid Date';
+  }
+  
   // Parse date with time in local timezone (no timezone conversion)
   let date: Date;
   if (typeof dateString === 'string') {
@@ -247,28 +262,33 @@ const getBankLogo = (bankName: string): any => {
 // Helper function to get category image
 const getCategoryImage = (categoryName: string, transactionType: 'income' | 'expense' | 'transfer'): any => {
   const imageMap: { [key: string]: any } = {
-    // Income Categories
+    // Income Categories (matching database names)
     'Salary': require('../assets/images/categories/income/income_salary_office.png'),
     'Freelance': require('../assets/images/categories/income/income_freelance_laptop.png'),
-    'Business Income': require('../assets/images/categories/income/income_business_meeting.png'),
-    'Rental Income': require('../assets/images/categories/income/income_rental_house.png'),
-    'Gift/Donations Received': require('../assets/images/categories/income/income_gift_received.png'),
+    'Investment': require('../assets/images/categories/income/income_other_general.png'),
     'Other Income': require('../assets/images/categories/income/income_other_general.png'),
     
-    // Expense Categories
+    // Expense Categories (matching database names)
+    'Food & Dining': require('../assets/images/categories/expense/expense_dining_restaurant.png'),
+    'Transportation': require('../assets/images/categories/expense/expense_transportation_car.png'),
+    'Shopping': require('../assets/images/categories/expense/expense_shopping_bags.png'),
+    'Entertainment': require('../assets/images/categories/expense/expense_entertainment_movies.png'),
+    'Bills & Utilities': require('../assets/images/categories/expense/expense_utilities_electricity.png'),
+    'Healthcare': require('../assets/images/categories/expense/expense_health_medical.png'),
+    'Education': require('../assets/images/categories/expense/expense_education_school.png'),
+    'Travel': require('../assets/images/categories/expense/expense_travel_airplane.png'),
+    
+    // Legacy mappings for backward compatibility
     'Groceries': require('../assets/images/categories/expense/expense_groceries_cart.png'),
     'Dining Out/Food Delivery': require('../assets/images/categories/expense/expense_dining_restaurant.png'),
     'Utilities': require('../assets/images/categories/expense/expense_utilities_electricity.png'),
     'Rent': require('../assets/images/categories/expense/expense_rent_house.png'),
-    'Shopping': require('../assets/images/categories/expense/expense_shopping_bags.png'),
-    'Entertainment': require('../assets/images/categories/expense/expense_entertainment_movies.png'),
-    'Transportation': require('../assets/images/categories/expense/expense_transportation_car.png'),
     'Travel/Vacation': require('../assets/images/categories/expense/expense_travel_airplane.png'),
     'Loan/Debt Payments': require('../assets/images/categories/expense/expense_loan_credit_card.png'),
     'Health': require('../assets/images/categories/expense/expense_health_medical.png'),
-    'Education': require('../assets/images/categories/expense/expense_education_school.png'),
     'Savings & Investment': require('../assets/images/categories/expense/expense_savings_piggy_bank.png'),
     'Family & Child': require('../assets/images/categories/expense/expense_family_children.png'),
+    'Investments': require('../assets/images/categories/expense/expense_savings_piggy_bank.png'),
     
     // Transfer Categories
     'Transfer': require('../assets/images/categories/transfer/transfer_general_arrow.png'),
