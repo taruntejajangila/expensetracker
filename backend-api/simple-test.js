@@ -1,45 +1,63 @@
-// Simple test to check live traffic
-const http = require('http');
+const fetch = require('node-fetch');
 
-const options = {
-  hostname: 'localhost',
-  port: 5000,
-  path: '/api/admin/live-traffic',
-  method: 'GET',
-  headers: {
-    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlMjNiNzQxZC1mNTQ5LTQ0NmUtODE3OC1hMzc5ZWRmYTNjMTQiLCJlbWFpbCI6ImFkbWluQGV4cGVuc2V0cmFja2VyLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1Njc5MjczNCwiZXhwIjoxNzU2ODc5MTM0fQ.4Fzkdo8QhR-JpawjJX3Alr_ncOLhNQNtawFdnsAzYOg'
-  }
-};
+async function simpleTest() {
+  try {
+    console.log('🧪 Simple API Test...\n');
 
-console.log('🚀 Testing Live Traffic API...\n');
+    // Test login
+    console.log('1️⃣ Testing login...');
+    const loginResponse = await fetch('https://expensetracker-production-eb9c.up.railway.app/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'tarun2022@gmail.com',
+        password: 'Tarunteja1422@'
+      })
+    });
 
-const req = http.request(options, (res) => {
-  console.log(`📊 Status: ${res.statusCode}`);
-  
-  let data = '';
-  res.on('data', (chunk) => {
-    data += chunk;
-  });
-  
-  res.on('end', () => {
-    try {
-      const response = JSON.parse(data);
-      console.log('✅ Live Traffic Data:');
-      console.log(`   📱 Live Users: ${response.data.liveUsers}`);
-      console.log(`   ⏰ Recently Active (2h): ${response.data.hourlyActive}`);
-      console.log(`   📅 Daily Active: ${response.data.dailyActive}`);
-      console.log(`   👥 Total Users: ${response.data.totalUsers}`);
-      console.log(`   🕐 Last Updated: ${response.data.lastUpdated}`);
-      console.log('\n🎉 Live Traffic System is Working!');
-    } catch (error) {
-      console.log('❌ Error parsing response:', error.message);
-      console.log('Raw response:', data);
+    console.log('Login status:', loginResponse.status);
+    
+    if (loginResponse.ok) {
+      const loginData = await loginResponse.json();
+      console.log('✅ Login successful');
+      
+      const token = loginData.data.token;
+      
+      // Test support ticket creation
+      console.log('\n2️⃣ Testing support ticket creation...');
+      const ticketResponse = await fetch('https://expensetracker-production-eb9c.up.railway.app/api/support-tickets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subject: 'Test Ticket',
+          description: 'Testing the API',
+          category: 'technical',
+          priority: 'medium'
+        })
+      });
+
+      console.log('Ticket creation status:', ticketResponse.status);
+      
+      if (ticketResponse.ok) {
+        const ticketData = await ticketResponse.json();
+        console.log('✅ Ticket created successfully!');
+        console.log('Ticket number:', ticketData.data.ticket_number);
+        console.log('Ticket ID:', ticketData.data.id);
+      } else {
+        const errorText = await ticketResponse.text();
+        console.log('❌ Ticket creation failed');
+        console.log('Error:', errorText);
+      }
+    } else {
+      console.log('❌ Login failed');
     }
-  });
-});
 
-req.on('error', (error) => {
-  console.error('❌ Request failed:', error.message);
-});
+  } catch (error) {
+    console.error('❌ Test error:', error.message);
+  }
+}
 
-req.end();
+simpleTest();

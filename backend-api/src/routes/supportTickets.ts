@@ -107,7 +107,7 @@ router.post('/', authenticateToken, upload.array('attachments', 5), async (req: 
 
     // Get user details for admin notification
     const userDetails = await client.query(
-      'SELECT name, email FROM users WHERE id = $1',
+      'SELECT CONCAT(first_name, \' \', last_name) as name, email FROM users WHERE id = $1',
       [userId]
     );
 
