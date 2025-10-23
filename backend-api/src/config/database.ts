@@ -109,6 +109,28 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   // Enable UUID extension
   await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
 
+  // Create ticket number generation function
+  await client.query(`
+    CREATE OR REPLACE FUNCTION generate_ticket_number()
+    RETURNS VARCHAR AS $$
+    DECLARE
+      ticket_num VARCHAR(20);
+      counter INTEGER;
+    BEGIN
+      -- Get the next counter value
+      SELECT COALESCE(MAX(CAST(SUBSTRING(ticket_number FROM 4) AS INTEGER)), 0) + 1
+      INTO counter
+      FROM support_tickets
+      WHERE ticket_number LIKE 'TK%';
+      
+      -- Format as TK + 6-digit number with leading zeros
+      ticket_num := 'TK' || LPAD(counter::TEXT, 6, '0');
+      
+      RETURN ticket_num;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
   // Users table
   await client.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -355,11 +377,13 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     CREATE TABLE IF NOT EXISTS support_tickets (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      ticket_number VARCHAR(20) UNIQUE NOT NULL,
       subject VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
       priority VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
       category VARCHAR(50) DEFAULT 'general',
+      assigned_to UUID REFERENCES users(id),
       attachments TEXT[],
       admin_response TEXT,
       resolution TEXT,
@@ -375,9 +399,37 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
       message TEXT NOT NULL,
-      is_admin BOOLEAN DEFAULT false,
+      is_admin_reply BOOLEAN DEFAULT false,
       attachments TEXT[],
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  // Ticket attachments table
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS ticket_attachments (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
+      message_id UUID REFERENCES ticket_messages(id) ON DELETE CASCADE,
+      file_name VARCHAR(255) NOT NULL,
+      file_path VARCHAR(500) NOT NULL,
+      file_type VARCHAR(100) NOT NULL,
+      file_size INTEGER NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  // Support ticket messages table (for admin replies)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS support_ticket_messages (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
+      admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      is_internal BOOLEAN DEFAULT false,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `);
 
