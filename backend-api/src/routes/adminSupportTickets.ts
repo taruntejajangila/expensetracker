@@ -212,7 +212,7 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
       SELECT 
         stm.id,
         stm.ticket_id,
-        stm.user_id,
+        stm.admin_id as user_id,
         stm.message,
         true as is_admin_reply,
         stm.created_at,
@@ -221,7 +221,7 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
         au.email as user_email,
         'admin' as message_type
       FROM support_ticket_messages stm
-      LEFT JOIN admin_users au ON stm.admin_id = au.id
+      LEFT JOIN users au ON stm.admin_id = au.id
       WHERE stm.ticket_id = $1
       
       ORDER BY created_at ASC`,
