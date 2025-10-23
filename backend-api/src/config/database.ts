@@ -133,7 +133,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     `);
     console.log('✅ generate_ticket_number function created');
   } catch (error) {
-    console.log('⚠️ Function might already exist:', error.message);
+    console.log('⚠️ Function might already exist:', (error as Error).message);
   }
 
   // Users table
@@ -419,7 +419,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
 
     console.log('✅ Support tickets table updated with ticket_number column');
   } catch (error) {
-    console.log('⚠️ Support tickets table update:', error.message);
+    console.log('⚠️ Support tickets table update:', (error as Error).message);
   }
 
   // Ticket messages table
@@ -450,7 +450,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
 
     console.log('✅ Ticket messages table updated with missing columns');
   } catch (error) {
-    console.log('⚠️ Ticket messages table update:', error.message);
+    console.log('⚠️ Ticket messages table update:', (error as Error).message);
   }
 
   // Ticket attachments table
