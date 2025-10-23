@@ -442,37 +442,19 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       [ticketId]
     );
 
-    // Get ticket details for notification
+    // Get ticket details for logging
     const ticketDetails = await client.query(
-      `SELECT st.*, u.email as user_email, u.name as user_name 
+      `SELECT st.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email 
        FROM support_tickets st 
        JOIN users u ON st.user_id = u.id 
        WHERE st.id = $1`,
       [ticketId]
     );
 
-    // Send push notification to user
+    // Log admin reply for tracking
     if (ticketDetails.rows.length > 0) {
       const ticket = ticketDetails.rows[0];
-      try {
-        await notificationService.sendToUser({
-          title: `Support Reply: ${ticket.ticket_number}`,
-          body: message.length > 100 ? message.substring(0, 100) + '...' : message,
-          data: {
-            type: 'support_ticket_reply',
-            ticketId: ticketId,
-            ticketNumber: ticket.ticket_number,
-            from: 'admin_panel'
-          },
-          targetAll: false,
-          userEmail: ticket.user_email,
-          type: 'simple'
-        });
-        console.log(`✅ Push notification sent to ${ticket.user_email} for ticket ${ticket.ticket_number}`);
-      } catch (notifError) {
-        console.error('⚠️ Failed to send push notification:', notifError);
-        // Don't fail the reply if notification fails
-      }
+      console.log(`✅ Admin reply added to ticket ${ticket.ticket_number} for user ${ticket.user_email}`);
     }
 
     return res.status(201).json({
