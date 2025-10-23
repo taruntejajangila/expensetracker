@@ -104,7 +104,7 @@ router.post('/:id/read', authenticateToken, async (req: any, res: any) => {
     const result = await pool.query(`
       UPDATE notifications 
       SET read_at = NOW() 
-      WHERE id = $1 AND (target_user_id = $2 OR target_user_id IS NULL)
+      WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
       RETURNING id, read_at
     `, [notificationId, userId]);
 
@@ -146,7 +146,7 @@ router.post('/mark-all-read', authenticateToken, async (req: any, res: any) => {
     const result = await pool.query(`
       UPDATE notifications 
       SET read_at = NOW() 
-      WHERE (target_user_id = $1 OR target_user_id IS NULL) AND read_at IS NULL
+      WHERE (user_id = $1 OR user_id IS NULL) AND read_at IS NULL
     `, [userId]);
 
     const updatedCount = result.rowCount || 0;

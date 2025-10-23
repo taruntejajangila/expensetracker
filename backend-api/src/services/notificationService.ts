@@ -458,7 +458,7 @@ class NotificationService {
   private async storeNotificationInDatabase(notificationData: PushNotificationData, targetUserId: string | null): Promise<void> {
     try {
       await this.pool.query(`
-        INSERT INTO notifications (target_user_id, title, body, data, type, status, created_at)
+        INSERT INTO notifications (user_id, title, message, data, type, status, created_at)
         VALUES ($1, $2, $3, $4, $5, 'sent', NOW())
       `, [
         targetUserId,
@@ -510,7 +510,7 @@ class NotificationService {
   async getRecentNotifications(minutesAgo: number = 5): Promise<any[]> {
     try {
       const result = await this.pool.query(`
-        SELECT id, title, body, data, target_user_id, target_token, created_at
+        SELECT id, title, message as body, data, user_id, target_token, created_at
         FROM notifications
         WHERE created_at >= NOW() - INTERVAL '${minutesAgo} minutes'
         ORDER BY created_at DESC
@@ -522,7 +522,7 @@ class NotificationService {
         title: row.title,
         body: row.body,
         data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
-        target_user_id: row.target_user_id,
+        target_user_id: row.user_id,
         target_token: row.target_token,
         createdAt: row.created_at
       }));
@@ -578,19 +578,19 @@ class NotificationService {
         SELECT 
           n.id,
           n.title,
-          n.body,
+          n.message as body,
           n.data,
           n.type,
           n.status,
           n.created_at,
           n.read_at,
-          n.target_user_id,
+          n.user_id,
           CASE 
             WHEN n.read_at IS NOT NULL THEN true 
             ELSE false 
           END as read
         FROM notifications n
-        WHERE n.target_user_id = $1 OR n.target_user_id IS NULL
+        WHERE n.user_id = $1 OR n.user_id IS NULL
         ORDER BY n.created_at DESC
         LIMIT 50
       `, [userId]);
@@ -652,7 +652,7 @@ class NotificationService {
           u.email as user_email,
           u.name
         FROM notifications n
-        LEFT JOIN users u ON n.target_user_id = u.id
+        LEFT JOIN users u ON n.user_id = u.id
         WHERE n.created_at >= NOW() - INTERVAL '${days} days'
         ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2
