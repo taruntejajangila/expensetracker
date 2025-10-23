@@ -285,8 +285,18 @@ const SavingsGoalsScreen: React.FC = () => {
             <Text style={[styles.greetingText, { color: theme.colors.text }]} allowFontScaling={false}>
               Savings Goals
             </Text>
+            <Text style={[styles.greetingSubtext, { color: theme.colors.textSecondary }]} allowFontScaling={false}>
+              Track your financial goals
+            </Text>
           </View>
-          <View style={styles.headerRight} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => navigation.navigate('AddGoal' as never)}
+            >
+              <Ionicons name="add" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -336,56 +346,48 @@ const SavingsGoalsScreen: React.FC = () => {
       >
 
 
-        {/* Overall Progress Card */}
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.overallProgressCard}
-        >
-          <View style={styles.overallProgressHeader}>
-            <Text style={styles.overallProgressIcon} allowFontScaling={false}>🎯</Text>
-            <Text style={styles.overallProgressTitle} allowFontScaling={false}>SAVINGS OVERVIEW</Text>
-          </View>
-          <View style={styles.overallProgressStats}>
-            <View style={styles.overallStatItem}>
-              <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalCurrent)}</Text>
-              <Text style={styles.overallStatLabel} allowFontScaling={false}>Total Saved</Text>
+        {/* Overall Progress Card - Only show if there are goals */}
+        {goals.length > 0 && (
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.overallProgressCard}
+          >
+            <View style={styles.overallProgressHeader}>
+              <Text style={styles.overallProgressIcon} allowFontScaling={false}>🎯</Text>
+              <Text style={styles.overallProgressTitle} allowFontScaling={false}>SAVINGS OVERVIEW</Text>
             </View>
-            <View style={styles.overallStatDivider} />
-            <View style={styles.overallStatItem}>
-              <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalTarget)}</Text>
-              <Text style={styles.overallStatLabel} allowFontScaling={false}>Total Goal</Text>
+            <View style={styles.overallProgressStats}>
+              <View style={styles.overallStatItem}>
+                <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalCurrent)}</Text>
+                <Text style={styles.overallStatLabel} allowFontScaling={false}>Total Saved</Text>
+              </View>
+              <View style={styles.overallStatDivider} />
+              <View style={styles.overallStatItem}>
+                <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalTarget)}</Text>
+                <Text style={styles.overallStatLabel} allowFontScaling={false}>Total Goal</Text>
+              </View>
+              <View style={styles.overallStatDivider} />
+              <View style={styles.overallStatItem}>
+                <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalTarget - totalCurrent)}</Text>
+                <Text style={styles.overallStatLabel} allowFontScaling={false}>Remaining</Text>
+              </View>
             </View>
-            <View style={styles.overallStatDivider} />
-            <View style={styles.overallStatItem}>
-              <Text style={styles.overallStatValue} allowFontScaling={false}>{formatCurrency(totalTarget - totalCurrent)}</Text>
-              <Text style={styles.overallStatLabel} allowFontScaling={false}>Remaining</Text>
+            <View style={styles.overallProgressBarContainer}>
+              <View style={styles.overallProgressBarHeader}>
+                <Text style={styles.overallProgressLabel} allowFontScaling={false}>Overall Progress</Text>
+                <Text style={styles.overallProgressPercentage} allowFontScaling={false}>{overallProgress}%</Text>
+              </View>
+              <View style={styles.overallProgressBar}>
+                <View style={[styles.overallProgressBarFill, { width: `${overallProgress}%` }]} />
+              </View>
             </View>
-          </View>
-          <View style={styles.overallProgressBarContainer}>
-            <View style={styles.overallProgressBarHeader}>
-              <Text style={styles.overallProgressLabel} allowFontScaling={false}>Overall Progress</Text>
-              <Text style={styles.overallProgressPercentage} allowFontScaling={false}>{overallProgress}%</Text>
-            </View>
-            <View style={styles.overallProgressBar}>
-              <View style={[styles.overallProgressBarFill, { width: `${overallProgress}%` }]} />
-            </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        )}
 
         {/* Goals Section */}
         <View style={styles.goalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle} allowFontScaling={false}>Your Goals</Text>
-            <TouchableOpacity 
-              style={styles.addGoalButton}
-              onPress={() => navigation.navigate('AddGoal' as never)}
-            >
-              <Ionicons name="add" size={20} color={theme.colors.primary} />
-              <Text style={styles.addGoalButtonText} allowFontScaling={false}>Add Goal</Text>
-            </TouchableOpacity>
-          </View>
           
           {goals.map(goal => {
             const progress = getProgress(goal.currentAmount, goal.targetAmount);
@@ -781,21 +783,17 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   greetingContainer: {
     alignItems: 'center',
@@ -803,10 +801,15 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
     color: theme.colors.text,
     marginBottom: 2,
+  },
+  greetingSubtext: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: theme.colors.textSecondary,
   },
 
   overallProgressCard: {
@@ -911,31 +914,6 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   goalsSection: {
     marginBottom: 32,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  addGoalButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + '10',
-  },
-  addGoalButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    marginLeft: 6,
   },
   goalCardContainer: {
     marginBottom: 12,
@@ -1166,7 +1144,7 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
@@ -1180,14 +1158,14 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     marginBottom: 16,
   },
   emptyStateTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyStateSubtitle: {
-    fontSize: 16,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
