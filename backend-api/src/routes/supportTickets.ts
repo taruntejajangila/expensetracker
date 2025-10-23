@@ -58,9 +58,27 @@ router.post('/', authenticateToken, upload.array('attachments', 5), async (req: 
       });
     }
 
+    // Ensure ticket_number column exists
+    try {
+      await client.query(`
+        ALTER TABLE support_tickets 
+        ADD COLUMN IF NOT EXISTS ticket_number VARCHAR(20)
+      `);
+    } catch (error) {
+      console.log('⚠️ Could not add ticket_number column:', (error as Error).message);
+    }
+
     // Generate ticket number
-    const ticketNumberResult = await client.query('SELECT generate_ticket_number() as ticket_number');
-    const ticketNumber = ticketNumberResult.rows[0].ticket_number;
+    let ticketNumber: string;
+    try {
+      const ticketNumberResult = await client.query('SELECT generate_ticket_number() as ticket_number');
+      ticketNumber = ticketNumberResult.rows[0].ticket_number;
+    } catch (error) {
+      // Fallback: generate simple ticket number if function doesn't exist
+      console.log('⚠️ generate_ticket_number function not found, using fallback');
+      const timestamp = Date.now();
+      ticketNumber = `TK${timestamp.toString().slice(-6)}`;
+    }
 
     // Create ticket
     const result = await client.query(
