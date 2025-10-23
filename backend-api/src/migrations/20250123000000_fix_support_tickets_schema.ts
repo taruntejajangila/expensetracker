@@ -51,7 +51,6 @@ export const up = async (pool: Pool): Promise<void> => {
         ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
         admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
         message TEXT NOT NULL,
-        is_internal BOOLEAN DEFAULT false,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
