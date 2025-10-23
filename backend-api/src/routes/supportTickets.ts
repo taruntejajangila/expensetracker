@@ -207,13 +207,20 @@ router.get('/:ticketId', authenticateToken, async (req: Request, res: Response) 
     // Get ticket details
     const ticketResult = await client.query(
       `SELECT 
-        st.*,
+        st.id,
+        st.user_id,
+        st.ticket_number,
+        st.subject,
+        st.description,
+        st.status,
+        st.priority,
+        st.category,
+        st.created_at,
+        st.updated_at,
         CONCAT(u.first_name, ' ', u.last_name) as user_name,
-        u.email as user_email,
-        CONCAT(admin.first_name, ' ', admin.last_name) as assigned_to_name
+        u.email as user_email
       FROM support_tickets st
       LEFT JOIN users u ON st.user_id = u.id
-      LEFT JOIN users admin ON st.assigned_to = admin.id
       WHERE st.id = $1 AND st.user_id = $2`,
       [ticketId, userId]
     );
