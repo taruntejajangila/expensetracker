@@ -162,14 +162,21 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
     // Get ticket details
     const ticketResult = await client.query(
       `SELECT 
-        st.*,
-        u.name as user_name,
+        st.id,
+        st.user_id,
+        st.ticket_number,
+        st.subject,
+        st.description,
+        st.status,
+        st.priority,
+        st.category,
+        st.created_at,
+        st.updated_at,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
-        u.phone as user_phone,
-        admin.name as assigned_to_name
+        u.phone as user_phone
       FROM support_tickets st
       LEFT JOIN users u ON st.user_id = u.id
-      LEFT JOIN users admin ON st.assigned_to = admin.id
       WHERE st.id = $1`,
       [ticketId]
     );
@@ -193,7 +200,7 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
         tm.is_admin_reply,
         tm.created_at,
         tm.updated_at,
-        u.name as user_name,
+        CONCAT(u.first_name, ' ', u.last_name) as user_name,
         u.email as user_email,
         'user' as message_type
       FROM ticket_messages tm
@@ -210,7 +217,7 @@ router.get('/:ticketId', authenticateToken, isAdmin, async (req: Request, res: R
         true as is_admin_reply,
         stm.created_at,
         stm.updated_at,
-        au.username as user_name,
+        CONCAT(au.first_name, ' ', au.last_name) as user_name,
         au.email as user_email,
         'admin' as message_type
       FROM support_ticket_messages stm
