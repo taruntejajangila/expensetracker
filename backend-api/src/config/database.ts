@@ -110,26 +110,31 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
 
   // Create ticket number generation function
-  await client.query(`
-    CREATE OR REPLACE FUNCTION generate_ticket_number()
-    RETURNS VARCHAR AS $$
-    DECLARE
-      ticket_num VARCHAR(20);
-      counter INTEGER;
-    BEGIN
-      -- Get the next counter value
-      SELECT COALESCE(MAX(CAST(SUBSTRING(ticket_number FROM 4) AS INTEGER)), 0) + 1
-      INTO counter
-      FROM support_tickets
-      WHERE ticket_number LIKE 'TK%';
-      
-      -- Format as TK + 6-digit number with leading zeros
-      ticket_num := 'TK' || LPAD(counter::TEXT, 6, '0');
-      
-      RETURN ticket_num;
-    END;
-    $$ LANGUAGE plpgsql;
-  `);
+  try {
+    await client.query(`
+      CREATE OR REPLACE FUNCTION generate_ticket_number()
+      RETURNS VARCHAR AS $$
+      DECLARE
+        ticket_num VARCHAR(20);
+        counter INTEGER;
+      BEGIN
+        -- Get the next counter value
+        SELECT COALESCE(MAX(CAST(SUBSTRING(ticket_number FROM 4) AS INTEGER)), 0) + 1
+        INTO counter
+        FROM support_tickets
+        WHERE ticket_number LIKE 'TK%';
+        
+        -- Format as TK + 6-digit number with leading zeros
+        ticket_num := 'TK' || LPAD(counter::TEXT, 6, '0');
+        
+        RETURN ticket_num;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    console.log('✅ generate_ticket_number function created');
+  } catch (error) {
+    console.log('⚠️ Function might already exist:', error.message);
+  }
 
   // Users table
   await client.query(`
@@ -377,7 +382,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     CREATE TABLE IF NOT EXISTS support_tickets (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-      ticket_number VARCHAR(20) UNIQUE NOT NULL,
+      ticket_number VARCHAR(20) UNIQUE,
       subject VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
@@ -392,6 +397,31 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // Add ticket_number column if it doesn't exist and update existing records
+  try {
+    await client.query(`
+      ALTER TABLE support_tickets 
+      ADD COLUMN IF NOT EXISTS ticket_number VARCHAR(20) UNIQUE
+    `);
+
+    // Update existing tickets with ticket numbers
+    await client.query(`
+      UPDATE support_tickets 
+      SET ticket_number = generate_ticket_number()
+      WHERE ticket_number IS NULL
+    `);
+
+    // Make ticket_number NOT NULL after updating
+    await client.query(`
+      ALTER TABLE support_tickets 
+      ALTER COLUMN ticket_number SET NOT NULL
+    `);
+
+    console.log('✅ Support tickets table updated with ticket_number column');
+  } catch (error) {
+    console.log('⚠️ Support tickets table update:', error.message);
+  }
+
   // Ticket messages table
   await client.query(`
     CREATE TABLE IF NOT EXISTS ticket_messages (
@@ -405,6 +435,23 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `);
+
+  // Add missing columns to ticket_messages if they don't exist
+  try {
+    await client.query(`
+      ALTER TABLE ticket_messages 
+      ADD COLUMN IF NOT EXISTS is_admin_reply BOOLEAN DEFAULT false
+    `);
+
+    await client.query(`
+      ALTER TABLE ticket_messages 
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    `);
+
+    console.log('✅ Ticket messages table updated with missing columns');
+  } catch (error) {
+    console.log('⚠️ Ticket messages table update:', error.message);
+  }
 
   // Ticket attachments table
   await client.query(`
