@@ -4,7 +4,7 @@
  */
 
 // Get API URL from environment variable or use default
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.29.14:5000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://expensetracker-production-eb9c.up.railway.app/api';
 
 // Get server URL (without /api) for image paths
 export const SERVER_BASE_URL = API_BASE_URL.replace('/api', '');
