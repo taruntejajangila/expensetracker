@@ -429,9 +429,23 @@ const AddTransactionScreen = () => {
 
   // Handle save transaction
   const handleSaveTransaction = async (saveAndAddAnother = false) => {
+    console.log('🔍 AddTransactionScreen: Starting save transaction process...');
+    console.log('🔍 AddTransactionScreen: Form data:', {
+      type,
+      amount,
+      title,
+      category,
+      selectedAccountId,
+      selectedToAccountId,
+      isEditMode
+    });
+    
     const isValid = validateForm();
+    console.log('🔍 AddTransactionScreen: Form validation result:', isValid);
+    console.log('🔍 AddTransactionScreen: Current errors:', errors);
 
     if (!isValid) {
+      console.log('❌ AddTransactionScreen: Form validation failed, not proceeding with save');
       return;
     }
 
@@ -491,8 +505,25 @@ const AddTransactionScreen = () => {
 
         if (isEditMode && editTransaction) {
           // Update existing transaction
+          console.log('🔍 AddTransactionScreen: Updating transaction with data:', transactionData);
+          console.log('🔍 AddTransactionScreen: Transaction ID:', editTransaction.id);
           await TransactionService.updateTransaction(editTransaction.id, transactionData);
-          // Adjust account if needed (skipping complex diff for now)
+          console.log('🔍 AddTransactionScreen: Transaction updated successfully');
+          
+          // Show success message
+          Alert.alert(
+            'Success',
+            'Transaction updated successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Navigate back to transaction detail or home
+                  navigation.goBack();
+                }
+              }
+            ]
+          );
         } else {
           // Save new transaction
           await TransactionService.saveTransaction(transactionData);
@@ -521,7 +552,12 @@ const AddTransactionScreen = () => {
           });
         }
       } catch (error) {
-        // Silent failure
+        console.error('❌ AddTransactionScreen: Error saving transaction:', error);
+        Alert.alert(
+          'Error',
+          `Failed to ${isEditMode ? 'update' : 'save'} transaction. Please try again.`,
+          [{ text: 'OK' }]
+        );
       }
     };
 
