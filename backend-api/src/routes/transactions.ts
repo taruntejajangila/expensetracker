@@ -9,6 +9,7 @@ const router = express.Router();
 const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.error('Validation failed:', errors.array());
     return res.status(400).json({
       success: false,
       message: 'Validation failed',
@@ -460,6 +461,7 @@ router.put('/:id',
       const updates = req.body;
 
       logger.info(`Updating transaction ${id} for user: ${userId}`);
+      logger.info(`Update data received:`, JSON.stringify(updates, null, 2));
 
       // Check if transaction exists and belongs to user
       const checkQuery = 'SELECT id FROM transactions WHERE id = $1 AND user_id = $2';
