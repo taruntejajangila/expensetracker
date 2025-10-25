@@ -563,7 +563,7 @@ router.put('/:id',
       });
       
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined || updates.type !== undefined) {
-        logger.info('🔄 Starting COMPREHENSIVE account balance update process...');
+        logger.info('🔄 Starting NEW ROBUST account balance update process...');
         
         try {
           // Get ORIGINAL transaction data BEFORE updating
@@ -595,98 +595,87 @@ router.put('/:id',
             toAccount: newToAccount
           });
           
-          // Step 1: Reverse ORIGINAL transaction completely
-          logger.info('🔄 Step 1: Reversing ORIGINAL transaction...');
+          // NEW APPROACH: Calculate net changes for each account
+          const accountChanges = new Map();
+          
+          // Step 1: Calculate what needs to be reversed from ORIGINAL transaction
+          logger.info('🔄 Step 1: Calculating ORIGINAL transaction reversals...');
           
           if (originalTransaction.transaction_type === 'expense' && originalTransaction.from_account_id) {
-            logger.info(`   Reversing expense: +₹${originalTransaction.amount} to account ${originalTransaction.from_account_id}`);
-            const reverseQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(reverseQuery, [originalTransaction.amount, originalTransaction.from_account_id, userId]);
+            const currentChange = accountChanges.get(originalTransaction.from_account_id) || 0;
+            accountChanges.set(originalTransaction.from_account_id, currentChange + parseFloat(originalTransaction.amount));
+            logger.info(`   Will add ₹${originalTransaction.amount} to account ${originalTransaction.from_account_id}`);
           }
           
           if (originalTransaction.transaction_type === 'income' && originalTransaction.to_account_id) {
-            logger.info(`   Reversing income: -₹${originalTransaction.amount} from account ${originalTransaction.to_account_id}`);
-            const reverseQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance - $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(reverseQuery, [originalTransaction.amount, originalTransaction.to_account_id, userId]);
+            const currentChange = accountChanges.get(originalTransaction.to_account_id) || 0;
+            accountChanges.set(originalTransaction.to_account_id, currentChange - parseFloat(originalTransaction.amount));
+            logger.info(`   Will subtract ₹${originalTransaction.amount} from account ${originalTransaction.to_account_id}`);
           }
           
           if (originalTransaction.transaction_type === 'transfer') {
             if (originalTransaction.from_account_id) {
-              logger.info(`   Reversing transfer from: +₹${originalTransaction.amount} to account ${originalTransaction.from_account_id}`);
-              const reverseFromQuery = `
-                UPDATE bank_accounts 
-                SET balance = balance + $1, updated_at = NOW()
-                WHERE id = $2 AND user_id = $3
-              `;
-              await req.app.locals.db.query(reverseFromQuery, [originalTransaction.amount, originalTransaction.from_account_id, userId]);
+              const currentChange = accountChanges.get(originalTransaction.from_account_id) || 0;
+              accountChanges.set(originalTransaction.from_account_id, currentChange + parseFloat(originalTransaction.amount));
+              logger.info(`   Will add ₹${originalTransaction.amount} to account ${originalTransaction.from_account_id} (transfer from)`);
             }
             if (originalTransaction.to_account_id) {
-              logger.info(`   Reversing transfer to: -₹${originalTransaction.amount} from account ${originalTransaction.to_account_id}`);
-              const reverseToQuery = `
-                UPDATE bank_accounts 
-                SET balance = balance - $1, updated_at = NOW()
-                WHERE id = $2 AND user_id = $3
-              `;
-              await req.app.locals.db.query(reverseToQuery, [originalTransaction.amount, originalTransaction.to_account_id, userId]);
+              const currentChange = accountChanges.get(originalTransaction.to_account_id) || 0;
+              accountChanges.set(originalTransaction.to_account_id, currentChange - parseFloat(originalTransaction.amount));
+              logger.info(`   Will subtract ₹${originalTransaction.amount} from account ${originalTransaction.to_account_id} (transfer to)`);
             }
           }
           
-          // Step 2: Apply NEW transaction
-          logger.info('🔄 Step 2: Applying NEW transaction...');
+          // Step 2: Calculate what needs to be applied for NEW transaction
+          logger.info('🔄 Step 2: Calculating NEW transaction applications...');
           
           if (newType === 'expense' && newFromAccount) {
-            logger.info(`   Applying expense: -₹${newAmount} from account ${newFromAccount}`);
-            const applyQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance - $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(applyQuery, [newAmount, newFromAccount, userId]);
+            const currentChange = accountChanges.get(newFromAccount) || 0;
+            accountChanges.set(newFromAccount, currentChange - parseFloat(newAmount));
+            logger.info(`   Will subtract ₹${newAmount} from account ${newFromAccount}`);
           }
           
           if (newType === 'income' && newToAccount) {
-            logger.info(`   Applying income: +₹${newAmount} to account ${newToAccount}`);
-            const applyQuery = `
-              UPDATE bank_accounts 
-              SET balance = balance + $1, updated_at = NOW()
-              WHERE id = $2 AND user_id = $3
-            `;
-            await req.app.locals.db.query(applyQuery, [newAmount, newToAccount, userId]);
+            const currentChange = accountChanges.get(newToAccount) || 0;
+            accountChanges.set(newToAccount, currentChange + parseFloat(newAmount));
+            logger.info(`   Will add ₹${newAmount} to account ${newToAccount}`);
           }
           
           if (newType === 'transfer') {
             if (newFromAccount) {
-              logger.info(`   Applying transfer from: -₹${newAmount} from account ${newFromAccount}`);
-              const applyFromQuery = `
-                UPDATE bank_accounts 
-                SET balance = balance - $1, updated_at = NOW()
-                WHERE id = $2 AND user_id = $3
-              `;
-              await req.app.locals.db.query(applyFromQuery, [newAmount, newFromAccount, userId]);
+              const currentChange = accountChanges.get(newFromAccount) || 0;
+              accountChanges.set(newFromAccount, currentChange - parseFloat(newAmount));
+              logger.info(`   Will subtract ₹${newAmount} from account ${newFromAccount} (transfer from)`);
             }
             if (newToAccount) {
-              logger.info(`   Applying transfer to: +₹${newAmount} to account ${newToAccount}`);
-              const applyToQuery = `
+              const currentChange = accountChanges.get(newToAccount) || 0;
+              accountChanges.set(newToAccount, currentChange + parseFloat(newAmount));
+              logger.info(`   Will add ₹${newAmount} to account ${newToAccount} (transfer to)`);
+            }
+          }
+          
+          // Step 3: Apply all net changes to accounts
+          logger.info('🔄 Step 3: Applying net changes to accounts...');
+          
+          for (const [accountId, netChange] of accountChanges.entries()) {
+            if (Math.abs(netChange) > 0.01) { // Only update if there's a meaningful change
+              logger.info(`   Updating account ${accountId} by ${netChange >= 0 ? '+' : ''}₹${netChange.toFixed(2)}`);
+              
+              const updateQuery = `
                 UPDATE bank_accounts 
                 SET balance = balance + $1, updated_at = NOW()
                 WHERE id = $2 AND user_id = $3
               `;
-              await req.app.locals.db.query(applyToQuery, [newAmount, newToAccount, userId]);
+              await req.app.locals.db.query(updateQuery, [netChange, accountId, userId]);
+              
+              logger.info(`   ✅ Account ${accountId} updated successfully`);
             }
           }
           
-          logger.info('✅ COMPREHENSIVE account balance update completed successfully!');
+          logger.info('✅ NEW ROBUST account balance update completed successfully!');
           
         } catch (balanceError) {
-          logger.error('❌ Error in COMPREHENSIVE account balance update:', balanceError);
+          logger.error('❌ Error in NEW ROBUST account balance update:', balanceError);
           const errorMessage = balanceError instanceof Error ? balanceError.message : 'Unknown error';
           logger.error('❌ Error details:', errorMessage);
         }
