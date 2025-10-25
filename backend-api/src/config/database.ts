@@ -219,7 +219,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       account_name VARCHAR(100) NOT NULL,
       account_number VARCHAR(50) NOT NULL,
       bank_name VARCHAR(100) NOT NULL,
-      account_type VARCHAR(20) DEFAULT 'checking' CHECK (account_type IN ('checking', 'savings', 'investment')),
+      account_type VARCHAR(20) DEFAULT 'checking' CHECK (account_type IN ('checking', 'savings', 'investment', 'wallet')),
       balance DECIMAL(12,2) DEFAULT 0,
       currency VARCHAR(3) DEFAULT 'USD',
       is_active BOOLEAN DEFAULT true,
