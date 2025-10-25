@@ -653,7 +653,8 @@ router.put('/:id',
           
         } catch (balanceError) {
           logger.error('❌ Error in SIMPLE account balance update:', balanceError);
-          logger.error('❌ Error details:', balanceError.message);
+          const errorMessage = balanceError instanceof Error ? balanceError.message : 'Unknown error';
+          logger.error('❌ Error details:', errorMessage);
         }
       }
       
