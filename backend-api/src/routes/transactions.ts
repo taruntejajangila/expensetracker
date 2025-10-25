@@ -447,7 +447,10 @@ router.put('/:id',
     body('type').optional().isIn(['income', 'expense', 'transfer']).withMessage('Type must be income, expense, or transfer'),
     body('category').optional().isString().trim().notEmpty().withMessage('Category cannot be empty'),
     body('description').optional().isString().trim().isLength({ max: 500 }).withMessage('Description too long'),
-    body('date').optional().isISO8601().withMessage('Valid date required')
+    body('date').optional().isISO8601().withMessage('Valid date required'),
+    body('fromAccount').optional().isUUID().withMessage('From account must be valid UUID'),
+    body('toAccount').optional().isUUID().withMessage('To account must be valid UUID'),
+    body('note').optional().isString().trim().isLength({ max: 1000 }).withMessage('Note too long')
   ],
   validateRequest,
   async (req: express.Request, res: express.Response) => {
@@ -479,7 +482,7 @@ router.put('/:id',
         updateValues.push(parseFloat(updates.amount));
       }
       if (updates.type !== undefined) {
-        updateFields.push(`type = $${++paramCount}`);
+        updateFields.push(`transaction_type = $${++paramCount}`);
         updateValues.push(updates.type);
       }
       if (updates.description !== undefined) {
@@ -487,8 +490,20 @@ router.put('/:id',
         updateValues.push(updates.description);
       }
       if (updates.date !== undefined) {
-        updateFields.push(`date = $${++paramCount}`);
+        updateFields.push(`transaction_date = $${++paramCount}`);
         updateValues.push(new Date(updates.date));
+      }
+      if (updates.fromAccount !== undefined) {
+        updateFields.push(`from_account_id = $${++paramCount}`);
+        updateValues.push(updates.fromAccount);
+      }
+      if (updates.toAccount !== undefined) {
+        updateFields.push(`to_account_id = $${++paramCount}`);
+        updateValues.push(updates.toAccount);
+      }
+      if (updates.note !== undefined) {
+        updateFields.push(`notes = $${++paramCount}`);
+        updateValues.push(updates.note);
       }
 
       if (updateFields.length === 0) {
@@ -505,7 +520,7 @@ router.put('/:id',
         UPDATE transactions 
         SET ${updateFields.join(', ')}
         WHERE id = $1 AND user_id = $2
-        RETURNING id, amount, type, description, date, updated_at
+        RETURNING id, amount, transaction_type, description, transaction_date, updated_at
       `;
 
       const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
