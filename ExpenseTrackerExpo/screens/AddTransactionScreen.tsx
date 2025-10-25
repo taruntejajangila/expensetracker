@@ -544,8 +544,49 @@ const AddTransactionScreen = () => {
       }
     };
 
-    // Insufficient funds check for expenses and transfers
-    if ((type === 'expense' || type === 'transfer') && selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
+    // Check if only non-financial fields have changed (for edit mode)
+    let hasFinancialChanges = true;
+    if (isEditMode && editTransaction) {
+      // Compare current values with original transaction values
+      const originalAmount = parseFloat(editTransaction.amount?.toString() || '0');
+      const originalType = editTransaction.type;
+      const originalFromAccount = editTransaction.fromAccount?.id;
+      const originalToAccount = editTransaction.toAccount?.id;
+      
+      const currentAmount = parsedAmount;
+      const currentType = type;
+      const currentFromAccount = selectedAccountId;
+      const currentToAccount = selectedToAccountId;
+      
+      // Check if any financial fields have changed
+      hasFinancialChanges = (
+        originalAmount !== currentAmount ||
+        originalType !== currentType ||
+        originalFromAccount !== currentFromAccount ||
+        originalToAccount !== currentToAccount
+      );
+      
+      console.log('🔍 AddTransactionScreen: Financial changes check:', {
+        originalAmount,
+        currentAmount,
+        originalType,
+        currentType,
+        originalFromAccount,
+        currentFromAccount,
+        originalToAccount,
+        currentToAccount,
+        hasFinancialChanges
+      });
+    }
+
+    // Insufficient funds check for expenses and transfers (only if there are financial changes)
+    if (hasFinancialChanges && (type === 'expense' || type === 'transfer') && selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
+      console.log('🔍 AddTransactionScreen: Running balance validation (financial changes detected)');
+    } else if (isEditMode && !hasFinancialChanges) {
+      console.log('🔍 AddTransactionScreen: Skipping balance validation (only non-financial fields changed)');
+    }
+    
+    if (hasFinancialChanges && (type === 'expense' || type === 'transfer') && selectedAccountId && selectedAccountId !== 'undefined' && selectedAccountId !== 'null' && selectedAccountId !== 'NaN') {
       const acc = await AccountService.getAccountById(selectedAccountId);
       
       // For v1 release, only bank accounts are supported
