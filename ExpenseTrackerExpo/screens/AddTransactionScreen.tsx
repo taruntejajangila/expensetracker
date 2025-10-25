@@ -463,17 +463,10 @@ const AddTransactionScreen = () => {
         // const isCreditCardPayment = selectedAccountId?.startsWith('credit-');
         // const isCreditCardTransfer = selectedToAccountId?.startsWith('credit-');
 
-        // Format date as ISO string in local timezone to preserve exact date and time
+        // Format date as proper ISO string with timezone information
         const formatDateTimeLocal = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          const seconds = String(date.getSeconds()).padStart(2, '0');
-          
-          // Return ISO-like format but without timezone offset (local time)
-          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+          // Use toISOString() to get proper UTC time that backend can handle correctly
+          return date.toISOString();
         };
 
         const transactionData = {
@@ -510,20 +503,10 @@ const AddTransactionScreen = () => {
           await TransactionService.updateTransaction(editTransaction.id, transactionData);
           console.log('🔍 AddTransactionScreen: Transaction updated successfully');
           
-          // Show success message
-          Alert.alert(
-            'Success',
-            'Transaction updated successfully!',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Navigate back to transaction detail or home
-                  navigation.goBack();
-                }
-              }
-            ]
-          );
+          // Navigate back to transaction detail screen to show updated transaction
+          navigation.navigate('TransactionDetail', { 
+            transactionId: editTransaction.id 
+          });
         } else {
           // Save new transaction
           await TransactionService.saveTransaction(transactionData);
