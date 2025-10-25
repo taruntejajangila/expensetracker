@@ -22,6 +22,7 @@ import { useNetwork } from '../context/NetworkContext';
 
 import TransactionService from '../services/transactionService';
 import AccountService from '../services/AccountService';
+import { LoanService } from '../services/LoanService';
 import DailyReminderService from '../services/DailyReminderService';
 import NotificationNavigationService from '../services/NotificationNavigationService';
 import OfflineBanner from '../components/OfflineBanner';
@@ -38,6 +39,47 @@ const { width } = Dimensions.get('window');
 const getGreeting = (userName?: string) => {
   return userName ? `Hi ${userName}` : 'Hi User';
 };
+
+// Helper function to get category icon
+const getCategoryIcon = (category: string) => {
+  const iconMap: { [key: string]: string } = {
+    'Food & Dining': '🍕',
+    'Food': '🍕',
+    'Transport': '🚗',
+    'Transportation': '🚗',
+    'Bills & Utilities': '💡',
+    'Bills': '💡',
+    'Utilities': '💡',
+    'Shopping': '🛍️',
+    'Entertainment': '🎬',
+    'Healthcare': '🏥',
+    'Education': '📚',
+    'Travel': '✈️',
+    'Groceries': '🛒',
+    'Fuel': '⛽',
+    'Rent': '🏠',
+    'Insurance': '🛡️',
+    'Others': '📦',
+    'Miscellaneous': '📦',
+  };
+  
+  // Try exact match first
+  if (iconMap[category]) {
+    return iconMap[category];
+  }
+  
+  // Try partial match
+  const lowerCategory = category.toLowerCase();
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (lowerCategory.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerCategory)) {
+      return icon;
+    }
+  }
+  
+  // Default icon
+  return '📦';
+};
+
 
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -60,6 +102,23 @@ const HomeScreen: React.FC = () => {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+  
+  // Enhanced Money Manager data
+  const [allTimeIncome, setAllTimeIncome] = useState(0);
+  const [allTimeExpense, setAllTimeExpense] = useState(0);
+  const [previousMonthSavings, setPreviousMonthSavings] = useState(0);
+  const [enhancedIncome, setEnhancedIncome] = useState(0);
+  
+  // Spending Categories data
+  const [spendingCategories, setSpendingCategories] = useState<any[]>([]);
+  const [totalMonthlySpending, setTotalMonthlySpending] = useState(0);
+  
+  // Active Loans data
+  const [activeLoans, setActiveLoans] = useState<any[]>([]);
+  const [totalOutstandingBalance, setTotalOutstandingBalance] = useState(0);
+  const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
+  const [nextPaymentDate, setNextPaymentDate] = useState<string | null>(null);
+  
   // Credit card expenses hidden for v1 release
   // const [totalCreditCardExpenses, setTotalCreditCardExpenses] = useState(0);
 
@@ -294,9 +353,115 @@ const HomeScreen: React.FC = () => {
         // Credit card functionality hidden for v1 release
       });
       
-      setCurrentBalance(currentBalance);
-      setTotalIncome(totalIncome);
+      // Calculate ALL-TIME totals for enhanced Money Manager
+      const allTimeIncomeTransactions = (transactions || []).filter(t => t.type === 'income');
+      const allTimeExpenseTransactions = (transactions || []).filter(t => t.type === 'expense');
+      
+      const allTimeIncomeTotal = allTimeIncomeTransactions
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      const allTimeExpenseTotal = allTimeExpenseTransactions
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // Calculate previous month savings (all-time - current month)
+      const previousMonthSavingsAmount = (allTimeIncomeTotal - allTimeExpenseTotal) - (totalIncome - totalCashExpenses);
+      
+      // Enhanced calculations
+      const enhancedIncomeAmount = totalIncome + previousMonthSavingsAmount;
+      const enhancedBalanceAmount = enhancedIncomeAmount - totalCashExpenses;
+      
+      // Debug logging for enhanced Money Manager
+      console.log('🔍 HomeScreen: Enhanced Money Manager Calculations:', {
+        currentMonth: { totalIncome, totalCashExpenses, currentBalance },
+        allTime: { allTimeIncomeTotal, allTimeExpenseTotal },
+        previousMonthSavings: previousMonthSavingsAmount,
+        enhancedIncome: enhancedIncomeAmount,
+        enhancedBalance: enhancedBalanceAmount,
+      });
+      
+      setCurrentBalance(enhancedBalanceAmount);
+      setTotalIncome(enhancedIncomeAmount);
       setTotalExpense(totalCashExpenses);
+      
+      // Set enhanced Money Manager data
+      setAllTimeIncome(allTimeIncomeTotal);
+      setAllTimeExpense(allTimeExpenseTotal);
+      setPreviousMonthSavings(previousMonthSavingsAmount);
+      setEnhancedIncome(enhancedIncomeAmount);
+      
+      // Calculate spending categories for current month (top 3)
+      const categorySpending = new Map();
+      let totalSpending = 0;
+      
+      expenseTransactions.forEach(transaction => {
+        const category = transaction.category || 'Others';
+        const amount = parseFloat(transaction.amount || 0);
+        
+        if (categorySpending.has(category)) {
+          categorySpending.set(category, categorySpending.get(category) + amount);
+        } else {
+          categorySpending.set(category, amount);
+        }
+        totalSpending += amount;
+      });
+      
+      // Convert to array and sort by amount (descending), take top 3
+      const categoriesArray = Array.from(categorySpending.entries())
+        .map(([category, amount]) => ({
+          category,
+          amount,
+          percentage: totalSpending > 0 ? (amount / totalSpending) * 100 : 0
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3); // Show only top 3 categories
+      
+      setSpendingCategories(categoriesArray);
+      setTotalMonthlySpending(totalSpending);
+      
+      // Debug logging for spending categories
+      console.log('🔍 HomeScreen: Spending Categories (Top 3):', {
+        totalSpending,
+        categories: categoriesArray,
+      });
+      
+      // Load active loans data
+      try {
+        const loans = await LoanService.getLoans();
+        const activeLoansList = loans.filter(loan => loan.status === 'active');
+        
+        // Calculate loan summary
+        const totalBalance = activeLoansList.reduce((sum, loan) => sum + (loan.remainingBalance || 0), 0);
+        const totalPayment = activeLoansList.reduce((sum, loan) => sum + (loan.monthlyPayment || 0), 0);
+        
+        // Find next payment date (simplified - just show current month)
+        const currentDate = new Date();
+        const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        const nextPaymentDateStr = nextMonth.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        setActiveLoans(activeLoansList);
+        setTotalOutstandingBalance(totalBalance);
+        setTotalMonthlyPayment(totalPayment);
+        setNextPaymentDate(nextPaymentDateStr);
+        
+        // Debug logging for loans
+        console.log('🔍 HomeScreen: Active Loans Summary:', {
+          totalLoans: activeLoansList.length,
+          totalBalance,
+          totalPayment,
+          nextPaymentDate: nextPaymentDateStr,
+        });
+      } catch (error) {
+        console.error('❌ HomeScreen: Error loading loans:', error);
+        setActiveLoans([]);
+        setTotalOutstandingBalance(0);
+        setTotalMonthlyPayment(0);
+        setNextPaymentDate(null);
+      }
+      
       // Credit card expenses hidden for v1 release
       // setTotalCreditCardExpenses(totalCreditCardExpenses);
       
@@ -886,6 +1051,15 @@ const HomeScreen: React.FC = () => {
       fontWeight: 'bold',
       marginTop: 4,
     },
+    cardDescription: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      fontStyle: 'italic',
+      marginTop: 4,
+      marginBottom: 8,
+    },
     cardRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -929,6 +1103,14 @@ const HomeScreen: React.FC = () => {
       color: theme.colors.text,
       fontWeight: 'bold',
       marginTop: -2,
+    },
+    cardRightSubtext: {
+      fontSize: 10,
+      fontWeight: '400',
+      color: theme.colors.textSecondary,
+      textAlign: 'right',
+      marginTop: 2,
+      fontStyle: 'italic',
     },
     cardBottomSpacer: {
       height: 8,
@@ -1356,86 +1538,302 @@ const HomeScreen: React.FC = () => {
       backgroundColor: 'transparent',
     },
 
-    // Smart Insights Styles - Enhanced List View
-    smartInsightsContainer: {
-      marginBottom: theme.spacing.lg,
-      marginHorizontal: -theme.spacing.md, // Negative margin to extend to screen edges
-    },
-    smartInsightsTitle: {
-      fontSize: theme.fontSize.sm - 1,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: theme.spacing.sm,
-      marginLeft: theme.spacing.md + 4,
-      textAlign: 'left',
-    },
-    insightsListContainer: {
+    // Smart Insights Styles - Card View (matching Money Manager)
+    smartInsightsCard: {
       backgroundColor: '#FFFFFF',
-      borderRadius: 16,
-      marginHorizontal: theme.spacing.md,
-      shadowColor: '#000',
+      borderRadius: theme.borderRadius.lg,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      shadowColor: '#000000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: 2,
       },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 6,
-      overflow: 'hidden',
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
-    insightListItem: {
-      backgroundColor: '#FFFFFF',
+    insightsCardContent: {
+      padding: 0, // No padding since card has its own padding
+    },
+    insightsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingBottom: theme.spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: '#F5F5F5',
     },
-    insightListContent: {
-      padding: theme.spacing.md,
+    insightsIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#FFF4E6',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
     },
-    insightListHeader: {
+    insightsTitleContainer: {
+      flex: 1,
+    },
+    insightsTitleText: {
+      fontSize: theme.fontSize.lg - 2,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 0,
+    },
+    insightsSubtitleText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      fontWeight: '400',
+      marginTop: 0,
+    },
+    insightsChevron: {
+      padding: 4,
+    },
+    insightListItem: {
+      marginBottom: theme.spacing.sm,
+    },
+    insightItemContent: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xs,
     },
-    insightListIcon: {
+    insightItemIcon: {
       width: 32,
       height: 32,
       borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: theme.spacing.sm,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.15,
-      shadowRadius: 2,
-      elevation: 2,
     },
-    insightListTextContainer: {
+    insightItemTextContainer: {
       flex: 1,
       marginRight: theme.spacing.sm,
     },
-    insightListType: {
+    insightItemType: {
       fontSize: theme.fontSize.xs - 2,
       fontWeight: '700',
       color: theme.colors.text,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
-      marginBottom: 3,
+      marginBottom: 2,
     },
-    insightListMessage: {
-      fontSize: theme.fontSize.sm - 1,
+    insightItemMessage: {
+      fontSize: theme.fontSize.sm,
       color: theme.colors.text,
-      lineHeight: 16,
+      lineHeight: 18,
       fontWeight: '400',
     },
-    insightListAction: {
+    insightItemAction: {
       justifyContent: 'center',
       alignItems: 'center',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+    },
+
+    // Spending Categories Styles - Card View (matching Money Manager)
+    spendingCategoriesCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: theme.borderRadius.lg,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    spendingCategoriesContent: {
+      padding: 0, // No padding since card has its own padding
+    },
+    spendingCategoriesHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingBottom: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
+    },
+    spendingCategoriesIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#E8F5E8',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
+    },
+    spendingCategoriesTitleContainer: {
+      flex: 1,
+    },
+    spendingCategoriesTitleText: {
+      fontSize: theme.fontSize.lg - 2,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 0,
+    },
+    spendingCategoriesSubtitleText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      fontWeight: '400',
+      marginTop: 0,
+    },
+    spendingCategoriesChevron: {
+      padding: 4,
+    },
+    spendingCategoryItem: {
+      marginBottom: theme.spacing.md,
+    },
+    spendingCategoryContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xs,
+    },
+    spendingCategoryIcon: {
       width: 32,
       height: 32,
       borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
       backgroundColor: '#F8F9FA',
+    },
+    spendingCategoryEmoji: {
+      fontSize: 18,
+    },
+    spendingCategoryTextContainer: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    spendingCategoryName: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: '500',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    spendingCategoryAmount: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    spendingCategoryPercentageContainer: {
+      backgroundColor: '#E3F2FD',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    spendingCategoryPercentage: {
+      fontSize: theme.fontSize.xs - 2,
+      fontWeight: '600',
+      color: '#1976D2',
+    },
+
+    // Active Loans Styles - Redesigned Card View
+    activeLoansCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: theme.borderRadius.lg,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    activeLoansContent: {
+      padding: 0,
+    },
+    activeLoansHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingBottom: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
+    },
+    activeLoansIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#F0F8FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
+    },
+    activeLoansTitleContainer: {
+      flex: 1,
+    },
+    activeLoansTitleText: {
+      fontSize: theme.fontSize.lg - 2,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 0,
+    },
+    activeLoansSubtitleText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      fontWeight: '400',
+      marginTop: 0,
+    },
+    activeLoansChevron: {
+      padding: 4,
+    },
+    loanStatsContainer: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    loanStatCard: {
+      flex: 1,
+      backgroundColor: '#F8F9FA',
+      borderRadius: 12,
+      padding: theme.spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+    },
+    loanStatIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
+    },
+    loanStatContent: {
+      flex: 1,
+    },
+    loanStatLabel: {
+      fontSize: theme.fontSize.xs - 2,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+      marginBottom: 2,
+    },
+    loanStatValue: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.text,
+      fontWeight: '600',
     },
   });
 
@@ -1550,6 +1948,9 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.cardAmount} allowFontScaling={false}>
               {loading ? '--' : `₹${currentBalance.toLocaleString()}`}
             </Text>
+            <Text style={styles.cardDescription} allowFontScaling={false}>
+              Including previous months savings
+            </Text>
             <View style={styles.cardRow}>
               <View style={styles.cardLeftSection}>
                 <Ionicons name="arrow-up" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
@@ -1569,6 +1970,9 @@ const HomeScreen: React.FC = () => {
               <View style={styles.cardRightColumn}>
                 <Text style={styles.cardRightAmount} allowFontScaling={false}>
                   {loading ? '--' : `₹${totalIncome.toLocaleString()}`}
+                </Text>
+                <Text style={styles.cardRightSubtext} allowFontScaling={false}>
+                  (₹{totalIncome - previousMonthSavings < 0 ? 0 : (totalIncome - previousMonthSavings).toLocaleString()} this month + ₹{previousMonthSavings.toLocaleString()} previous savings)
                 </Text>
               </View>
             </View>
@@ -1798,38 +2202,153 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
-         {/* Smart Insights Section - List View */}
+         {/* Smart Insights Section - Card View */}
          {!loading && (
-           <View style={styles.smartInsightsContainer}>
-             <Text style={styles.smartInsightsTitle} allowFontScaling={false}>💡 Smart Insights</Text>
-             <View style={styles.insightsListContainer}>
+           <View style={styles.smartInsightsCard}>
+            <View style={styles.insightsCardContent}>
+              {/* Header with icon and title */}
+              <View style={styles.insightsHeader}>
+                <View style={styles.insightsIconContainer}>
+                  <Ionicons name="bulb" size={20} color="#FF9500" />
+                </View>
+                <View style={styles.insightsTitleContainer}>
+                  <Text style={styles.insightsTitleText} allowFontScaling={false}>Smart Insights</Text>
+                  <Text style={styles.insightsSubtitleText} allowFontScaling={false}>
+                    Personalized financial tips
+                  </Text>
+                </View>
+                <View style={styles.insightsChevron}>
+                  <Ionicons name="chevron-forward" size={16} color="#FF9500" />
+                </View>
+              </View>
+               
                {generateSmartInsights().map((insight, index) => (
                  <TouchableOpacity 
                    key={index} 
-                   style={[styles.insightListItem, { borderLeftColor: insight.color }]}
+                   style={styles.insightListItem}
                    onPress={() => insight.action && handleInsightAction(insight.action)}
                    activeOpacity={0.8}
                  >
-                   <View style={styles.insightListContent}>
-                     <View style={styles.insightListHeader}>
-                       <View style={[styles.insightListIcon, { backgroundColor: insight.color }]}>
-                         <Ionicons name={insight.icon} size={16} color="#FFFFFF" />
-                       </View>
-                       <View style={styles.insightListTextContainer}>
-                         <Text style={styles.insightListType} allowFontScaling={false}>{insight.type}</Text>
-                         <Text style={styles.insightListMessage} allowFontScaling={false} numberOfLines={2}>
-                           {insight.message}
-                         </Text>
-                       </View>
-                       {insight.action && (
-                         <View style={styles.insightListAction}>
-                           <Ionicons name="chevron-forward" size={16} color={insight.color} />
-                         </View>
-                       )}
+                   <View style={styles.insightItemContent}>
+                     <View style={[styles.insightItemIcon, { backgroundColor: insight.color }]}>
+                       <Ionicons name={insight.icon} size={18} color="#FFFFFF" />
                      </View>
+                     <View style={styles.insightItemTextContainer}>
+                       <Text style={styles.insightItemType} allowFontScaling={false}>{insight.type}</Text>
+                       <Text style={styles.insightItemMessage} allowFontScaling={false} numberOfLines={2}>
+                         {insight.message}
+                       </Text>
+                     </View>
+                     {insight.action && (
+                       <View style={styles.insightItemAction}>
+                         <Ionicons name="chevron-forward" size={16} color={insight.color} />
+                       </View>
+                     )}
                    </View>
                  </TouchableOpacity>
               ))}
+            </View>
+          </View>
+        )}
+
+        {/* Top Spending Categories */}
+        {!loading && spendingCategories.length > 0 && (
+          <View style={styles.spendingCategoriesCard}>
+            <View style={styles.spendingCategoriesContent}>
+              {/* Header with icon and title */}
+              <View style={styles.spendingCategoriesHeader}>
+                <View style={styles.spendingCategoriesIconContainer}>
+                  <Ionicons name="pie-chart" size={20} color="#34C759" />
+                </View>
+                <View style={styles.spendingCategoriesTitleContainer}>
+                  <Text style={styles.spendingCategoriesTitleText} allowFontScaling={false}>Top Spending Categories</Text>
+                  <Text style={styles.spendingCategoriesSubtitleText} allowFontScaling={false}>
+                    This month's highest expenses
+                  </Text>
+                </View>
+                <View style={styles.spendingCategoriesChevron}>
+                  <Ionicons name="chevron-forward" size={16} color="#34C759" />
+                </View>
+              </View>
+              
+              {/* Categories List */}
+              {spendingCategories.map((category, index) => (
+                <View key={index} style={styles.spendingCategoryItem}>
+                  <View style={styles.spendingCategoryContent}>
+                    <View style={styles.spendingCategoryIcon}>
+                      <Text style={styles.spendingCategoryEmoji} allowFontScaling={false}>
+                        {getCategoryIcon(category.category)}
+                      </Text>
+                    </View>
+                    <View style={styles.spendingCategoryTextContainer}>
+                      <Text style={styles.spendingCategoryName} allowFontScaling={false}>
+                        {category.category}
+                      </Text>
+                      <Text style={styles.spendingCategoryAmount} allowFontScaling={false}>
+                        ₹{category.amount.toLocaleString()}
+                      </Text>
+                    </View>
+                    <View style={styles.spendingCategoryPercentageContainer}>
+                      <Text style={styles.spendingCategoryPercentage} allowFontScaling={false}>
+                        {category.percentage.toFixed(0)}%
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Active Loans Summary */}
+        {!loading && activeLoans.length > 0 && (
+          <View style={styles.activeLoansCard}>
+            <View style={styles.activeLoansContent}>
+              {/* Header with icon and title */}
+              <View style={styles.activeLoansHeader}>
+                <View style={styles.activeLoansIconContainer}>
+                  <Ionicons name="card" size={20} color="#007AFF" />
+                </View>
+                <View style={styles.activeLoansTitleContainer}>
+                  <Text style={styles.activeLoansTitleText} allowFontScaling={false}>Active Loans</Text>
+                  <Text style={styles.activeLoansSubtitleText} allowFontScaling={false}>
+                    {activeLoans.length} loan{activeLoans.length > 1 ? 's' : ''} • Next payment: {nextPaymentDate}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('Loans' as never)}
+                  style={styles.activeLoansChevron}
+                >
+                  <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Loan Stats in a more compact layout */}
+              <View style={styles.loanStatsContainer}>
+                <View style={styles.loanStatCard}>
+                  <View style={styles.loanStatIcon}>
+                    <Ionicons name="wallet" size={16} color="#34C759" />
+                  </View>
+                  <View style={styles.loanStatContent}>
+                    <Text style={styles.loanStatLabel} allowFontScaling={false}>Outstanding</Text>
+                    <Text style={styles.loanStatValue} allowFontScaling={false}>
+                      ₹{totalOutstandingBalance.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.loanStatCard}>
+                  <View style={styles.loanStatIcon}>
+                    <Ionicons name="calendar" size={16} color="#FF9500" />
+                  </View>
+                  <View style={styles.loanStatContent}>
+                    <Text style={styles.loanStatLabel} allowFontScaling={false}>Monthly</Text>
+                    <Text style={styles.loanStatValue} allowFontScaling={false}>
+                      ₹{totalMonthlyPayment.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
         )}

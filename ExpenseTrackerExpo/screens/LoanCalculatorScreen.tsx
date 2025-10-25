@@ -131,16 +131,6 @@ const LoanCalculatorScreen: React.FC = () => {
     setAmortization(schedule);
   };
 
-  const autoFill = () => {
-    setLoanAmount('160000');
-    setInterestRate('26');
-    setLoanTerm('2');
-    setTermType('years');
-    setSelectedDate(new Date(2025, 6, 5)); // July 5th, 2025 (month is 0-indexed)
-    setCalculation(null);
-    setAmortization([]);
-    setShowAmortization(false);
-  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -358,6 +348,7 @@ const LoanCalculatorScreen: React.FC = () => {
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'android' ? 8 : 16,
     height: 56,
+    justifyContent: 'space-between',
   },
   termInput: {
     flex: 1,
@@ -391,60 +382,44 @@ const LoanCalculatorScreen: React.FC = () => {
   termTypeContainer: {
     flexDirection: 'row',
     backgroundColor: '#F5F5F5',
-    borderRadius: 6,
-    padding: 2,
-    marginLeft: 8,
+    borderRadius: 8,
+    padding: 3,
+    marginLeft: 12,
   },
   termTypeButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     alignItems: 'center',
-    minWidth: 50,
+    justifyContent: 'center',
+    minWidth: 60,
+    minHeight: 32,
   },
   termTypeButtonActive: {
     backgroundColor: theme.colors.primary,
   },
   termTypeText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   termTypeTextActive: {
     color: '#FFFFFF',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-      marginTop: 20,
-    },
+   buttonContainer: {
+     marginTop: 20,
+   },
     primaryButton: {
-      flex: 1,
       backgroundColor: theme.colors.primary,
       borderRadius: 12,
       paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     primaryButtonText: {
     fontSize: 14,
     fontWeight: '600',
       color: '#FFFFFF',
-    },
-    secondaryButton: {
-      flex: 1,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    secondaryButtonText: {
-    fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.text,
     },
     resultsCard: {
       backgroundColor: theme.colors.surface,
@@ -658,21 +633,18 @@ const LoanCalculatorScreen: React.FC = () => {
             />
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={autoFill}>
-              <Text style={styles.secondaryButtonText}>Auto Fill</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.primaryButton} 
-              onPress={calculateLoan}
-              disabled={isCalculating}
-            >
-              <Text style={styles.primaryButtonText}>
-                {isCalculating ? 'Calculating...' : 'Calculate Loan'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+           {/* Action Button */}
+           <View style={styles.buttonContainer}>
+             <TouchableOpacity 
+               style={styles.primaryButton} 
+               onPress={calculateLoan}
+               disabled={isCalculating}
+             >
+               <Text style={styles.primaryButtonText}>
+                 {isCalculating ? 'Calculating...' : 'Calculate Loan'}
+               </Text>
+             </TouchableOpacity>
+           </View>
 
           {/* Loading State */}
           {isCalculating && (

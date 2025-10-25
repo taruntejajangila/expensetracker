@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import LogoutVerificationModal from '../components/LogoutVerificationModal';
 
 const { width } = Dimensions.get('window');
 
@@ -14,20 +15,24 @@ const ProfileScreen: React.FC = () => {
   const { user, logout, clearAllUserData } = useAuth();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: logout
-        }
-      ]
-    );
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    try {
+      await logout();
+      setShowLogoutModal(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   const handleClearData = () => {
@@ -519,6 +524,13 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.appNameText} allowFontScaling={false}>MyPaisa Finance Manager</Text>
         </View>
       </ScrollView>
+
+      {/* Logout Verification Modal */}
+      <LogoutVerificationModal
+        visible={showLogoutModal}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+      />
     </View>
   );
 };

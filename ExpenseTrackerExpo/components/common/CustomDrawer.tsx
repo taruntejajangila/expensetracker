@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
@@ -13,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LogoutVerificationModal from '../LogoutVerificationModal';
 
 interface DrawerItemProps {
   icon: string;
@@ -46,6 +48,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const getCurrentRouteName = () => {
     const route = state.routes[state.index];
@@ -59,13 +62,23 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
 
   const currentRoute = getCurrentRouteName();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
     try {
       await logout();
+      setShowLogoutModal(false);
       navigation.closeDrawer();
     } catch (error) {
       console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
     }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   return (
@@ -395,6 +408,13 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             <Text style={styles.versionText} allowFontScaling={false}>Version 1.0.0</Text>
           </View>
         </View>
+
+        {/* Logout Verification Modal */}
+        <LogoutVerificationModal
+          visible={showLogoutModal}
+          onClose={handleLogoutCancel}
+          onConfirm={handleLogoutConfirm}
+        />
     </View>
   );
 };

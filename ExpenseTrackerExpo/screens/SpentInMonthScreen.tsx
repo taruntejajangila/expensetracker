@@ -52,6 +52,12 @@ const SpentInMonthScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   
+  // Expense trends data
+  const [dailySpending, setDailySpending] = useState<any[]>([]);
+  const [categorySpending, setCategorySpending] = useState<any[]>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
+  const [averageDailySpending, setAverageDailySpending] = useState(0);
+  
   // Calculate progress based on income vs spent
   const progress = monthlyIncome > 0 ? (spentAmount / monthlyIncome) * 100 : 0;
   const radius = 80;
@@ -128,6 +134,87 @@ const SpentInMonthScreen: React.FC = () => {
         remainingBalance: balance,
         daysRemaining,
         safeToSpendPerDay: safeDaily
+      });
+      
+      // Calculate expense trends
+      const currentMonthTransactions = monthlyTransactions.filter(t => t.type === 'expense');
+      
+      // Daily spending trend (last 7 days)
+      const dailySpendingMap = new Map();
+      const last7Days = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        last7Days.push({
+          date: dateStr,
+          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          amount: 0
+        });
+      }
+      
+      currentMonthTransactions.forEach(transaction => {
+        const transactionDate = new Date(transaction.date).toISOString().split('T')[0];
+        const dayIndex = last7Days.findIndex(day => day.date === transactionDate);
+        if (dayIndex !== -1) {
+          last7Days[dayIndex].amount += parseFloat(transaction.amount || 0);
+        }
+      });
+      
+      setDailySpending(last7Days);
+      
+      // Category spending breakdown
+      const categoryMap = new Map();
+      currentMonthTransactions.forEach(transaction => {
+        const category = transaction.category || 'Others';
+        const amount = parseFloat(transaction.amount || 0);
+        categoryMap.set(category, (categoryMap.get(category) || 0) + amount);
+      });
+      
+      const categoryArray = Array.from(categoryMap.entries())
+        .map(([category, amount]) => ({
+          category,
+          amount,
+          percentage: monthlyExpenses > 0 ? (amount / monthlyExpenses) * 100 : 0
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5); // Top 5 categories
+      
+      setCategorySpending(categoryArray);
+      
+      // Weekly trend (4 weeks of current month)
+      const weeklyTrendData = [];
+      const weeksInMonth = Math.ceil(lastDayOfMonth / 7);
+      for (let week = 0; week < weeksInMonth; week++) {
+        const weekStart = week * 7 + 1;
+        const weekEnd = Math.min(weekStart + 6, lastDayOfMonth);
+        let weekAmount = 0;
+        
+        currentMonthTransactions.forEach(transaction => {
+          const transactionDay = new Date(transaction.date).getDate();
+          if (transactionDay >= weekStart && transactionDay <= weekEnd) {
+            weekAmount += parseFloat(transaction.amount || 0);
+          }
+        });
+        
+        weeklyTrendData.push({
+          week: week + 1,
+          amount: weekAmount,
+          label: `Week ${week + 1}`
+        });
+      }
+      
+      setWeeklyTrend(weeklyTrendData);
+      
+      // Average daily spending
+      const avgDaily = currentDay > 0 ? monthlyExpenses / currentDay : 0;
+      setAverageDailySpending(avgDaily);
+      
+      console.log('🔍 SpentInMonthScreen: Expense trends calculated:', {
+        dailySpending: last7Days,
+        categorySpending: categoryArray,
+        weeklyTrend: weeklyTrendData,
+        averageDailySpending: avgDaily
       });
       
       setLoading(false);
@@ -457,6 +544,139 @@ const SpentInMonthScreen: React.FC = () => {
         marginTop: 8,
         textAlign: 'center',
       },
+      
+      // Expense Trends Styles
+      trendsContainer: {
+        paddingBottom: theme.spacing.lg,
+      },
+      trendCard: {
+        // Additional styles specific to trend cards can go here
+        // Base card styling is inherited from styles.card
+      },
+      trendHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: theme.spacing.md,
+      },
+      trendTitle: {
+        fontSize: theme.fontSize.md,
+        fontWeight: '600',
+        color: theme.colors.text,
+        marginLeft: theme.spacing.sm,
+      },
+      
+      // Daily Trend Styles
+      dailyTrendContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        height: 100,
+      },
+      dailyTrendItem: {
+        flex: 1,
+        alignItems: 'center',
+        marginHorizontal: 2,
+      },
+      dailyTrendBar: {
+        width: 20,
+        backgroundColor: '#007AFF',
+        borderRadius: 10,
+        marginBottom: theme.spacing.xs,
+      },
+      dailyTrendLabel: {
+        fontSize: theme.fontSize.xs,
+        color: theme.colors.textSecondary,
+        fontWeight: '500',
+        marginBottom: 2,
+      },
+      dailyTrendAmount: {
+        fontSize: theme.fontSize.xs - 2,
+        color: theme.colors.text,
+        fontWeight: '600',
+        textAlign: 'center',
+      },
+      
+      // Category Trend Styles
+      categoryTrendContainer: {
+        gap: theme.spacing.sm,
+      },
+      categoryTrendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: theme.spacing.xs,
+      },
+      categoryTrendInfo: {
+        flex: 1,
+        marginRight: theme.spacing.sm,
+      },
+      categoryTrendName: {
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.text,
+        fontWeight: '500',
+        marginBottom: 2,
+      },
+      categoryTrendAmount: {
+        fontSize: theme.fontSize.xs,
+        color: theme.colors.textSecondary,
+        fontWeight: '400',
+      },
+      categoryTrendBarContainer: {
+        flex: 2,
+        height: 8,
+        backgroundColor: '#F0F0F0',
+        borderRadius: 4,
+        marginRight: theme.spacing.sm,
+      },
+      categoryTrendBar: {
+        height: '100%',
+        backgroundColor: '#34C759',
+        borderRadius: 4,
+      },
+      categoryTrendPercentage: {
+        fontSize: theme.fontSize.xs - 2,
+        color: theme.colors.textSecondary,
+        fontWeight: '600',
+        minWidth: 30,
+        textAlign: 'right',
+      },
+      
+      // Weekly Trend Styles
+      weeklyTrendContainer: {
+        gap: theme.spacing.sm,
+      },
+      weeklyTrendItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: theme.spacing.xs,
+      },
+      weeklyTrendLabel: {
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.text,
+        fontWeight: '500',
+      },
+      weeklyTrendAmount: {
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.text,
+        fontWeight: '600',
+      },
+      
+      // Average Styles
+      averageContainer: {
+        alignItems: 'center',
+        paddingVertical: theme.spacing.sm,
+      },
+      averageAmount: {
+        fontSize: theme.fontSize.xl,
+        color: theme.colors.text,
+        fontWeight: '700',
+        marginBottom: 4,
+      },
+      averageLabel: {
+        fontSize: theme.fontSize.sm,
+        color: theme.colors.textSecondary,
+        fontWeight: '400',
+      },
   });
 
   // Header Component
@@ -702,6 +922,108 @@ const SpentInMonthScreen: React.FC = () => {
              </View>
            </View>
          )}
+
+         {/* Expense Trends Section */}
+         {!loading && (
+           <View style={styles.trendsContainer}>
+             {/* Average Daily Spending */}
+             <View style={[styles.card, styles.trendCard]}>
+               <View style={styles.trendHeader}>
+                 <Ionicons name="analytics" size={20} color="#9C27B0" />
+                 <Text style={styles.trendTitle} allowFontScaling={false}>Daily Average</Text>
+               </View>
+               <View style={styles.averageContainer}>
+                 <Text style={styles.averageAmount} allowFontScaling={false}>
+                   ₹{averageDailySpending.toLocaleString()}
+                 </Text>
+                 <Text style={styles.averageLabel} allowFontScaling={false}>
+                   per day this month
+                 </Text>
+               </View>
+             </View>
+
+             {/* Daily Spending Trend */}
+             <View style={[styles.card, styles.trendCard]}>
+               <View style={styles.trendHeader}>
+                 <Ionicons name="trending-up" size={20} color="#007AFF" />
+                 <Text style={styles.trendTitle} allowFontScaling={false}>Last 7 Days</Text>
+               </View>
+               <View style={styles.dailyTrendContainer}>
+                 {dailySpending.map((day, index) => {
+                   const maxAmount = Math.max(...dailySpending.map(d => d.amount));
+                   const height = maxAmount > 0 ? (day.amount / maxAmount) * 60 : 0;
+                   return (
+                     <View key={index} style={styles.dailyTrendItem}>
+                       <View style={[styles.dailyTrendBar, { height: Math.max(height, 2) }]} />
+                       <Text style={styles.dailyTrendLabel} allowFontScaling={false}>{day.dayName}</Text>
+                       <Text style={styles.dailyTrendAmount} allowFontScaling={false}>
+                         ₹{day.amount.toLocaleString()}
+                       </Text>
+                     </View>
+                   );
+                 })}
+               </View>
+             </View>
+
+             {/* Top Spending Categories */}
+             {categorySpending.length > 0 && (
+               <View style={[styles.card, styles.trendCard]}>
+                 <View style={styles.trendHeader}>
+                   <Ionicons name="pie-chart" size={20} color="#34C759" />
+                   <Text style={styles.trendTitle} allowFontScaling={false}>Top Categories</Text>
+                 </View>
+                 <View style={styles.categoryTrendContainer}>
+                   {categorySpending.map((category, index) => (
+                     <View key={index} style={styles.categoryTrendItem}>
+                       <View style={styles.categoryTrendInfo}>
+                         <Text style={styles.categoryTrendName} allowFontScaling={false}>
+                           {category.category}
+                         </Text>
+                         <Text style={styles.categoryTrendAmount} allowFontScaling={false}>
+                           ₹{category.amount.toLocaleString()}
+                         </Text>
+                       </View>
+                       <View style={styles.categoryTrendBarContainer}>
+                         <View 
+                           style={[
+                             styles.categoryTrendBar, 
+                             { width: `${category.percentage}%` }
+                           ]} 
+                         />
+                       </View>
+                       <Text style={styles.categoryTrendPercentage} allowFontScaling={false}>
+                         {category.percentage.toFixed(0)}%
+                       </Text>
+                     </View>
+                   ))}
+                 </View>
+               </View>
+             )}
+
+             {/* Weekly Trend */}
+             {weeklyTrend.length > 0 && (
+               <View style={[styles.card, styles.trendCard]}>
+                 <View style={styles.trendHeader}>
+                   <Ionicons name="calendar" size={20} color="#FF9500" />
+                   <Text style={styles.trendTitle} allowFontScaling={false}>Weekly Breakdown</Text>
+                 </View>
+                 <View style={styles.weeklyTrendContainer}>
+                   {weeklyTrend.map((week, index) => (
+                     <View key={index} style={styles.weeklyTrendItem}>
+                       <Text style={styles.weeklyTrendLabel} allowFontScaling={false}>
+                         {week.label}
+                       </Text>
+                       <Text style={styles.weeklyTrendAmount} allowFontScaling={false}>
+                         ₹{week.amount.toLocaleString()}
+                       </Text>
+                     </View>
+                   ))}
+                 </View>
+               </View>
+             )}
+
+           </View>
+         )}
          
                    {/* Empty content area - ready for future data */}
           
@@ -712,6 +1034,7 @@ const SpentInMonthScreen: React.FC = () => {
     </View>
   );
 };
+
 
 export default SpentInMonthScreen;
 
