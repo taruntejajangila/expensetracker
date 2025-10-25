@@ -11,7 +11,7 @@ const validateAccountInput = [
   body('bankName').trim().isLength({ min: 1, max: 100 }).withMessage('Bank name is required and must be less than 100 characters'),
   body('accountHolderName').trim().isLength({ min: 1, max: 100 }).withMessage('Account holder name is required and must be less than 100 characters'),
   body('accountNumber').trim().isLength({ min: 4, max: 20 }).withMessage('Account number must be between 4 and 20 characters'),
-  body('accountType').isIn(['savings', 'current', 'salary']).withMessage('Invalid account type'),
+  body('accountType').isIn(['savings', 'current', 'salary', 'wallet']).withMessage('Invalid account type'),
   body('balance').isFloat({ min: 0 }).withMessage('Balance must be a positive number'),
   body('currency').isLength({ min: 3, max: 3 }).withMessage('Currency must be 3 characters (e.g., USD, INR)'),
   body('icon').optional().isLength({ min: 1, max: 50 }).withMessage('Icon must be less than 50 characters'),
@@ -24,7 +24,7 @@ const validateAccountUpdate = [
   body('bankName').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Bank name must be less than 100 characters'),
   body('accountHolderName').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Account holder name must be less than 100 characters'),
   body('accountNumber').optional().trim().isLength({ min: 4, max: 20 }).withMessage('Account number must be between 4 and 20 characters'),
-  body('accountType').optional().isIn(['savings', 'current', 'salary']).withMessage('Invalid account type'),
+  body('accountType').optional().isIn(['savings', 'current', 'salary', 'wallet']).withMessage('Invalid account type'),
   body('balance').optional().isFloat({ min: 0 }).withMessage('Balance must be a positive number'),
   body('currency').optional().isLength({ min: 3, max: 3 }).withMessage('Currency must be 3 characters (e.g., USD, INR)'),
   body('icon').optional().isLength({ min: 1, max: 50 }).withMessage('Icon must be less than 50 characters'),
@@ -57,11 +57,11 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         name: row.account_name,
         bankName: row.bank_name,
         accountHolderName: row.account_holder_name || row.account_name, // Use account_holder_name if available, fallback to account_name
-        type: row.account_type === 'wallet' ? 'cash' : 'bank',
+        type: (row.account_type === 'wallet' || (row.bank_name === 'Cash' && row.account_name === 'Cash Wallet')) ? 'cash' : 'bank',
         balance: parseFloat(row.balance),
         currency: row.currency || 'INR',
-        icon: 'wallet', // Default icon for wallet, 'card' for bank accounts
-        color: row.account_type === 'wallet' ? '#10B981' : '#3B82F6', // Default colors
+        icon: (row.account_type === 'wallet' || (row.bank_name === 'Cash' && row.account_name === 'Cash Wallet')) ? 'wallet' : 'card',
+        color: (row.account_type === 'wallet' || (row.bank_name === 'Cash' && row.account_name === 'Cash Wallet')) ? '#10B981' : '#3B82F6',
         accountType: row.account_type,
         accountNumber: row.account_number || '',
         status: row.status,
@@ -113,11 +113,11 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
         name: account.account_name,
         bankName: account.bank_name,
         accountHolderName: account.account_holder_name || account.account_name, // Use account_holder_name if available, fallback to account_name
-        type: account.account_type === 'wallet' ? 'cash' : 'bank',
+        type: (account.account_type === 'wallet' || (account.bank_name === 'Cash' && account.account_name === 'Cash Wallet')) ? 'cash' : 'bank',
         balance: parseFloat(account.balance),
         currency: account.currency || 'INR',
-        icon: account.account_type === 'wallet' ? 'wallet' : 'card', // Default icons
-        color: account.account_type === 'wallet' ? '#10B981' : '#3B82F6', // Default colors
+        icon: (account.account_type === 'wallet' || (account.bank_name === 'Cash' && account.account_name === 'Cash Wallet')) ? 'wallet' : 'card',
+        color: (account.account_type === 'wallet' || (account.bank_name === 'Cash' && account.account_name === 'Cash Wallet')) ? '#10B981' : '#3B82F6',
         accountType: account.account_type,
         accountNumber: account.account_number,
         status: account.status,
@@ -215,7 +215,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
         name: newAccount.account_name,
         bankName: newAccount.bank_name,
         accountHolderName: newAccount.account_holder_name || newAccount.account_name, // Use account_holder_name if available, fallback to account_name
-        type: newAccount.account_type === 'wallet' ? 'cash' : 'bank',
+        type: (newAccount.account_type === 'wallet' || (newAccount.bank_name === 'Cash' && newAccount.account_name === 'Cash Wallet')) ? 'cash' : 'bank',
         balance: parseFloat(newAccount.balance),
         currency: newAccount.currency || 'INR',
         icon: newAccount.account_type === 'wallet' ? 'wallet' : 'card', // Default icons
@@ -364,7 +364,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
            name: currentAccount.account_name,
            bankName: currentAccount.bank_name,
            accountHolderName: currentAccount.account_holder_name || currentAccount.account_name,
-           type: currentAccount.account_type === 'wallet' ? 'cash' : 'bank',
+           type: (currentAccount.account_type === 'wallet' || (currentAccount.bank_name === 'Cash' && currentAccount.account_name === 'Cash Wallet')) ? 'cash' : 'bank',
            balance: parseFloat(currentAccount.balance),
            currency: currentAccount.currency || 'INR',
            icon: currentAccount.account_type === 'wallet' ? 'wallet' : 'card',
@@ -399,7 +399,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
       name: updatedAccount.account_name,
       bankName: updatedAccount.bank_name,
       accountHolderName: updatedAccount.account_holder_name || updatedAccount.account_name, // Use account_holder_name if available, fallback to account_name
-      type: updatedAccount.account_type === 'wallet' ? 'cash' : 'bank',
+      type: (updatedAccount.account_type === 'wallet' || (updatedAccount.bank_name === 'Cash' && updatedAccount.account_name === 'Cash Wallet')) ? 'cash' : 'bank',
       balance: parseFloat(updatedAccount.balance),
       currency: updatedAccount.currency || 'INR',
       icon: updatedAccount.account_type === 'wallet' ? 'wallet' : 'card', // Default icons
