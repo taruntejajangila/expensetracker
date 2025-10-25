@@ -263,11 +263,114 @@ const LoanCalculatorScreen: React.FC = () => {
       color: theme.colors.text,
       marginBottom: 8,
     },
-    inputHeader: {
+  inputHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  // New inline text border styles
+  outlinedInputContainer: {
+    position: 'relative',
+  },
+  floatingLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#000000',
+    zIndex: 1,
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#000000',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 8 : 16,
+    height: 56,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginRight: 8,
+    lineHeight: Platform.OS === 'android' ? 32 : undefined,
+    textAlignVertical: Platform.OS === 'android' ? 'center' : 'auto',
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginVertical: 0,
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 32 : undefined,
+  },
+  rateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#000000',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 8 : 16,
+    height: 56,
+  },
+  rateInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginVertical: 0,
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 32 : undefined,
+  },
+  percentSymbol: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginLeft: 8,
+    lineHeight: Platform.OS === 'android' ? 32 : undefined,
+    textAlignVertical: Platform.OS === 'android' ? 'center' : 'auto',
+  },
+  termContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#000000',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 8 : 16,
+    height: 56,
+  },
+  termInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginVertical: 0,
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 32 : undefined,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -285,43 +388,30 @@ const LoanCalculatorScreen: React.FC = () => {
       color: theme.colors.text,
       padding: 0,
   },
-  currencySymbol: {
-    fontSize: 14,
-    fontWeight: '500',
-      color: theme.colors.textSecondary,
-    marginRight: 8,
-  },
-    percentSymbol: {
-    fontSize: 14,
-    fontWeight: '500',
-      color: theme.colors.textSecondary,
-    marginLeft: 8,
-  },
   termTypeContainer: {
     flexDirection: 'row',
-      backgroundColor: theme.colors.surface,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 6,
     padding: 2,
+    marginLeft: 8,
   },
   termTypeButton: {
-      paddingVertical: 6,
-    paddingHorizontal: 12,
-      borderRadius: 6,
-      alignItems: 'center',
-      minWidth: 60,
-    },
-    termTypeButtonActive: {
-      backgroundColor: theme.colors.primary,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  termTypeButtonActive: {
+    backgroundColor: theme.colors.primary,
   },
   termTypeText: {
     fontSize: 12,
     fontWeight: '500',
-      color: theme.colors.textSecondary,
-    },
-    termTypeTextActive: {
-      color: '#FFFFFF',
+    color: theme.colors.textSecondary,
+  },
+  termTypeTextActive: {
+    color: '#FFFFFF',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -472,83 +562,90 @@ const LoanCalculatorScreen: React.FC = () => {
             
             {/* Loan Amount */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Loan Amount</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.currencySymbol}>₹</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={loanAmount}
-                  onChangeText={setLoanAmount}
-                  placeholder="Enter loan amount"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="numeric"
-                  maxLength={12}
-                />
+              <View style={styles.outlinedInputContainer}>
+                <Text style={styles.floatingLabel} allowFontScaling={false}>Loan Amount</Text>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.currencySymbol} allowFontScaling={false}>₹</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={loanAmount}
+                    onChangeText={setLoanAmount}
+                    placeholder="Enter loan amount"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={12}
+                    allowFontScaling={false}
+                  />
+                </View>
               </View>
             </View>
 
             {/* Interest Rate */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Annual Interest Rate</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.textInput}
-                  value={interestRate}
-                  onChangeText={setInterestRate}
-                  placeholder="Enter interest rate"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="numeric"
-                  maxLength={5}
-                />
-                <Text style={styles.percentSymbol}>%</Text>
+              <View style={styles.outlinedInputContainer}>
+                <Text style={styles.floatingLabel} allowFontScaling={false}>Annual Interest Rate</Text>
+                <View style={styles.rateContainer}>
+                  <TextInput
+                    style={styles.rateInput}
+                    value={interestRate}
+                    onChangeText={setInterestRate}
+                    placeholder="Enter interest rate"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={5}
+                    allowFontScaling={false}
+                  />
+                  <Text style={styles.percentSymbol} allowFontScaling={false}>%</Text>
+                </View>
               </View>
             </View>
 
             {/* Loan Term */}
             <View style={styles.inputGroup}>
-              <View style={styles.inputHeader}>
-                <Text style={styles.inputLabel}>Loan Term</Text>
-                <View style={styles.termTypeContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.termTypeButton,
-                      termType === 'years' && styles.termTypeButtonActive
-                    ]}
-                    onPress={() => setTermType('years')}
-                  >
-                    <Text style={[
-                      styles.termTypeText,
-                      termType === 'years' && styles.termTypeTextActive
-                    ]}>
-                      Years
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.termTypeButton,
-                      termType === 'months' && styles.termTypeButtonActive
-                    ]}
-                    onPress={() => setTermType('months')}
-                  >
-                    <Text style={[
-                      styles.termTypeText,
-                      termType === 'months' && styles.termTypeTextActive
-                    ]}>
-                      Months
-                    </Text>
-                  </TouchableOpacity>
+              <View style={styles.outlinedInputContainer}>
+                <Text style={styles.floatingLabel} allowFontScaling={false}>Loan Term</Text>
+                <View style={styles.termContainer}>
+                  <TextInput
+                    style={styles.termInput}
+                    value={loanTerm}
+                    onChangeText={setLoanTerm}
+                    placeholder="Enter loan term"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={3}
+                    allowFontScaling={false}
+                  />
+                  <View style={styles.termTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.termTypeButton,
+                        termType === 'years' && styles.termTypeButtonActive
+                      ]}
+                      onPress={() => setTermType('years')}
+                    >
+                      <Text style={[
+                        styles.termTypeText,
+                        termType === 'years' && styles.termTypeTextActive
+                      ]} allowFontScaling={false}>
+                        Years
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.termTypeButton,
+                        termType === 'months' && styles.termTypeButtonActive
+                      ]}
+                      onPress={() => setTermType('months')}
+                    >
+                      <Text style={[
+                        styles.termTypeText,
+                        termType === 'months' && styles.termTypeTextActive
+                      ]} allowFontScaling={false}>
+                        Months
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.textInput}
-                  value={loanTerm}
-                  onChangeText={setLoanTerm}
-                  placeholder="Enter loan term"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="numeric"
-                  maxLength={3}
-                />
               </View>
             </View>
 

@@ -46,129 +46,6 @@ const AddLoanScreen: React.FC = () => {
 		);
     }, [name, type, lender, principal, interestRate, termYears, emiStartDate]);
 
-    // Auto-fill function with your loan data
-  const handleAutoFill = () => {
-    console.log('🔍 AddLoanScreen: Showing loan options...');
-    
-    const loanOptions = [
-      {
-        id: 1,
-        name: 'Axis Personal Loan',
-        type: 'Personal Loan',
-        lender: 'Axis Bank',
-        amount: '250000',
-        rate: '13.5',
-        tenure: '36',
-        tenureUnit: 'Months',
-        startDate: '2024-02-05',
-        status: 'Active'
-      },
-      {
-        id: 2,
-        name: 'Dream Home Loan',
-        type: 'Home Loan',
-        lender: 'HDFC Bank',
-        amount: '2500000',
-        rate: '8.4',
-        tenure: '240',
-        tenureUnit: 'Months',
-        startDate: '2024-03-10',
-        status: 'Active'
-      },
-      {
-        id: 3,
-        name: 'Swift Car Loan',
-        type: 'Car Loan',
-        lender: 'SBI',
-        amount: '800000',
-        rate: '9.25',
-        tenure: '60',
-        tenureUnit: 'Months',
-        startDate: '2024-04-15',
-        status: 'Active'
-      },
-      {
-        id: 4,
-        name: 'Business Expansion',
-        type: 'Business Loan',
-        lender: 'ICICI Bank',
-        amount: '500000',
-        rate: '12.0',
-        tenure: '24',
-        tenureUnit: 'Months',
-        startDate: '2024-05-20',
-        status: 'Active'
-      },
-      {
-        id: 5,
-        name: 'Family Gold Loan',
-        type: 'Gold Loan',
-        lender: 'Muthoot Finance',
-        amount: '100000',
-        rate: '11.0',
-        tenure: '12',
-        tenureUnit: 'Months',
-        startDate: '2024-06-25',
-        status: 'Closed'
-      },
-      {
-        id: 6,
-        name: 'Study Abroad',
-        type: 'Education Loan',
-        lender: 'Bank of Baroda',
-        amount: '1200000',
-        rate: '10.2',
-        tenure: '84',
-        tenureUnit: 'Months',
-        startDate: '2024-07-10',
-        status: 'Active'
-      },
-      {
-        id: 7,
-        name: 'Private Lender – Raju',
-        type: 'Private Money Lending',
-        lender: 'Raju Finances',
-        amount: '80000',
-        rate: '18.0',
-        tenure: '12',
-        tenureUnit: 'Months',
-        startDate: '2024-08-05',
-        status: 'Closed'
-      }
-    ];
-
-    // Show action sheet with loan options
-    const options = loanOptions.map(loan => ({
-      text: `${loan.name} - ${loan.lender} (₹${parseInt(loan.amount).toLocaleString()})`,
-      onPress: () => {
-        console.log(`🔍 AddLoanScreen: Auto-filling with ${loan.name}...`);
-        setName(loan.name);
-        setType(loan.type);
-        setLender(loan.lender);
-        setPrincipal(loan.amount);
-        setInterestRate(loan.rate);
-        setTermYears(loan.tenureUnit === 'Years' ? loan.tenure : Math.floor(parseInt(loan.tenure) / 12).toString());
-        setTenureUnit(loan.tenureUnit);
-        setEmiStartDate(loan.startDate);
-        setEmiDate(new Date(loan.startDate));
-        console.log(`✅ AddLoanScreen: Form auto-filled with ${loan.name} successfully`);
-      }
-    }));
-
-    // Add cancel option
-    options.push({
-      text: 'Cancel',
-      onPress: () => console.log('❌ AddLoanScreen: Auto-fill cancelled')
-    });
-
-    // Show action sheet
-    Alert.alert(
-      'Select Loan to Auto-fill',
-      'Choose a loan from the list to auto-fill the form:',
-      options,
-      { cancelable: true }
-    );
-  };
 
     // Monthly amount: EMI for bank-type loans; Monthly Interest for Gold/Private lending
     const isInterestOnly = useMemo(() => {
@@ -386,19 +263,6 @@ const AddLoanScreen: React.FC = () => {
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View>
 
-                {/* Auto-fill Button */}
-                <View style={styles.autoFillContainer}>
-                    <TouchableOpacity 
-                        style={styles.autoFillButton}
-                        onPress={handleAutoFill}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="flash" size={20} color="#FFFFFF" />
-                <Text style={styles.autoFillButtonText} allowFontScaling={false}>
-                    Select Loan Template
-                </Text>
-                    </TouchableOpacity>
-                </View>
 
                 {/* Loan Name */}
                 <View style={[styles.formGroup, styles.firstFormGroup]}>
@@ -697,34 +561,6 @@ const createStyles = (theme: any) => StyleSheet.create({
         marginBottom: 24,
     },
     
-    // Auto-fill Button Styles
-    autoFillContainer: {
-        marginBottom: 20,
-        marginHorizontal: 20,
-    },
-    autoFillButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#6C5CE7',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    autoFillButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-        marginLeft: 8,
-    },
     label: {
         fontSize: 14,
         color: '#111827',

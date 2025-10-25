@@ -129,6 +129,106 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
     setSelectedColor(color);
   };
 
+  // Auto-fill function with savings goal templates
+  const handleAutoFill = () => {
+    console.log('🔍 AddGoalScreen: Showing savings goal options...');
+    
+    const goalOptions = [
+      {
+        id: 1,
+        name: 'Emergency Fund',
+        amount: '100000',
+        icon: '🛡️',
+        color: '#667eea',
+        deadline: '2025-12-31',
+        description: '6 months of expenses'
+      },
+      {
+        id: 2,
+        name: 'House Down Payment',
+        amount: '500000',
+        icon: '🏠',
+        color: '#764ba2',
+        deadline: '2026-06-30',
+        description: '20% down for dream home'
+      },
+      {
+        id: 3,
+        name: 'New Car Fund',
+        amount: '800000',
+        icon: '🚗',
+        color: '#4facfe',
+        deadline: '2025-08-15',
+        description: 'Mid-size sedan purchase'
+      },
+      {
+        id: 4,
+        name: 'Vacation Fund',
+        amount: '150000',
+        icon: '✈️',
+        color: '#43e97b',
+        deadline: '2025-07-01',
+        description: 'Europe trip with family'
+      },
+      {
+        id: 5,
+        name: 'Wedding Fund',
+        amount: '300000',
+        icon: '💍',
+        color: '#f093fb',
+        deadline: '2026-03-15',
+        description: 'Dream wedding celebration'
+      },
+      {
+        id: 6,
+        name: 'Education Fund',
+        amount: '200000',
+        icon: '🎓',
+        color: '#38f9d7',
+        deadline: '2027-01-01',
+        description: 'Child\'s college education'
+      },
+      {
+        id: 7,
+        name: 'Retirement Fund',
+        amount: '1000000',
+        icon: '🏦',
+        color: '#fa709a',
+        deadline: '2030-12-31',
+        description: 'Early retirement planning'
+      }
+    ];
+
+    // Show action sheet with goal options
+    const options = goalOptions.map(goal => ({
+      text: `${goal.name} - ₹${parseInt(goal.amount).toLocaleString()}`,
+      onPress: () => {
+        console.log(`🔍 AddGoalScreen: Auto-filling with ${goal.name}...`);
+        setGoalName(goal.name);
+        setTargetAmount(goal.amount);
+        setSelectedIcon(goal.icon);
+        setSelectedColor(goal.color);
+        setDeadline(goal.deadline);
+        setDeadlineDate(new Date(goal.deadline));
+        console.log(`✅ AddGoalScreen: Form auto-filled with ${goal.name} successfully`);
+      }
+    }));
+
+    // Add cancel option
+    options.push({
+      text: 'Cancel',
+      onPress: () => console.log('❌ AddGoalScreen: Auto-fill cancelled')
+    });
+
+    // Show action sheet
+    Alert.alert(
+      'Select Savings Goal Template',
+      'Choose a savings goal from the list to auto-fill the form:',
+      options,
+      { cancelable: true }
+    );
+  };
+
 
 
   // Create styles with fallback theme
@@ -189,6 +289,20 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+
+        {/* Auto-fill Button */}
+        <View style={styles.autoFillContainer}>
+          <TouchableOpacity 
+            style={styles.autoFillButton}
+            onPress={handleAutoFill}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="flash" size={20} color="#FFFFFF" />
+            <Text style={styles.autoFillButtonText} allowFontScaling={false}>
+              Select Goal Template
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Goal Preview Card */}
         <View style={styles.previewCard}>
@@ -523,6 +637,34 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 32,
+  },
+  // Auto-fill Button Styles
+  autoFillContainer: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  autoFillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6C5CE7',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  autoFillButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   previewCard: {
     margin: 20,
