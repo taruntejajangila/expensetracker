@@ -567,6 +567,8 @@ router.put('/:id',
       });
       
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined) {
+        logger.info('🔄 Starting account balance update process...');
+        
         // Get the original transaction data to calculate balance changes
         const originalTransactionQuery = `
           SELECT amount, transaction_type, from_account_id, to_account_id 
@@ -658,6 +660,8 @@ router.put('/:id',
             await req.app.locals.db.query(applyToQuery, [updatedTransaction.amount, updatedTransaction.to_account_id, userId]);
           }
         }
+        
+        logger.info('✅ Account balance update process completed');
       }
       
       return res.json({
