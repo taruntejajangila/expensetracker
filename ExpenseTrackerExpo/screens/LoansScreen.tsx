@@ -77,7 +77,7 @@ const LoansScreen: React.FC = () => {
         try {
           const isInterestOnly = !!loan.isInterestOnly || loan.type === 'Gold Loan' || loan.type === 'Private Money Lending';
           const annualRate = Number(loan.interestRate || 0);
-          const r = (annualRate / 12) / 100;
+          const r = annualRate / 100 / 12; // annualRate is now percentage, convert to decimal then monthly
           const tenureMonths = Number(loan.tenureMonths || Math.round((loan.term || 0) * 12));
           const start = new Date(loan.emiStartDate || loan.nextPaymentDate || new Date());
           // months elapsed from start to now
