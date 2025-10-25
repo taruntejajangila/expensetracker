@@ -324,6 +324,20 @@ const AddTransactionScreen = () => {
       setCategory(editTransaction.category);
       setDate(new Date(editTransaction.date));
       setNote(editTransaction.note || '');
+      
+      // Set the correct account based on transaction type
+      if (editTransaction.type === 'income' && editTransaction.toAccount) {
+        // For income, money goes TO the account
+        setSelectedAccountId(editTransaction.toAccount.id);
+      } else if ((editTransaction.type === 'expense' || editTransaction.type === 'transfer') && editTransaction.fromAccount) {
+        // For expense/transfer, money comes FROM the account
+        setSelectedAccountId(editTransaction.fromAccount.id);
+      }
+      
+      // For transfers, also set the destination account
+      if (editTransaction.type === 'transfer' && editTransaction.toAccount) {
+        setSelectedToAccountId(editTransaction.toAccount.id);
+      }
     }
   }, [isEditMode, editTransaction]);
 
