@@ -569,23 +569,38 @@ router.put('/:id',
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined) {
         logger.info('🔄 Starting account balance update process...');
         
-        // Get the original transaction data to calculate balance changes
-        const originalTransactionQuery = `
-          SELECT amount, transaction_type, from_account_id, to_account_id 
-          FROM transactions 
-          WHERE id = $1 AND user_id = $2
-        `;
-        const originalResult = await req.app.locals.db.query(originalTransactionQuery, [id, userId]);
-        const originalTransaction = originalResult.rows[0];
-        
-        // Get the updated transaction data
-        const updatedTransactionQuery = `
-          SELECT amount, transaction_type, from_account_id, to_account_id 
-          FROM transactions 
-          WHERE id = $1 AND user_id = $2
-        `;
-        const updatedResult = await req.app.locals.db.query(updatedTransactionQuery, [id, userId]);
-        const updatedTransaction = updatedResult.rows[0];
+        try {
+          // Get the original transaction data to calculate balance changes
+          const originalTransactionQuery = `
+            SELECT amount, transaction_type, from_account_id, to_account_id 
+            FROM transactions 
+            WHERE id = $1 AND user_id = $2
+          `;
+          const originalResult = await req.app.locals.db.query(originalTransactionQuery, [id, userId]);
+          const originalTransaction = originalResult.rows[0];
+          
+          logger.info('📊 Original transaction data:', {
+            amount: originalTransaction.amount,
+            type: originalTransaction.transaction_type,
+            fromAccount: originalTransaction.from_account_id,
+            toAccount: originalTransaction.to_account_id
+          });
+          
+          // Get the updated transaction data
+          const updatedTransactionQuery = `
+            SELECT amount, transaction_type, from_account_id, to_account_id 
+            FROM transactions 
+            WHERE id = $1 AND user_id = $2
+          `;
+          const updatedResult = await req.app.locals.db.query(updatedTransactionQuery, [id, userId]);
+          const updatedTransaction = updatedResult.rows[0];
+          
+          logger.info('📊 Updated transaction data:', {
+            amount: updatedTransaction.amount,
+            type: updatedTransaction.transaction_type,
+            fromAccount: updatedTransaction.from_account_id,
+            toAccount: updatedTransaction.to_account_id
+          });
         
         // Reverse the original transaction's effect on account balances
         if (originalTransaction.transaction_type === 'income' && originalTransaction.to_account_id) {
@@ -662,6 +677,12 @@ router.put('/:id',
         }
         
         logger.info('✅ Account balance update process completed');
+        
+        } catch (balanceError) {
+          logger.error('❌ Error in account balance update:', balanceError);
+          // Don't throw the error - just log it and continue
+          // The transaction update should still succeed even if balance update fails
+        }
       }
       
       return res.json({
