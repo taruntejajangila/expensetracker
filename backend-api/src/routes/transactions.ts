@@ -554,15 +554,24 @@ router.put('/:id',
       `;
 
       // Handle account balance updates BEFORE updating the transaction
+      // Only run balance updates if there are actual financial changes that affect account balances
+      // Check if any of the financial fields that affect account balances have changed
+      const hasFinancialChanges = (updates.fromAccount !== undefined) || 
+                                 (updates.toAccount !== undefined) || 
+                                 (updates.amount !== undefined) || 
+                                 (updates.type !== undefined);
+      
       logger.info('Checking if balance updates needed:', {
         fromAccount: updates.fromAccount,
         toAccount: updates.toAccount,
         amount: updates.amount,
         type: updates.type,
-        shouldUpdate: updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined || updates.type !== undefined
+        hasFinancialChanges: hasFinancialChanges,
+        shouldUpdate: hasFinancialChanges,
+        note: 'Only run balance updates for financial field changes (fromAccount, toAccount, amount, type)'
       });
       
-      if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined || updates.type !== undefined) {
+      if (hasFinancialChanges) {
         logger.info('🔄 Starting NEW ROBUST account balance update process...');
         
         try {
@@ -693,6 +702,9 @@ router.put('/:id',
           const errorMessage = balanceError instanceof Error ? balanceError.message : 'Unknown error';
           logger.error('❌ Error details:', errorMessage);
         }
+      } else {
+        logger.info('✅ No financial changes detected - skipping account balance updates');
+        logger.info('   Only non-financial fields changed (title, category, description, note, etc.)');
       }
       
       logger.info(`Update query: ${updateQuery}`);
