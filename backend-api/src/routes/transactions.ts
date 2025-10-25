@@ -535,14 +535,18 @@ router.put('/:id',
         updateValues.push(updates.categoryId);
       }
 
-      if (updateFields.length === 0) {
+      // Add updated_at field (doesn't need a parameter)
+      updateFields.push(`updated_at = NOW()`);
+      
+      // Check if we have any actual field updates (excluding updated_at)
+      if (updateFields.length === 1) {
         return res.status(400).json({
           success: false,
           message: 'No valid fields to update'
         });
       }
-
-      updateFields.push(`updated_at = NOW()`);
+      
+      // Add id and userId as the first two parameters
       updateValues.unshift(id, userId);
 
       const updateQuery = `
