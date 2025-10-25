@@ -558,23 +558,42 @@ const AddTransactionScreen = () => {
       const currentFromAccount = selectedAccountId;
       const currentToAccount = selectedToAccountId;
       
+      // Normalize values for comparison (treat undefined, null, and empty string as equivalent)
+      const normalizeValue = (value: any) => {
+        if (value === undefined || value === null || value === '') return null;
+        return value;
+      };
+      
+      const normalizedOriginalFromAccount = normalizeValue(originalFromAccount);
+      const normalizedCurrentFromAccount = normalizeValue(currentFromAccount);
+      const normalizedOriginalToAccount = normalizeValue(originalToAccount);
+      const normalizedCurrentToAccount = normalizeValue(currentToAccount);
+      
       // Check if any financial fields have changed
       hasFinancialChanges = (
-        originalAmount !== currentAmount ||
+        Math.abs(originalAmount - currentAmount) > 0.01 || // Use tolerance for amount comparison
         originalType !== currentType ||
-        originalFromAccount !== currentFromAccount ||
-        originalToAccount !== currentToAccount
+        normalizedOriginalFromAccount !== normalizedCurrentFromAccount ||
+        normalizedOriginalToAccount !== normalizedCurrentToAccount
       );
       
       console.log('🔍 AddTransactionScreen: Financial changes check:', {
         originalAmount,
         currentAmount,
+        amountChanged: Math.abs(originalAmount - currentAmount) > 0.01,
         originalType,
         currentType,
+        typeChanged: originalType !== currentType,
         originalFromAccount,
         currentFromAccount,
+        normalizedOriginalFromAccount,
+        normalizedCurrentFromAccount,
+        fromAccountChanged: normalizedOriginalFromAccount !== normalizedCurrentFromAccount,
         originalToAccount,
         currentToAccount,
+        normalizedOriginalToAccount,
+        normalizedCurrentToAccount,
+        toAccountChanged: normalizedOriginalToAccount !== normalizedCurrentToAccount,
         hasFinancialChanges
       });
     }
