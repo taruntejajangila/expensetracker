@@ -90,7 +90,7 @@ const LoansScreen: React.FC = () => {
           const onOrAfterStart = now.getTime() >= start.getTime();
           const paymentsMade = onOrAfterStart ? Math.min(tenureMonths, monthsElapsed + 1) : 0;
           
-          console.log(`🔍 Loan ${loan.name}: Principal=${loan.principal}, InterestRate=${loan.interestRate}%, Tenure=${tenureMonths} months, PaymentsMade=${paymentsMade}, MonthsElapsed=${monthsElapsed}`);
+          console.log(`🔍 Loan ${loan.name}: Principal=${loan.principal}, InterestRate=${Number(loan.interestRate).toFixed(2)}%, Tenure=${tenureMonths} months, PaymentsMade=${paymentsMade}, MonthsElapsed=${monthsElapsed}`);
           let currentBalance = Number(loan.principal || 0);
           if (isInterestOnly) {
             // Interest-only: principal doesn't reduce automatically

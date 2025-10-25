@@ -206,7 +206,7 @@ const LoanAmortizationScreen: React.FC = () => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel} allowFontScaling={false}>Interest Rate:</Text>
-            <Text style={styles.summaryValue} allowFontScaling={false}>{loan.interestRate}%</Text>
+            <Text style={styles.summaryValue} allowFontScaling={false}>{Number(loan.interestRate).toFixed(2)}%</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel} allowFontScaling={false}>Loan Term:</Text>

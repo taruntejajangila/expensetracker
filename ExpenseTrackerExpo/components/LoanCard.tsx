@@ -265,7 +265,7 @@ const LoanCard: React.FC<LoanCardProps> = ({
       <View style={styles.bottomSection}>
         <View style={styles.interestSection}>
           <Text style={styles.interestLabel} allowFontScaling={false}>Interest Rate</Text>
-          <Text style={styles.interestValue} allowFontScaling={false}>{interestRate}%</Text>
+          <Text style={styles.interestValue} allowFontScaling={false}>{Number(interestRate).toFixed(2)}%</Text>
         </View>
         <View style={styles.paymentSection}>
           <Text style={styles.paymentLabel} allowFontScaling={false}>Next Payment</Text>

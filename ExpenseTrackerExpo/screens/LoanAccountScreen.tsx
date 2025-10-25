@@ -378,7 +378,7 @@ const LoanAccountScreen: React.FC = () => {
 					
 					<View style={styles.loanSummaryDetails}>
 						<Text style={styles.detailText} allowFontScaling={false}>EMI: {currency(loan.monthlyPayment)}/mo</Text>
-						<Text style={styles.detailText} allowFontScaling={false}>Interest Rate: {loan.interestRate}%</Text>
+						<Text style={styles.detailText} allowFontScaling={false}>Interest Rate: {Number(loan.interestRate).toFixed(2)}%</Text>
 					</View>
 					
 											<View style={styles.loanSummaryDates}>

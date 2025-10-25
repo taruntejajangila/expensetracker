@@ -544,7 +544,7 @@ const DebtPlansScreen: React.FC = () => {
                         </Text>
                         
                         <Text style={styles.debtDetailLine} allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail">
-                          Interest Rate: <Text style={styles.boldText}>{loan.interestRate || 0}%</Text>
+                          Interest Rate: <Text style={styles.boldText}>{Number(loan.interestRate || 0).toFixed(2)}%</Text>
                         </Text>
                         
                         <Text style={styles.debtDetailLine} allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail">

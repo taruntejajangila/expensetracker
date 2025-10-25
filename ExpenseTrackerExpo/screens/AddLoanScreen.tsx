@@ -46,6 +46,21 @@ const AddLoanScreen: React.FC = () => {
 		);
     }, [name, type, lender, principal, interestRate, termYears, emiStartDate]);
 
+    // Auto-fill function with your loan data
+    const handleAutoFill = () => {
+        console.log('🔍 AddLoanScreen: Auto-filling form with sample data...');
+        setName('Axis Personal Loan');
+        setType('Personal Loan');
+        setLender('Axis Bank');
+        setPrincipal('250000');
+        setInterestRate('13.5');
+        setTermYears('3'); // 36 months = 3 years
+        setTenureUnit('Years');
+        setEmiStartDate('2024-02-05');
+        setEmiDate(new Date('2024-02-05'));
+        console.log('✅ AddLoanScreen: Form auto-filled successfully');
+    };
+
     // Monthly amount: EMI for bank-type loans; Monthly Interest for Gold/Private lending
     const isInterestOnly = useMemo(() => {
         return type === 'Gold Loan' || type === 'Private Money Lending';
@@ -261,6 +276,20 @@ const AddLoanScreen: React.FC = () => {
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View>
+
+                {/* Auto-fill Button */}
+                <View style={styles.autoFillContainer}>
+                    <TouchableOpacity 
+                        style={styles.autoFillButton}
+                        onPress={handleAutoFill}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="flash" size={20} color="#FFFFFF" />
+                        <Text style={styles.autoFillButtonText} allowFontScaling={false}>
+                            Auto-fill Sample Data
+                        </Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Loan Name */}
                 <View style={[styles.formGroup, styles.firstFormGroup]}>
@@ -557,6 +586,35 @@ const createStyles = (theme: any) => StyleSheet.create({
 	},
     formGroup: {
         marginBottom: 24,
+    },
+    
+    // Auto-fill Button Styles
+    autoFillContainer: {
+        marginBottom: 20,
+        marginHorizontal: 20,
+    },
+    autoFillButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#6C5CE7',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    autoFillButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
     },
     label: {
         fontSize: 14,
