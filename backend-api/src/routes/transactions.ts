@@ -553,15 +553,13 @@ router.put('/:id',
         RETURNING id, amount, transaction_type, description, transaction_date, updated_at
       `;
 
-      logger.info(`Update query: ${updateQuery}`);
-      logger.info(`Update values:`, updateValues);
-
       // Handle account balance updates BEFORE updating the transaction
       logger.info('Checking if balance updates needed:', {
         fromAccount: updates.fromAccount,
         toAccount: updates.toAccount,
         amount: updates.amount,
-        shouldUpdate: updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined
+        type: updates.type,
+        shouldUpdate: updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined || updates.type !== undefined
       });
       
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined || updates.type !== undefined) {
@@ -694,6 +692,9 @@ router.put('/:id',
         }
       }
       
+      logger.info(`Update query: ${updateQuery}`);
+      logger.info(`Update values:`, updateValues);
+
       // Now run the transaction update
       const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
       
