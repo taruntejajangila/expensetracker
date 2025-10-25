@@ -450,7 +450,10 @@ router.put('/:id',
     body('description').optional().isString().trim().isLength({ max: 500 }).withMessage('Description too long'),
     body('date').optional().isISO8601().withMessage('Valid date required'),
     body('fromAccount').optional().isUUID().withMessage('From account must be valid UUID'),
-    body('toAccount').optional().isUUID().withMessage('To account must be valid UUID'),
+    body('toAccount').optional().custom((value) => {
+      if (value === null || value === undefined) return true;
+      return require('validator').isUUID(value);
+    }).withMessage('To account must be valid UUID or null'),
     body('note').optional().isString().trim().isLength({ max: 1000 }).withMessage('Note too long')
   ],
   validateRequest,
@@ -462,6 +465,26 @@ router.put('/:id',
 
       logger.info(`Updating transaction ${id} for user: ${userId}`);
       logger.info(`Update data received:`, JSON.stringify(updates, null, 2));
+
+      // Handle category name to ID conversion if category is provided
+      if (updates.category) {
+        const categoryQuery = `
+          SELECT id FROM categories 
+          WHERE name = $1 AND is_active = true
+          ORDER BY is_default DESC, sort_order ASC
+          LIMIT 1
+        `;
+        const categoryResult = await req.app.locals.db.query(categoryQuery, [updates.category]);
+        
+        if (categoryResult.rows.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid category'
+          });
+        }
+        
+        updates.categoryId = categoryResult.rows[0].id;
+      }
 
       // Check if transaction exists and belongs to user
       const checkQuery = 'SELECT id FROM transactions WHERE id = $1 AND user_id = $2';
@@ -506,6 +529,10 @@ router.put('/:id',
       if (updates.note !== undefined) {
         updateFields.push(`notes = $${++paramCount}`);
         updateValues.push(updates.note);
+      }
+      if (updates.categoryId !== undefined) {
+        updateFields.push(`category_id = $${++paramCount}`);
+        updateValues.push(updates.categoryId);
       }
 
       if (updateFields.length === 0) {
