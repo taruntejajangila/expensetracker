@@ -558,6 +558,101 @@ router.put('/:id',
 
       const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
       
+      // Handle account balance updates if account information changed
+      if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined) {
+        // Get the original transaction data to calculate balance changes
+        const originalTransactionQuery = `
+          SELECT amount, transaction_type, from_account_id, to_account_id 
+          FROM transactions 
+          WHERE id = $1 AND user_id = $2
+        `;
+        const originalResult = await req.app.locals.db.query(originalTransactionQuery, [id, userId]);
+        const originalTransaction = originalResult.rows[0];
+        
+        // Get the updated transaction data
+        const updatedTransactionQuery = `
+          SELECT amount, transaction_type, from_account_id, to_account_id 
+          FROM transactions 
+          WHERE id = $1 AND user_id = $2
+        `;
+        const updatedResult = await req.app.locals.db.query(updatedTransactionQuery, [id, userId]);
+        const updatedTransaction = updatedResult.rows[0];
+        
+        // Reverse the original transaction's effect on account balances
+        if (originalTransaction.transaction_type === 'income' && originalTransaction.to_account_id) {
+          // Original was income - subtract from the original to_account
+          const reverseQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance - $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
+          `;
+          await req.app.locals.db.query(reverseQuery, [originalTransaction.amount, originalTransaction.to_account_id, userId]);
+        } else if (originalTransaction.transaction_type === 'expense' && originalTransaction.from_account_id) {
+          // Original was expense - add back to the original from_account
+          const reverseQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
+          `;
+          await req.app.locals.db.query(reverseQuery, [originalTransaction.amount, originalTransaction.from_account_id, userId]);
+        } else if (originalTransaction.transaction_type === 'transfer') {
+          // Original was transfer - reverse both accounts
+          if (originalTransaction.from_account_id) {
+            const reverseFromQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(reverseFromQuery, [originalTransaction.amount, originalTransaction.from_account_id, userId]);
+          }
+          if (originalTransaction.to_account_id) {
+            const reverseToQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance - $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(reverseToQuery, [originalTransaction.amount, originalTransaction.to_account_id, userId]);
+          }
+        }
+        
+        // Apply the updated transaction's effect on account balances
+        if (updatedTransaction.transaction_type === 'income' && updatedTransaction.to_account_id) {
+          // Updated is income - add to the updated to_account
+          const applyQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
+          `;
+          await req.app.locals.db.query(applyQuery, [updatedTransaction.amount, updatedTransaction.to_account_id, userId]);
+        } else if (updatedTransaction.transaction_type === 'expense' && updatedTransaction.from_account_id) {
+          // Updated is expense - subtract from the updated from_account
+          const applyQuery = `
+            UPDATE bank_accounts 
+            SET balance = balance - $1, updated_at = NOW()
+            WHERE id = $2 AND user_id = $3
+          `;
+          await req.app.locals.db.query(applyQuery, [updatedTransaction.amount, updatedTransaction.from_account_id, userId]);
+        } else if (updatedTransaction.transaction_type === 'transfer') {
+          // Updated is transfer - update both accounts
+          if (updatedTransaction.from_account_id) {
+            const applyFromQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance - $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(applyFromQuery, [updatedTransaction.amount, updatedTransaction.from_account_id, userId]);
+          }
+          if (updatedTransaction.to_account_id) {
+            const applyToQuery = `
+              UPDATE bank_accounts 
+              SET balance = balance + $1, updated_at = NOW()
+              WHERE id = $2 AND user_id = $3
+            `;
+            await req.app.locals.db.query(applyToQuery, [updatedTransaction.amount, updatedTransaction.to_account_id, userId]);
+          }
+        }
+      }
+      
       return res.json({
         success: true,
         message: 'Transaction updated successfully',
