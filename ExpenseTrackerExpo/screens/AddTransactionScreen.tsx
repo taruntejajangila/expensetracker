@@ -332,6 +332,13 @@ const AddTransactionScreen = () => {
       setCategory(editTransaction.category);
       setDate(new Date(editTransaction.date));
       setNote(editTransaction.note || '');
+    }
+  }, [isEditMode, editTransaction]);
+
+  // Set account selection after accounts are loaded (separate useEffect to handle timing)
+  useEffect(() => {
+    if (isEditMode && editTransaction && accounts.length > 0) {
+      console.log('🔍 AddTransactionScreen: Setting account selection after accounts loaded');
       
       // Set the correct account based on transaction type
       if (editTransaction.type === 'income' && editTransaction.toAccount) {
@@ -352,7 +359,7 @@ const AddTransactionScreen = () => {
         setSelectedToAccountId(editTransaction.toAccount.id);
       }
     }
-  }, [isEditMode, editTransaction]);
+  }, [isEditMode, editTransaction, accounts]);
 
   // Get categories based on transaction type
   const getCategoriesByType = (transactionType: 'expense' | 'income' | 'transfer') => {
