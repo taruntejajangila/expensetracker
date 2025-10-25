@@ -552,6 +552,9 @@ router.put('/:id',
         RETURNING id, amount, transaction_type, description, transaction_date, updated_at
       `;
 
+      logger.info(`Update query: ${updateQuery}`);
+      logger.info(`Update values:`, updateValues);
+
       const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
       
       return res.json({
@@ -561,6 +564,11 @@ router.put('/:id',
       });
     } catch (error) {
       logger.error('Error updating transaction:', error);
+      logger.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
       const errorMessage = error instanceof Error ? error.message : 'Internal server error';
       return res.status(500).json({
         success: false,
