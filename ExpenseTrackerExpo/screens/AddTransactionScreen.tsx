@@ -299,8 +299,10 @@ const AddTransactionScreen = () => {
             setIsLoadingCategories(false);
             
             console.log('🔍 AddTransactionScreen: Force refreshed - accounts:', sorted.length, 'categories:', allCategories.length);
+            console.log('🔍 AddTransactionScreen: Available accounts:', sorted.map(a => ({ id: a.id, name: a.name, type: a.type })));
             
-            if (!selectedAccountId && sorted.length > 0) {
+            // Only set default account if not in edit mode or if no account is selected
+            if (!isEditMode && !selectedAccountId && sorted.length > 0) {
               const wallet = sorted.find(a => a.type === 'cash');
               setSelectedAccountId(wallet ? wallet.id : sorted[0].id);
             }
@@ -318,6 +320,12 @@ const AddTransactionScreen = () => {
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && editTransaction) {
+      console.log('🔍 AddTransactionScreen: Populating edit form with transaction:', {
+        type: editTransaction.type,
+        fromAccount: editTransaction.fromAccount,
+        toAccount: editTransaction.toAccount
+      });
+      
       setType(editTransaction.type);
       setAmount(editTransaction.amount.toString());
       setTitle(editTransaction.title);
@@ -328,14 +336,19 @@ const AddTransactionScreen = () => {
       // Set the correct account based on transaction type
       if (editTransaction.type === 'income' && editTransaction.toAccount) {
         // For income, money goes TO the account
+        console.log('🔍 AddTransactionScreen: Setting income account to:', editTransaction.toAccount.id);
+        console.log('🔍 AddTransactionScreen: Account exists in list:', accounts.some(a => a.id === editTransaction.toAccount.id));
         setSelectedAccountId(editTransaction.toAccount.id);
       } else if ((editTransaction.type === 'expense' || editTransaction.type === 'transfer') && editTransaction.fromAccount) {
         // For expense/transfer, money comes FROM the account
+        console.log('🔍 AddTransactionScreen: Setting expense/transfer account to:', editTransaction.fromAccount.id);
+        console.log('🔍 AddTransactionScreen: Account exists in list:', accounts.some(a => a.id === editTransaction.fromAccount.id));
         setSelectedAccountId(editTransaction.fromAccount.id);
       }
       
       // For transfers, also set the destination account
       if (editTransaction.type === 'transfer' && editTransaction.toAccount) {
+        console.log('🔍 AddTransactionScreen: Setting transfer destination account to:', editTransaction.toAccount.id);
         setSelectedToAccountId(editTransaction.toAccount.id);
       }
     }
