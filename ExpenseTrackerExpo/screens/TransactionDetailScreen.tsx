@@ -384,14 +384,11 @@ const TransactionDetailScreen: React.FC = () => {
 
   const handleEdit = () => {
     if (transaction) {
-          // Navigating to edit transaction
       // Navigate to edit screen (AddTransactionScreen with edit mode)
-      
-      // Since TransactionDetail is in Stack Navigator and AddTransaction is in DrawerNavigator,
-      // we need to navigate to the DrawerNavigator first, then to AddTransaction
-      (navigation as any).navigate('DrawerNavigator', {
-        screen: 'AddTransaction',
-        params: { transaction, isEdit: true }
+      // Both TransactionDetail and AddTransaction are in the same Stack Navigator
+      (navigation as any).navigate('AddTransaction', {
+        transaction,
+        isEdit: true
       });
     }
   };
