@@ -94,7 +94,7 @@ class LoanService {
     totalAmount: number;
     schedule: LoanAmortizationSchedule[];
   } {
-    const monthlyRate = annualRate / 12; // Backend receives decimal (0.26), just divide by 12 ✅
+    const monthlyRate = annualRate / 100 / 12; // Backend receives percentage (13.5), convert to decimal then divide by 12
     
     // Handle zero interest rate case
     let monthlyPayment: number;

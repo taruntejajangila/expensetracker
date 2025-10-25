@@ -110,7 +110,7 @@ router.post('/', [
     const loanData = {
       ...req.body,
       startDate: new Date(req.body.startDate),
-      interestRate: req.body.interestRate / 100 // Convert percentage to decimal
+      interestRate: req.body.interestRate // Keep as percentage to avoid rounding issues
     };
     
     const loan = await loanService.createLoan(userId, loanData);

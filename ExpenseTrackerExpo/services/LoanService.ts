@@ -70,8 +70,8 @@ export const LoanService = {
         const mappedLoans = result.data.map((loan: any) => {
           const rawRate = parseFloat(loan.interestRate);
           
-          // Smart detection: if rate > 1, it's already a percentage; if <= 1, it's a decimal
-          const interestRate = rawRate > 1 ? rawRate : rawRate * 100;
+          // Backend now sends percentage rates (13.5 for 13.5%), so use directly
+          const interestRate = rawRate;
           
           return {
             id: loan.id,
