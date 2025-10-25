@@ -556,9 +556,7 @@ router.put('/:id',
       logger.info(`Update query: ${updateQuery}`);
       logger.info(`Update values:`, updateValues);
 
-      const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
-      
-      // Handle account balance updates if account information changed
+      // Handle account balance updates BEFORE updating the transaction
       logger.info('Checking if balance updates needed:', {
         fromAccount: updates.fromAccount,
         toAccount: updates.toAccount,
@@ -566,61 +564,59 @@ router.put('/:id',
         shouldUpdate: updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined
       });
       
-      // Handle account balance updates if account information changed
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined) {
         logger.info('🔄 Starting SIMPLE account balance update process...');
         
         try {
-          // Get current transaction data
-          const currentQuery = `
+          // Get ORIGINAL transaction data BEFORE updating
+          const originalQuery = `
             SELECT amount, transaction_type, from_account_id, to_account_id 
             FROM transactions 
             WHERE id = $1 AND user_id = $2
           `;
-          const currentResult = await req.app.locals.db.query(currentQuery, [id, userId]);
-          const currentTransaction = currentResult.rows[0];
+          const originalResult = await req.app.locals.db.query(originalQuery, [id, userId]);
+          const originalTransaction = originalResult.rows[0];
           
-          logger.info('📊 Current transaction:', {
-            amount: currentTransaction.amount,
-            type: currentTransaction.transaction_type,
-            fromAccount: currentTransaction.from_account_id,
-            toAccount: currentTransaction.to_account_id
+          logger.info('📊 ORIGINAL transaction data:', {
+            amount: originalTransaction.amount,
+            type: originalTransaction.transaction_type,
+            fromAccount: originalTransaction.from_account_id,
+            toAccount: originalTransaction.to_account_id
           });
           
-          // SIMPLE APPROACH: Just reverse the current transaction and apply the new one
-          const transactionAmount = currentTransaction.amount;
-          const transactionType = currentTransaction.transaction_type;
+          // Step 1: Reverse ORIGINAL transaction
+          const originalAmount = originalTransaction.amount;
+          const originalType = originalTransaction.transaction_type;
           
-          // Step 1: Reverse current transaction
-          if (transactionType === 'expense' && currentTransaction.from_account_id) {
-            logger.info('🔄 Reversing expense from account:', currentTransaction.from_account_id);
+          if (originalType === 'expense' && originalTransaction.from_account_id) {
+            logger.info('🔄 Reversing ORIGINAL expense from account:', originalTransaction.from_account_id);
             const reverseQuery = `
               UPDATE bank_accounts 
               SET balance = balance + $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
-            await req.app.locals.db.query(reverseQuery, [transactionAmount, currentTransaction.from_account_id, userId]);
-            logger.info('✅ Reversed expense - added back to account');
+            await req.app.locals.db.query(reverseQuery, [originalAmount, originalTransaction.from_account_id, userId]);
+            logger.info('✅ Reversed ORIGINAL expense - added back to account');
           }
           
-          if (transactionType === 'income' && currentTransaction.to_account_id) {
-            logger.info('🔄 Reversing income to account:', currentTransaction.to_account_id);
+          if (originalType === 'income' && originalTransaction.to_account_id) {
+            logger.info('🔄 Reversing ORIGINAL income to account:', originalTransaction.to_account_id);
             const reverseQuery = `
               UPDATE bank_accounts 
               SET balance = balance - $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
-            await req.app.locals.db.query(reverseQuery, [transactionAmount, currentTransaction.to_account_id, userId]);
-            logger.info('✅ Reversed income - subtracted from account');
+            await req.app.locals.db.query(reverseQuery, [originalAmount, originalTransaction.to_account_id, userId]);
+            logger.info('✅ Reversed ORIGINAL income - subtracted from account');
           }
           
-          // Step 2: Apply new transaction based on updated data
-          const newFromAccount = updates.fromAccount !== undefined ? updates.fromAccount : currentTransaction.from_account_id;
-          const newToAccount = updates.toAccount !== undefined ? updates.toAccount : currentTransaction.to_account_id;
-          const newAmount = updates.amount !== undefined ? updates.amount : transactionAmount;
-          const newType = updates.type !== undefined ? updates.type : transactionType;
+          // Step 2: Apply NEW transaction based on updates
+          const newFromAccount = updates.fromAccount !== undefined ? updates.fromAccount : originalTransaction.from_account_id;
+          const newToAccount = updates.toAccount !== undefined ? updates.toAccount : originalTransaction.to_account_id;
+          const newAmount = updates.amount !== undefined ? updates.amount : originalAmount;
+          const newType = updates.type !== undefined ? updates.type : originalType;
           
-          logger.info('📊 Applying new transaction:', {
+          logger.info('📊 Applying NEW transaction:', {
             amount: newAmount,
             type: newType,
             fromAccount: newFromAccount,
@@ -628,35 +624,38 @@ router.put('/:id',
           });
           
           if (newType === 'expense' && newFromAccount) {
-            logger.info('🔄 Applying expense to account:', newFromAccount);
+            logger.info('🔄 Applying NEW expense to account:', newFromAccount);
             const applyQuery = `
               UPDATE bank_accounts 
               SET balance = balance - $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
             await req.app.locals.db.query(applyQuery, [newAmount, newFromAccount, userId]);
-            logger.info('✅ Applied expense - subtracted from account');
+            logger.info('✅ Applied NEW expense - subtracted from account');
           }
           
           if (newType === 'income' && newToAccount) {
-            logger.info('🔄 Applying income to account:', newToAccount);
+            logger.info('🔄 Applying NEW income to account:', newToAccount);
             const applyQuery = `
               UPDATE bank_accounts 
               SET balance = balance + $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3
             `;
             await req.app.locals.db.query(applyQuery, [newAmount, newToAccount, userId]);
-            logger.info('✅ Applied income - added to account');
+            logger.info('✅ Applied NEW income - added to account');
           }
           
-          logger.info('✅ SIMPLE account balance update completed successfully!');
+          logger.info('✅ Account balance update completed successfully!');
           
         } catch (balanceError) {
-          logger.error('❌ Error in SIMPLE account balance update:', balanceError);
+          logger.error('❌ Error in account balance update:', balanceError);
           const errorMessage = balanceError instanceof Error ? balanceError.message : 'Unknown error';
           logger.error('❌ Error details:', errorMessage);
         }
       }
+      
+      // Now run the transaction update
+      const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
       
       return res.json({
         success: true,
