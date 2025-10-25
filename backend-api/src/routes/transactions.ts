@@ -499,8 +499,8 @@ router.put('/:id',
 
       // Build update query dynamically
       const updateFields: string[] = [];
-      const updateValues: any[] = [];
-      let paramCount = 1;
+      const updateValues: any[] = [id, userId]; // Start with id and userId as $1 and $2
+      let paramCount = 2; // Start from 3 since $1 and $2 are taken
 
       if (updates.amount !== undefined) {
         updateFields.push(`amount = $${++paramCount}`);
@@ -545,9 +545,6 @@ router.put('/:id',
           message: 'No valid fields to update'
         });
       }
-      
-      // Add id and userId as the first two parameters
-      updateValues.unshift(id, userId);
 
       const updateQuery = `
         UPDATE transactions 
