@@ -24,7 +24,7 @@ class ApiClient {
   private static instance: ApiClient;
   private requestQueue: Map<string, Promise<any>> = new Map();
   private lastRequestTime: Map<string, number> = new Map();
-  private minRequestInterval = 100; // Minimum 100ms between requests to same endpoint
+  private minRequestInterval = 500; // Minimum 500ms between requests to same endpoint (increased to reduce rate limiting)
   private isRefreshing = false; // Prevent multiple simultaneous refresh attempts
   private refreshPromise: Promise<string | null> | null = null; // Cache refresh promise
 

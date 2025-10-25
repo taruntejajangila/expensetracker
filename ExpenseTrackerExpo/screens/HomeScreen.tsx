@@ -77,8 +77,11 @@ const HomeScreen: React.FC = () => {
   const [isDataStale, setIsDataStale] = useState(true);
   const [appInitialized, setAppInitialized] = useState(false);
   const loadDataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const CACHE_DURATION = 30000; // 30 seconds cache
-  const DEBOUNCE_DELAY = 1000; // 1 second debounce
+  const CACHE_DURATION = 120000; // 2 minutes cache (increased to reduce API calls)
+  const DEBOUNCE_DELAY = 3000; // 3 seconds debounce (increased to reduce rapid calls)
+  
+  // Global request deduplication
+  const [isLoadingData, setIsLoadingData] = useState(false);
   
   
   const loadAds = async () => {
@@ -205,9 +208,12 @@ const HomeScreen: React.FC = () => {
     }
     
     // Prevent multiple concurrent calls
-    if (loading && !forceRefresh) {
+    if (isLoadingData || (loading && !forceRefresh)) {
       return;
     }
+    
+    // Set global loading flag
+    setIsLoadingData(true);
     
     try {
       // Only set loading if not already loading
@@ -302,6 +308,9 @@ const HomeScreen: React.FC = () => {
       console.error('❌ HomeScreen: Error loading transaction data:', error);
       setLoading(false);
       setIsLoading(false);
+    } finally {
+      // Always clear the global loading flag
+      setIsLoadingData(false);
     }
   }, []); // Remove dependencies to prevent re-creation
 
@@ -310,6 +319,11 @@ const HomeScreen: React.FC = () => {
     
     // Check if stats are fresh and not forcing refresh
     if (!forceRefresh && stats && (now - lastDataLoad) < CACHE_DURATION) {
+      return;
+    }
+    
+    // Prevent multiple concurrent calls
+    if (isLoadingData) {
       return;
     }
     
