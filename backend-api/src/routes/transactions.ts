@@ -559,6 +559,13 @@ router.put('/:id',
       const updateResult = await req.app.locals.db.query(updateQuery, updateValues);
       
       // Handle account balance updates if account information changed
+      logger.info('Checking if balance updates needed:', {
+        fromAccount: updates.fromAccount,
+        toAccount: updates.toAccount,
+        amount: updates.amount,
+        shouldUpdate: updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined
+      });
+      
       if (updates.fromAccount !== undefined || updates.toAccount !== undefined || updates.amount !== undefined) {
         // Get the original transaction data to calculate balance changes
         const originalTransactionQuery = `
