@@ -193,6 +193,7 @@ const HomeScreen: React.FC = () => {
       setAppInitialized(true);
       loadStats(true); // Force refresh stats
       loadTransactionData(true); // Force refresh transactions
+      loadAds(); // Force refresh banners
       // Clear the refresh flag to prevent infinite loops
       (navigation as any).setParams({ refresh: false });
     }
@@ -528,6 +529,7 @@ const HomeScreen: React.FC = () => {
         setAppInitialized(true);
         loadStats(true); // Force refresh stats
         loadTransactionData(true); // Force refresh transactions
+        loadAds(); // Force refresh banners
       }, DEBOUNCE_DELAY);
       
       // Cleanup function
@@ -1827,10 +1829,10 @@ const HomeScreen: React.FC = () => {
                      </View>
                    </View>
                  </TouchableOpacity>
-               ))}
-             </View>
-           </View>
-         )}
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* App Quote and Name */}
         <View style={styles.appQuoteContainer}>
