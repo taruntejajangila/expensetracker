@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions, Alert } from 'react-native';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -47,19 +47,128 @@ const AddLoanScreen: React.FC = () => {
     }, [name, type, lender, principal, interestRate, termYears, emiStartDate]);
 
     // Auto-fill function with your loan data
-    const handleAutoFill = () => {
-        console.log('🔍 AddLoanScreen: Auto-filling form with sample data...');
-        setName('Axis Personal Loan');
-        setType('Personal Loan');
-        setLender('Axis Bank');
-        setPrincipal('250000');
-        setInterestRate('13.5');
-        setTermYears('3'); // 36 months = 3 years
-        setTenureUnit('Years');
-        setEmiStartDate('2024-02-05');
-        setEmiDate(new Date('2024-02-05'));
-        console.log('✅ AddLoanScreen: Form auto-filled successfully');
-    };
+  const handleAutoFill = () => {
+    console.log('🔍 AddLoanScreen: Showing loan options...');
+    
+    const loanOptions = [
+      {
+        id: 1,
+        name: 'Axis Personal Loan',
+        type: 'Personal Loan',
+        lender: 'Axis Bank',
+        amount: '250000',
+        rate: '13.5',
+        tenure: '36',
+        tenureUnit: 'Months',
+        startDate: '2024-02-05',
+        status: 'Active'
+      },
+      {
+        id: 2,
+        name: 'Dream Home Loan',
+        type: 'Home Loan',
+        lender: 'HDFC Bank',
+        amount: '2500000',
+        rate: '8.4',
+        tenure: '240',
+        tenureUnit: 'Months',
+        startDate: '2024-03-10',
+        status: 'Active'
+      },
+      {
+        id: 3,
+        name: 'Swift Car Loan',
+        type: 'Car Loan',
+        lender: 'SBI',
+        amount: '800000',
+        rate: '9.25',
+        tenure: '60',
+        tenureUnit: 'Months',
+        startDate: '2024-04-15',
+        status: 'Active'
+      },
+      {
+        id: 4,
+        name: 'Business Expansion',
+        type: 'Business Loan',
+        lender: 'ICICI Bank',
+        amount: '500000',
+        rate: '12.0',
+        tenure: '24',
+        tenureUnit: 'Months',
+        startDate: '2024-05-20',
+        status: 'Active'
+      },
+      {
+        id: 5,
+        name: 'Family Gold Loan',
+        type: 'Gold Loan',
+        lender: 'Muthoot Finance',
+        amount: '100000',
+        rate: '11.0',
+        tenure: '12',
+        tenureUnit: 'Months',
+        startDate: '2024-06-25',
+        status: 'Closed'
+      },
+      {
+        id: 6,
+        name: 'Study Abroad',
+        type: 'Education Loan',
+        lender: 'Bank of Baroda',
+        amount: '1200000',
+        rate: '10.2',
+        tenure: '84',
+        tenureUnit: 'Months',
+        startDate: '2024-07-10',
+        status: 'Active'
+      },
+      {
+        id: 7,
+        name: 'Private Lender – Raju',
+        type: 'Private Money Lending',
+        lender: 'Raju Finances',
+        amount: '80000',
+        rate: '18.0',
+        tenure: '12',
+        tenureUnit: 'Months',
+        startDate: '2024-08-05',
+        status: 'Closed'
+      }
+    ];
+
+    // Show action sheet with loan options
+    const options = loanOptions.map(loan => ({
+      text: `${loan.name} - ${loan.lender} (₹${parseInt(loan.amount).toLocaleString()})`,
+      onPress: () => {
+        console.log(`🔍 AddLoanScreen: Auto-filling with ${loan.name}...`);
+        setName(loan.name);
+        setType(loan.type);
+        setLender(loan.lender);
+        setPrincipal(loan.amount);
+        setInterestRate(loan.rate);
+        setTermYears(loan.tenureUnit === 'Years' ? loan.tenure : Math.floor(parseInt(loan.tenure) / 12).toString());
+        setTenureUnit(loan.tenureUnit);
+        setEmiStartDate(loan.startDate);
+        setEmiDate(new Date(loan.startDate));
+        console.log(`✅ AddLoanScreen: Form auto-filled with ${loan.name} successfully`);
+      }
+    }));
+
+    // Add cancel option
+    options.push({
+      text: 'Cancel',
+      onPress: () => console.log('❌ AddLoanScreen: Auto-fill cancelled')
+    });
+
+    // Show action sheet
+    Alert.alert(
+      'Select Loan to Auto-fill',
+      'Choose a loan from the list to auto-fill the form:',
+      options,
+      { cancelable: true }
+    );
+  };
 
     // Monthly amount: EMI for bank-type loans; Monthly Interest for Gold/Private lending
     const isInterestOnly = useMemo(() => {
@@ -285,9 +394,9 @@ const AddLoanScreen: React.FC = () => {
                         activeOpacity={0.7}
                     >
                         <Ionicons name="flash" size={20} color="#FFFFFF" />
-                        <Text style={styles.autoFillButtonText} allowFontScaling={false}>
-                            Auto-fill Sample Data
-                        </Text>
+                <Text style={styles.autoFillButtonText} allowFontScaling={false}>
+                    Select Loan Template
+                </Text>
                     </TouchableOpacity>
                 </View>
 
