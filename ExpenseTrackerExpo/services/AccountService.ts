@@ -15,6 +15,9 @@ const getAuthToken = async () => {
   }
 };
 
+// Flag to prevent multiple simultaneous wallet creation attempts
+let isCreatingWallet = false;
+
 export default {
   async getAccounts() {
     try {
@@ -81,6 +84,18 @@ export default {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('🔍 AccountService: Error response:', errorText);
+        
+        // Handle duplicate account error gracefully
+        if (response.status === 409) {
+          console.log('🔍 AccountService: Account already exists, this is expected for default wallet');
+          // Return the existing account data instead of throwing error
+          const existingAccounts = await this.getAccounts();
+          const cashWallet = existingAccounts.find(acc => acc.accountNumber === account.accountNumber);
+          if (cashWallet) {
+            return { success: true, data: cashWallet };
+          }
+        }
+        
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
@@ -251,52 +266,96 @@ export default {
 
       // Check if user already has a cash wallet
       const existingAccounts = await this.getAccounts();
-      const hasCashWallet = existingAccounts.some(acc => acc.type === 'cash');
+      const hasCashWallet = existingAccounts.some(acc => 
+        acc.type === 'cash' || 
+        (acc.bankName === 'Cash' && acc.name === 'Cash Wallet')
+      );
       
       if (hasCashWallet) {
         console.log('🔍 AccountService: Cash wallet already exists');
-        return existingAccounts.find(acc => acc.type === 'cash');
+        return existingAccounts.find(acc => 
+          acc.type === 'cash' || 
+          (acc.bankName === 'Cash' && acc.name === 'Cash Wallet')
+        );
       }
 
-      // Create default cash wallet
+      // Prevent multiple simultaneous wallet creation attempts
+      if (isCreatingWallet) {
+        console.log('🔍 AccountService: Wallet creation already in progress, waiting...');
+        // Wait a bit and check again
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const updatedAccounts = await this.getAccounts();
+        const updatedCashWallet = updatedAccounts.find(acc => 
+          acc.type === 'cash' || 
+          (acc.bankName === 'Cash' && acc.name === 'Cash Wallet')
+        );
+        if (updatedCashWallet) {
+          console.log('🔍 AccountService: Cash wallet found after waiting');
+          return updatedCashWallet;
+        }
+      }
+
+      isCreatingWallet = true;
+
+      // Create default cash wallet with unique account number
+      const timestamp = Date.now();
       const defaultWalletData = {
-        account_name: 'Cash Wallet',
-        bank_name: 'Cash',
-        account_holder_name: 'Cash Wallet',
-        account_type: 'wallet',
+        name: 'Cash Wallet',
+        bankName: 'Cash',
+        accountHolderName: 'Cash Wallet',
+        accountType: 'wallet',
         balance: 0,
         currency: 'INR',
-        account_number: '',
+        accountNumber: `CASH${timestamp}`,
       };
 
       console.log('🔍 AccountService: Creating default cash wallet...');
-      const result = await this.addAccount(defaultWalletData);
-      
-      if (result.success) {
-        console.log('🔍 AccountService: Default cash wallet created successfully');
-        return {
-          id: result.data.id,
-          name: 'Cash Wallet',
-          bankName: 'Cash',
-          accountHolderName: 'Cash Wallet',
-          type: 'cash',
-          balance: 0,
-          currency: 'INR',
-          icon: 'wallet',
-          color: '#10B981',
-          accountType: 'wallet',
-          accountNumber: '',
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      } else {
-        console.error('🔍 AccountService: Failed to create default wallet:', result.message);
+      try {
+        const result = await this.addAccount(defaultWalletData);
+        
+        if (result.success) {
+          console.log('🔍 AccountService: Default cash wallet created successfully');
+          return {
+            id: result.data.id,
+            name: 'Cash Wallet',
+            bankName: 'Cash',
+            accountHolderName: 'Cash Wallet',
+            type: 'cash',
+            balance: 0,
+            currency: 'INR',
+            icon: 'wallet',
+            color: '#10B981',
+            accountType: 'wallet',
+            accountNumber: `CASH${timestamp}`,
+            status: 'Active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        } else {
+          console.error('🔍 AccountService: Failed to create default wallet:', result.message);
+          return null;
+        }
+      } catch (error: any) {
+        // If it's a duplicate error, try to find the existing wallet
+        if (error.message && error.message.includes('409')) {
+          console.log('🔍 AccountService: Wallet already exists, fetching existing wallet...');
+          const existingAccounts = await this.getAccounts();
+          const existingWallet = existingAccounts.find(acc => 
+            acc.bankName === 'Cash' && acc.name === 'Cash Wallet'
+          );
+          if (existingWallet) {
+            console.log('🔍 AccountService: Found existing cash wallet');
+            return existingWallet;
+          }
+        }
+        console.error('🔍 AccountService: Failed to create default wallet:', error.message);
         return null;
       }
     } catch (error) {
       console.error('🔍 AccountService: Error ensuring default wallet:', error);
       return null;
+    } finally {
+      isCreatingWallet = false;
     }
   },
 

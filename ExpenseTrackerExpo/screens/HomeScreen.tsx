@@ -68,6 +68,10 @@ const HomeScreen: React.FC = () => {
   const bannerFlatListRef = useRef<FlatList>(null);
   const [banners, setBanners] = useState<any[]>([]);
   
+  // Smart Insights auto-slide state
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
+  const insightsScrollViewRef = useRef<ScrollView>(null);
+  
   // Cache and debouncing state
   const [lastDataLoad, setLastDataLoad] = useState<number>(0);
   const [isDataStale, setIsDataStale] = useState(true);
@@ -462,6 +466,33 @@ const HomeScreen: React.FC = () => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
+  // Smart Insights auto-scroll functionality
+  useEffect(() => {
+    const insights = generateSmartInsights();
+    // Only set up interval if we have multiple insights
+    if (insights.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentInsightIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % insights.length;
+        if (insightsScrollViewRef.current) {
+          try {
+            const cardWidth = width - (theme.spacing.md * 2) + theme.spacing.md; // Card width + margin
+            insightsScrollViewRef.current.scrollTo({
+              x: nextIndex * cardWidth,
+              animated: true
+            });
+          } catch (e) {
+            // ignore scroll errors
+          }
+        }
+        return nextIndex;
+      });
+    }, 4000); // 4 seconds for insights (slightly faster than banners)
+
+    return () => clearInterval(interval);
+  }, [totalExpense, totalIncome, recentTransactions.length]); // Re-run when insights data changes
+
   // Reload data when screen comes into focus (after adding a transaction)
   useFocusEffect(
     React.useCallback(() => {
@@ -506,85 +537,157 @@ const HomeScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  // Test function for salary reminder
-  const testSalaryReminder = async () => {
-    try {
-      console.log('🧪 Testing salary reminder...');
-      
-      // Test immediate notification
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "New Month, New Budget",
-          body: "Salary received? Add it now to plan your expenses.",
-          data: { 
-            type: 'monthly_salary_reminder',
-            reminderType: 'salary',
-            action: 'add_income'
-          },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: 3, // Show after 3 seconds
-        },
-      });
-      
-      console.log('✅ Salary reminder test notification scheduled for 3 seconds');
-      alert('Salary reminder test notification will appear in 3 seconds!');
-    } catch (error) {
-      console.error('❌ Error testing salary reminder:', error);
-      alert('Error testing salary reminder: ' + error.message);
+
+  // Generate smart insights based on user's financial data
+  const generateSmartInsights = () => {
+    const insights = [];
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Insight 1: Spending trend analysis
+    if (totalExpense > 0) {
+      const dailyAverage = totalExpense / currentDate.getDate();
+      if (dailyAverage > 500) {
+        insights.push({
+          type: 'Spending Alert',
+          icon: 'trending-up',
+          message: `You're spending ₹${Math.round(dailyAverage)} daily on average. Consider reviewing your expenses.`,
+          color: '#FF6B35',
+          action: 'view_transactions',
+          actionText: 'View Details'
+        });
+      } else if (dailyAverage < 200) {
+        insights.push({
+          type: 'Great Job!',
+          icon: 'checkmark-circle',
+          message: `Excellent! You're spending only ₹${Math.round(dailyAverage)} daily. Keep it up!`,
+          color: '#4CAF50',
+          action: 'view_transactions',
+          actionText: 'View Details'
+        });
+      }
     }
+
+    // Insight 2: Savings analysis
+    if (totalIncome > 0 && totalExpense > 0) {
+      const savingsRate = ((totalIncome - totalExpense) / totalIncome) * 100;
+      if (savingsRate > 20) {
+        insights.push({
+          type: 'Savings Champion',
+          icon: 'trophy',
+          message: `Amazing! You're saving ${savingsRate.toFixed(1)}% of your income this month.`,
+          color: '#2196F3',
+          action: 'view_goals',
+          actionText: 'Set Goals'
+        });
+      } else if (savingsRate < 10 && savingsRate > 0) {
+        insights.push({
+          type: 'Savings Tip',
+          icon: 'bulb',
+          message: `You're saving ${savingsRate.toFixed(1)}% this month. Try to aim for 20%!`,
+          color: '#FF9800',
+          action: 'view_goals',
+          actionText: 'Set Goals'
+        });
+      } else if (savingsRate <= 0) {
+        insights.push({
+          type: 'Budget Alert',
+          icon: 'warning',
+          message: `You're spending more than you earn. Let's create a budget to get back on track.`,
+          color: '#F44336',
+          action: 'view_budget',
+          actionText: 'Create Budget'
+        });
+      }
+    }
+
+    // Insight 3: Transaction frequency
+    if (recentTransactions.length > 0) {
+      const today = new Date();
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const recentCount = recentTransactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate >= yesterday;
+      }).length;
+
+      if (recentCount === 0) {
+        insights.push({
+          type: 'Reminder',
+          icon: 'time',
+          message: "Don't forget to log your expenses today to keep track of your spending!",
+          color: '#9C27B0',
+          action: 'add_transaction',
+          actionText: 'Add Transaction'
+        });
+      } else if (recentCount >= 5) {
+        insights.push({
+          type: 'Active User',
+          icon: 'flash',
+          message: `You've logged ${recentCount} transactions recently. Great job staying organized!`,
+          color: '#00BCD4',
+          action: null,
+          actionText: null
+        });
+      }
+    }
+
+    // Insight 4: Monthly progress
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysPassed = currentDate.getDate();
+    const monthProgress = (daysPassed / daysInMonth) * 100;
+    
+    if (monthProgress > 50) {
+      const remainingDays = daysInMonth - daysPassed;
+      insights.push({
+        type: 'Month Progress',
+        icon: 'calendar',
+        message: `${remainingDays} days left this month. Time to review your budget!`,
+        color: '#607D8B',
+        action: 'view_budget',
+        actionText: 'Review Budget'
+      });
+    }
+
+    // Insight 5: Financial tip (single tip)
+    const tips = [
+      {
+        type: 'Pro Tip',
+        icon: 'star',
+        message: "Track small expenses too - they add up quickly!",
+        color: '#795548',
+        action: null,
+        actionText: null
+      }
+    ];
+    
+    // Add a random tip if we have space
+    if (insights.length < 3) {
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      insights.push(randomTip);
+    }
+
+    // Return maximum 3 insights
+    return insights.slice(0, 3);
   };
 
-  // Test function for custom notifications
-  const testCustomNotification = async () => {
-    try {
-      console.log('🧪 Testing custom notification...');
-      
-      await NotificationNavigationService.getInstance().simulateCustomNotification();
-      console.log('✅ Custom notification test triggered');
-    } catch (error) {
-      console.error('❌ Error testing custom notification:', error);
-    }
-  };
-
-  // Direct navigation test
-  const testDirectNavigation = () => {
-    try {
-      console.log('🧪 Testing direct navigation to NotificationDetail...');
-      
-      const testNotification = {
-        id: 'direct-test-' + Date.now(),
-        title: '🧪 Direct Navigation Test',
-        body: 'This is a direct navigation test',
-        type: 'update',
-        content: `# Direct Navigation Test
-
-This is a test to verify that direct navigation to the NotificationDetail screen works properly.
-
-## Test Features:
-- Direct navigation without notification
-- Content display
-- Back navigation
-- Screen rendering
-
-If you can see this content, the navigation system is working correctly!`,
-        author: 'Test Team',
-        actionButton: {
-          text: 'Test Action',
-          action: 'test_action'
-        },
-        tags: ['test', 'navigation', 'direct']
-      };
-
-      (navigation as any).navigate('NotificationDetail', {
-        notificationId: testNotification.id,
-        notification: testNotification
-      });
-      
-      console.log('✅ Direct navigation test triggered');
-    } catch (error) {
-      console.error('❌ Error testing direct navigation:', error);
+  // Handle insight action button clicks
+  const handleInsightAction = (action: string) => {
+    switch (action) {
+      case 'view_transactions':
+        (navigation as any).navigate('AllTransaction');
+        break;
+      case 'view_goals':
+        (navigation as any).navigate('MainApp', { screen: 'SavingsGoals' });
+        break;
+      case 'view_budget':
+        (navigation as any).navigate('MainApp', { screen: 'BudgetPlanning' });
+        break;
+      case 'add_transaction':
+        (navigation as any).navigate('AddTransaction');
+        break;
+      default:
+        console.log('Unknown action:', action);
     }
   };
 
@@ -1229,37 +1332,94 @@ If you can see this content, the navigation system is working correctly!`,
       shadowRadius: 8,
       elevation: 8,
     },
-    salaryTestButton: {
-      position: 'absolute',
-      right: 20,
-      width: 80,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: '#FF6B35',
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexDirection: 'row',
-      shadowColor: '#000000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    salaryTestButtonText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '600',
-      marginLeft: 4,
-    },
 
     adContainer: {
       alignItems: 'center',
       paddingVertical: 4,
       marginBottom: theme.spacing.sm,
       backgroundColor: 'transparent',
+    },
+
+    // Smart Insights Styles - Enhanced List View
+    smartInsightsContainer: {
+      marginBottom: theme.spacing.lg,
+      marginHorizontal: -theme.spacing.md, // Negative margin to extend to screen edges
+    },
+    smartInsightsTitle: {
+      fontSize: theme.fontSize.sm - 1,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm,
+      marginLeft: theme.spacing.md + 4,
+      textAlign: 'left',
+    },
+    insightsListContainer: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      marginHorizontal: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 6,
+      overflow: 'hidden',
+    },
+    insightListItem: {
+      backgroundColor: '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
+    },
+    insightListContent: {
+      padding: theme.spacing.md,
+    },
+    insightListHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    insightListIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    insightListTextContainer: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    insightListType: {
+      fontSize: theme.fontSize.xs - 2,
+      fontWeight: '700',
+      color: theme.colors.text,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 3,
+    },
+    insightListMessage: {
+      fontSize: theme.fontSize.sm - 1,
+      color: theme.colors.text,
+      lineHeight: 16,
+      fontWeight: '400',
+    },
+    insightListAction: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#F8F9FA',
     },
   });
 
@@ -1420,9 +1580,6 @@ If you can see this content, the navigation system is working correctly!`,
         </TouchableOpacity>
 
         {/* Sync Status Indicator */}
-
-
-        {/* Offline Test Panel - Remove this in production */}
 
 
         {!loading && recentTransactions.length > 0 && (
@@ -1625,6 +1782,42 @@ If you can see this content, the navigation system is working correctly!`,
           </View>
         )}
 
+         {/* Smart Insights Section - List View */}
+         {!loading && (
+           <View style={styles.smartInsightsContainer}>
+             <Text style={styles.smartInsightsTitle} allowFontScaling={false}>💡 Smart Insights</Text>
+             <View style={styles.insightsListContainer}>
+               {generateSmartInsights().map((insight, index) => (
+                 <TouchableOpacity 
+                   key={index} 
+                   style={[styles.insightListItem, { borderLeftColor: insight.color }]}
+                   onPress={() => insight.action && handleInsightAction(insight.action)}
+                   activeOpacity={0.8}
+                 >
+                   <View style={styles.insightListContent}>
+                     <View style={styles.insightListHeader}>
+                       <View style={[styles.insightListIcon, { backgroundColor: insight.color }]}>
+                         <Ionicons name={insight.icon} size={16} color="#FFFFFF" />
+                       </View>
+                       <View style={styles.insightListTextContainer}>
+                         <Text style={styles.insightListType} allowFontScaling={false}>{insight.type}</Text>
+                         <Text style={styles.insightListMessage} allowFontScaling={false} numberOfLines={2}>
+                           {insight.message}
+                         </Text>
+                       </View>
+                       {insight.action && (
+                         <View style={styles.insightListAction}>
+                           <Ionicons name="chevron-forward" size={16} color={insight.color} />
+                         </View>
+                       )}
+                     </View>
+                   </View>
+                 </TouchableOpacity>
+               ))}
+             </View>
+           </View>
+         )}
+
         {/* App Quote and Name */}
         <View style={styles.appQuoteContainer}>
           <Text style={styles.appQuote}>
@@ -1642,62 +1835,6 @@ If you can see this content, the navigation system is working correctly!`,
           </Text>
         </View>
 
-        {/* Test Button for Salary Reminder */}
-        <TouchableOpacity 
-          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 140, 160) }]}
-          onPress={testSalaryReminder}
-        >
-          <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Test Salary</Text>
-        </TouchableOpacity>
-
-        {/* Test Button for Custom Notifications */}
-        <TouchableOpacity 
-          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 200, 220), right: 20 }]}
-          onPress={testCustomNotification}
-        >
-          <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Test Custom</Text>
-        </TouchableOpacity>
-
-        {/* Direct Navigation Test Button */}
-        <TouchableOpacity 
-          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 260, 280), right: 20 }]}
-          onPress={testDirectNavigation}
-        >
-          <Ionicons name="navigate-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Direct Nav</Text>
-        </TouchableOpacity>
-
-        {/* Notification Detail Button */}
-        <TouchableOpacity 
-          style={[styles.salaryTestButton, { bottom: Math.max(insets.bottom + 320, 340), right: 20 }]}
-          onPress={() => {
-            // Navigate to NotificationDetail screen
-            (navigation as any).navigate('MainApp', { 
-              screen: 'NotificationDetail',
-              params: {
-                notificationId: 'sample-notification-1',
-                notification: {
-                  id: 'sample-notification-1',
-                  title: 'Welcome to Expense Tracker!',
-                  content: 'This is a sample notification detail screen. You can view detailed information about notifications here. Click the button below to test the link functionality.',
-                  type: 'announcement',
-                  publishedAt: new Date().toISOString(),
-                  author: 'Expense Tracker Team',
-                  actionButton: {
-                    text: 'Visit Website',
-                    url: 'https://www.google.com',
-                    action: 'open_url'
-                  }
-                }
-              }
-            });
-          }}
-        >
-          <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.salaryTestButtonText} allowFontScaling={false}>Notifications</Text>
-        </TouchableOpacity>
 
       </ScrollView>
 

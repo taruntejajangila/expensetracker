@@ -6,6 +6,7 @@ import './utils/NetworkErrorHandler';
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -60,6 +61,9 @@ import TermsConditionsScreen from './screens/TermsConditionsScreen';
 // Import auth screens
 import LoginScreen from './screens/auth/LoginScreen';
 import RegisterScreen from './screens/auth/RegisterScreen';
+
+// Import onboarding screen
+import OnboardingScreen from './screens/OnboardingScreen';
 
 // Import custom drawer
 import CustomDrawer from './components/common/CustomDrawer';
@@ -234,7 +238,46 @@ function AppNavigator() {
   const [showSplashAd, setShowSplashAd] = useState(false);
   const [appInitialized, setAppInitialized] = useState(false);
   const [adMobInitialized, setAdMobInitialized] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  
+  // FOR TESTING: Force show onboarding (remove this in production)
+  const FORCE_SHOW_ONBOARDING = false; // Set to false for production
   const navigationRef = React.useRef(null);
+
+  // Check onboarding status on app start
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const hasCompletedOnboarding = await AsyncStorage.getItem('onboarding_completed');
+        
+        // Show onboarding only for new users (no onboarding_completed flag) AND not logged in
+        // Never show onboarding for logged-in users
+        if (FORCE_SHOW_ONBOARDING) {
+          // Force show for testing only
+          setShowOnboarding(true);
+          setOnboardingCompleted(false);
+        } else if (hasCompletedOnboarding === null && !user) {
+          // First time user and not logged in - show onboarding
+          setShowOnboarding(true);
+          setOnboardingCompleted(false);
+        } else {
+          // Returning user or logged in user - skip onboarding
+          setOnboardingCompleted(true);
+          setShowOnboarding(false);
+        }
+        setCheckingOnboarding(false);
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setCheckingOnboarding(false);
+        setOnboardingCompleted(true); // Default to completed on error
+        setShowOnboarding(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [user]); // Add user dependency
 
   // Mock AdMob initialization for Expo Go
   useEffect(() => {
@@ -348,8 +391,33 @@ function AppNavigator() {
     console.log('💵 Monetization Event:', monetizationEvent);
   };
 
-  if (isLoading) {
+  // Handle onboarding completion
+  const handleOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem('onboarding_completed', 'true');
+      setOnboardingCompleted(true);
+      setShowOnboarding(false);
+      console.log('✅ Onboarding completed successfully');
+    } catch (error) {
+      console.error('Error saving onboarding completion:', error);
+      setOnboardingCompleted(true);
+      setShowOnboarding(false);
+    }
+  };
+
+
+  if (isLoading || checkingOnboarding) {
     return <LoadingScreen />;
+  }
+
+  // Show onboarding only for first-time users who are not logged in
+  // Never show onboarding for logged-in users
+  if (showOnboarding && !onboardingCompleted && !user) {
+    return (
+      <OnboardingScreen
+        onComplete={handleOnboardingComplete}
+      />
+    );
   }
 
   return (

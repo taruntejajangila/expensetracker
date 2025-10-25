@@ -108,17 +108,29 @@ const AddTransactionScreen = () => {
         
         // Ensure default wallet exists
         let accountsWithWallet = [...allAccounts];
-        const hasWallet = allAccounts.some(acc => acc.type === 'cash');
+        const hasWallet = allAccounts.some(acc => acc.type === 'cash' || (acc.bankName === 'Cash' && acc.name === 'Cash Wallet'));
         
         if (!hasWallet) {
           const defaultWallet = await AccountService.ensureDefaultWallet();
           if (defaultWallet) {
-            accountsWithWallet = [defaultWallet, ...allAccounts];
+            // Check if wallet is not already in the list to prevent duplicates
+            const walletExists = accountsWithWallet.some(acc => 
+              acc.id === defaultWallet.id || 
+              (acc.bankName === 'Cash' && acc.name === 'Cash Wallet')
+            );
+            if (!walletExists) {
+              accountsWithWallet = [defaultWallet, ...allAccounts];
+            }
           }
         }
         
+        // Remove duplicates by ID to prevent React key errors
+        const uniqueAccounts = accountsWithWallet.filter((account, index, self) => 
+          index === self.findIndex(acc => acc.id === account.id)
+        );
+        
         // Sort accounts: wallet first, then others
-        const sorted = accountsWithWallet.sort((a, b) => {
+        const sorted = uniqueAccounts.sort((a, b) => {
           const aCash = a.type === 'cash' ? 1 : 0;
           const bCash = b.type === 'cash' ? 0 : 1;
           return bCash - aCash; // cash first
@@ -251,17 +263,29 @@ const AddTransactionScreen = () => {
           
           // Ensure default wallet exists
           let accountsWithWallet = [...allAccounts];
-          const hasWallet = allAccounts.some(acc => acc.type === 'cash');
+          const hasWallet = allAccounts.some(acc => acc.type === 'cash' || (acc.bankName === 'Cash' && acc.name === 'Cash Wallet'));
           
           if (!hasWallet) {
             const defaultWallet = await AccountService.ensureDefaultWallet();
             if (defaultWallet) {
-              accountsWithWallet = [defaultWallet, ...allAccounts];
+              // Check if wallet is not already in the list to prevent duplicates
+              const walletExists = accountsWithWallet.some(acc => 
+                acc.id === defaultWallet.id || 
+                (acc.bankName === 'Cash' && acc.name === 'Cash Wallet')
+              );
+              if (!walletExists) {
+                accountsWithWallet = [defaultWallet, ...allAccounts];
+              }
             }
           }
           
+          // Remove duplicates by ID to prevent React key errors
+          const uniqueAccounts = accountsWithWallet.filter((account, index, self) => 
+            index === self.findIndex(acc => acc.id === account.id)
+          );
+          
           // Sort accounts: wallet first, then others
-          const sorted = accountsWithWallet.sort((a, b) => {
+          const sorted = uniqueAccounts.sort((a, b) => {
             const aCash = a.type === 'cash' ? 1 : 0;
             const bCash = b.type === 'cash' ? 0 : 1;
             return bCash - aCash; // cash first
