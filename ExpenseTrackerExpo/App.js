@@ -82,7 +82,7 @@ import DailyReminderService from './services/DailyReminderService';
 import NotificationNavigationService from './services/NotificationNavigationService';
 
 // Import AdMob components
-import { SplashScreenAd } from './components/SplashScreenAd';
+import AppOpenAdService from './services/AppOpenAdService';
 // Note: react-native-google-mobile-ads requires development build
 // import mobileAds from 'react-native-google-mobile-ads';
 
@@ -242,7 +242,6 @@ function LoadingScreen() {
 // App Navigator Component
 function AppNavigator() {
   const { user, isLoading } = useAuth();
-  const [showSplashAd, setShowSplashAd] = useState(false);
   const [appInitialized, setAppInitialized] = useState(false);
   const [adMobInitialized, setAdMobInitialized] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -296,6 +295,11 @@ function AppNavigator() {
         // Initialize AdMob
         await AdMobService.initialize();
         console.log('✅ AdMob initialized successfully');
+        
+        // Initialize App Open Ad
+        await AppOpenAdService.initializeAppOpenAd();
+        console.log('✅ App Open Ad initialized');
+        
         setAdMobInitialized(true);
       } catch (error) {
         console.error('❌ AdMob initialization failed:', error);
@@ -307,13 +311,17 @@ function AppNavigator() {
     initializeAdMob();
   }, []);
 
+  // Show App Open Ad when app becomes active
   useEffect(() => {
-    // Show splash ad when app starts (only for authenticated users and after AdMob is initialized)
+    if (!isLoading && user && adMobInitialized) {
+      // Show app open ad (only once per app session)
+      AppOpenAdService.showAppOpenAd();
+    }
+  }, [isLoading, user, adMobInitialized]);
+
+  useEffect(() => {
+    // Mark app as initialized when user and adMob are ready
     if (!isLoading && user && !appInitialized && adMobInitialized) {
-      const shouldShowAd = Math.random() > 0.3; // 70% chance to show ad
-      if (shouldShowAd) {
-        setShowSplashAd(true);
-      }
       setAppInitialized(true);
     }
   }, [isLoading, user, appInitialized, adMobInitialized]);
@@ -349,9 +357,6 @@ function AppNavigator() {
         
         // Use the notification navigation service to handle the response
         NotificationNavigationService.getInstance().handleNotificationResponse(response);
-        
-        // Show splash ad for monetization (for both simple and custom notifications)
-        setShowSplashAd(true);
       });
 
       return () => {
@@ -382,27 +387,6 @@ function AppNavigator() {
     }
   }, [user, isLoading]);
 
-  const handleSplashAdClose = () => {
-    console.log('📱 Splash ad closed - user continued to app without ad engagement');
-    setShowSplashAd(false);
-  };
-
-  const handleSplashAdClick = () => {
-    // Handle ad click - track monetization metrics
-    console.log('💰 Splash screen ad clicked - monetization event triggered');
-    console.log('📊 User came through notification and engaged with ad');
-    
-    // Track this as a successful monetization event
-    // This could be sent to analytics service for revenue tracking
-    const monetizationEvent = {
-      type: 'notification_driven_ad_click',
-      timestamp: new Date().toISOString(),
-      source: 'splash_ad_from_notification',
-      revenue_potential: true
-    };
-    
-    console.log('💵 Monetization Event:', monetizationEvent);
-  };
 
   // Handle onboarding completion
   const handleOnboardingComplete = async () => {
@@ -438,14 +422,6 @@ function AppNavigator() {
       <StatusBar style="auto" />
       <OfflineIndicator />
       {user ? <DrawerNavigator /> : <AuthStackNavigator />}
-      
-      {/* Splash Screen Ad */}
-      <SplashScreenAd
-        visible={showSplashAd}
-        onClose={handleSplashAdClose}
-        onAdClicked={handleSplashAdClick}
-        onAdClosed={() => console.log('Splash ad closed')}
-      />
     </NavigationContainer>
   );
 }
