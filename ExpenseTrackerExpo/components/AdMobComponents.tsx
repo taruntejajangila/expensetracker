@@ -40,8 +40,8 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
       <View style={styles.container} key={refreshKey}>
         <BannerAd
           unitId={Platform.OS === 'ios' 
-            ? 'ca-app-pub-3940256099942544/2934735716'
-            : 'ca-app-pub-3940256099942544/6300978111'}
+            ? 'ca-app-pub-3940256099942544/2934735716' // Test ID (replace with iOS ID)
+            : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
           size={'fullBanner'}
           requestOptions={{
             requestNonPersonalizedAdsOnly: false,

@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 // Detect environment
 const isProduction = Constants.executionEnvironment === 'storeClient';
@@ -37,13 +37,13 @@ export const loadAppOpenAd = async () => {
   }
 
   try {
-    // Create App Open Ad (use test ID for now)
-    const adUnitId = __DEV__
-      ? 'ca-app-pub-3940256099942544/3419835294' // Test Ad ID
-      : 'YOUR_APP_OPEN_AD_UNIT_ID'; // Replace with your real ID
+    // Create App Open Ad with your real Android ID
+    const adUnitId = Platform.OS === 'android'
+      ? 'ca-app-pub-4113490348002307/8975566416' // MyPaisa App Open Ad
+      : 'ca-app-pub-3940256099942544/3419835294'; // Test ID for iOS (replace when you get iOS ID)
     
     appOpenAdLoaded = true;
-    console.log('✅ App Open Ad loaded');
+    console.log('✅ App Open Ad loaded with ID:', adUnitId);
   } catch (error) {
     console.error('❌ App Open Ad load error:', error);
   }
