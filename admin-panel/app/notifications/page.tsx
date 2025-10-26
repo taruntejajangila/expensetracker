@@ -1286,12 +1286,11 @@ function calculateTotal(expenses) {
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{notification.body}</p>
                           <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>Created: {new Date(notification.createdAt).toLocaleString()}</span>
-                            {notification.targetUser && (
-                              <span>To: {notification.targetUser.email}</span>
-                            )}
-                            {!notification.targetUser && (
-                              <span>To: All Users</span>
+                            <span>Sent: {new Date(notification.createdAt).toLocaleString()}</span>
+                            {notification.recipientCount && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                {notification.recipientCount} recipient{notification.recipientCount > 1 ? 's' : ''}
+                              </span>
                             )}
                           </div>
                         </div>

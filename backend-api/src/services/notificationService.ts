@@ -640,39 +640,41 @@ class NotificationService {
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - days);
       
-      // Get total count
-      const countResult = await this.pool.query(`
-        SELECT COUNT(*) as total
-        FROM notifications
-        WHERE created_at >= $1
-      `, [daysAgo]);
-      
-      const total = parseInt(countResult.rows[0].total);
-      const totalPages = Math.ceil(total / limit);
-      const page = Math.floor(offset / limit) + 1;
-
-      // Get notifications with user info
+      // Get notifications grouped by title and body to show unique broadcasts only
       const result = await this.pool.query(`
         SELECT 
-          n.id,
+          MIN(n.id) as id,
           n.title,
           n.body,
           n.message,
           n.data,
           n.type,
-          n.status,
-          n.created_at,
-          n.read_at,
-          n.updated_at,
-          u.email as user_email,
-          u.first_name,
-          u.last_name
+          COUNT(*) as recipient_count,
+          MIN(n.created_at) as created_at,
+          MAX(n.created_at) as last_sent_at,
+          MIN(n.read_at) as read_at,
+          MAX(n.updated_at) as updated_at,
+          CASE 
+            WHEN n.user_id IS NULL THEN 'all_users'
+            ELSE 'specific_user'
+          END as target_type
         FROM notifications n
-        LEFT JOIN users u ON n.user_id = u.id
         WHERE n.created_at >= $3
-        ORDER BY n.created_at DESC
+        GROUP BY n.title, n.body, n.message, n.data, n.type, n.user_id
+        ORDER BY last_sent_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset, daysAgo]);
+      
+      // Get total unique broadcasts
+      const countResult = await this.pool.query(`
+        SELECT COUNT(DISTINCT CONCAT(n.title, n.message, COALESCE(n.user_id::text, 'null'))) as total
+        FROM notifications n
+        WHERE n.created_at >= $1
+      `, [daysAgo]);
+      
+      const total = parseInt(countResult.rows[0].total);
+      const totalPages = Math.ceil(total / limit);
+      const page = Math.floor(offset / limit) + 1;
 
       const notifications = result.rows.map(row => {
         let parsedData = null;
@@ -690,16 +692,18 @@ class NotificationService {
           body: row.body || row.message,
           data: parsedData,
           type: row.type || 'info',
-          status: row.status || 'unread',
+          status: 'sent',
           createdAt: row.created_at,
-          sentAt: row.read_at, // Using read_at as proxy for sent_at since sent_at doesn't exist
-          deliveredAt: row.updated_at, // Using updated_at as proxy for delivered_at
+          sentAt: row.last_sent_at,
+          deliveredAt: row.updated_at,
           readAt: row.read_at,
-          targetUser: row.user_email ? {
-            email: row.user_email,
-            firstName: row.first_name || '',
-            lastName: row.last_name || ''
-          } : null
+          recipientCount: row.recipient_count || 1,
+          targetType: row.target_type,
+          targetUser: row.target_type === 'all_users' ? null : {
+            email: 'Multiple recipients',
+            firstName: '',
+            lastName: ''
+          }
         };
       });
 
