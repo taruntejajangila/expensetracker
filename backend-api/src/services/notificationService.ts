@@ -625,12 +625,16 @@ class NotificationService {
     totalPages: number;
   }> {
     try {
+      // Calculate the date threshold
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - days);
+      
       // Get total count
       const countResult = await this.pool.query(`
         SELECT COUNT(*) as total
         FROM notifications
-        WHERE created_at >= NOW() - INTERVAL $1
-      `, [`${days} days`]);
+        WHERE created_at >= $1
+      `, [daysAgo]);
       
       const total = parseInt(countResult.rows[0].total);
       const totalPages = Math.ceil(total / limit);
@@ -653,10 +657,10 @@ class NotificationService {
           u.name
         FROM notifications n
         LEFT JOIN users u ON n.user_id = u.id
-        WHERE n.created_at >= NOW() - INTERVAL $3
+        WHERE n.created_at >= $3
         ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2
-      `, [limit, offset, `${days} days`]);
+      `, [limit, offset, daysAgo]);
 
       const notifications = result.rows.map(row => {
         let parsedData = null;
