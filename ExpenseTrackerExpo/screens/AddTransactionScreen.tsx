@@ -535,9 +535,26 @@ const AddTransactionScreen = () => {
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          const seconds = String(date.getSeconds()).padStart(2, '0');
+          
+          // If the date is today and time is midnight (00:00:00), use current time instead
+          // This handles the case where WheelDatePicker creates a date without time info
+          const now = new Date();
+          const isToday = year === now.getFullYear() && 
+                         month === String(now.getMonth() + 1).padStart(2, '0') && 
+                         day === String(now.getDate()).padStart(2, '0');
+          const isMidnight = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
+          
+          let hours, minutes, seconds;
+          if (isToday && isMidnight) {
+            // Use current time for today's transactions
+            hours = String(now.getHours()).padStart(2, '0');
+            minutes = String(now.getMinutes()).padStart(2, '0');
+            seconds = String(now.getSeconds()).padStart(2, '0');
+          } else {
+            hours = String(date.getHours()).padStart(2, '0');
+            minutes = String(date.getMinutes()).padStart(2, '0');
+            seconds = String(date.getSeconds()).padStart(2, '0');
+          }
           
           const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
           console.log('🔍 AddTransactionScreen: Formatted date:', formattedDate);
