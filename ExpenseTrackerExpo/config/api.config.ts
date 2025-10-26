@@ -7,7 +7,7 @@
 const LOCAL_API_URL = 'http://192.168.29.14:5000/api';
 
 // ☁️ PRODUCTION - Railway Backend URL
-const PRODUCTION_API_URL = 'https://generous-miracle-production-245f.up.railway.app/api';
+const PRODUCTION_API_URL = 'https://expensetracker-production-eb9c.up.railway.app/api';
 
 // 🔀 FORCE CLOUD MODE - Set to true to use cloud backend even in development
 const FORCE_CLOUD_MODE = true;
