@@ -89,28 +89,28 @@ router.get('/',
 
       // Map transactions with bank account information
       const mappedTransactions = result.rows.map((row: any) => ({
-          ...row,
-          type: row.transaction_type,
-          date: row.transaction_date,
-          bankAccount: row.bank_account_id ? {
-            id: row.bank_account_id,
-            name: row.account_name,
-            bankName: row.bank_name,
-            accountNumber: row.account_number
-          } : null,
-          fromAccount: row.from_account_id ? {
-            id: row.from_account_id,
-            name: row.from_account_name,
-            bankName: row.from_bank_name,
-            accountNumber: row.from_account_number
-          } : null,
-          toAccount: row.to_account_id ? {
-            id: row.to_account_id,
-            name: row.to_account_name,
-            bankName: row.to_bank_name,
-            accountNumber: row.to_account_number
-          } : null
-        }));
+        ...row,
+        type: row.transaction_type,
+        date: row.transaction_date,
+        bankAccount: row.bank_account_id ? {
+          id: row.bank_account_id,
+          name: row.account_name,
+          bankName: row.bank_name,
+          accountNumber: row.account_number
+        } : null,
+        fromAccount: row.from_account_id ? {
+          id: row.from_account_id,
+          name: row.from_account_name,
+          bankName: row.from_bank_name,
+          accountNumber: row.from_account_number
+        } : null,
+        toAccount: row.to_account_id ? {
+          id: row.to_account_id,
+          name: row.to_account_name,
+          bankName: row.to_bank_name,
+          accountNumber: row.to_account_number
+        } : null
+      }));
 
       return res.json({
         success: true,
