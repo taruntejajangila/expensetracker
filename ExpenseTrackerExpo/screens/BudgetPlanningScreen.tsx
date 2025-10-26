@@ -24,6 +24,7 @@ import { categoryService, Category } from '../services/CategoryService';
 import TransactionService from '../services/transactionService';
 import BudgetService from '../services/BudgetService';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { NativeAdComponent } from '../components/NativeAdComponent';
 
 
 interface BudgetCategory {
@@ -486,12 +487,8 @@ const BudgetPlanningScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
                 
-                {/* Show banner ad after every 2 categories */}
-                {showAd && (
-                  <View style={styles.adContainer}>
-                    <BannerAdComponent />
-                  </View>
-                )}
+                {/* Show native ad after every 2 categories */}
+                {showAd && <NativeAdComponent />}
               </React.Fragment>
             );
           })}

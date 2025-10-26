@@ -26,6 +26,7 @@ import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import { NativeAdComponent } from '../components/NativeAdComponent';
 
 interface SavingsGoal {
   id: string;
@@ -531,12 +532,8 @@ const SavingsGoalsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
               
-              {/* Show banner ad after every 2 goals */}
-              {showAd && (
-                <View style={styles.adContainer}>
-                  <BannerAdComponent />
-                </View>
-              )}
+              {/* Show native ad after every 2 goals */}
+              {showAd && <NativeAdComponent />}
               </React.Fragment>
             );
           })}
