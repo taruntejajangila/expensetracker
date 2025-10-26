@@ -189,15 +189,17 @@ router.post('/',
         RETURNING id, amount, transaction_type, description, transaction_date, to_account_id, from_account_id, tags, created_at
       `;
       
-      // Parse the date string treating it as UTC time
+      // Parse the date string - frontend sends local time
       // The frontend sends "YYYY-MM-DDTHH:mm:ss" which represents the user's local time
-      // When we parse it with new Date(), JavaScript interprets it as local time on the server
-      // Since Railway server is in UTC, we need to manually construct it as UTC
+      // We need to store it exactly as-is, treating it as local time, not UTC
       let parsedDate: Date;
       if (typeof date === 'string' && date.includes('T')) {
-        // Parse as UTC time since the server is in UTC and we want to preserve the time
+        // Parse the date components as local time
         const [datePart, timePart] = date.split('T');
-        parsedDate = new Date(date + 'Z'); // Add 'Z' to indicate UTC
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes, seconds] = timePart.split(':').map(Number);
+        // Create date as local time on the server (which is UTC)
+        parsedDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
         logger.info(`Date received from frontend: ${date}`);
         logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
       } else {
@@ -532,17 +534,17 @@ router.put('/:id',
       }
       if (updates.date !== undefined) {
         updateFields.push(`transaction_date = $${++paramCount}`);
-        // Parse the date string as local time (not UTC)
+        // Parse the date string - frontend sends local time
         let parsedDate: Date;
         if (typeof updates.date === 'string' && updates.date.includes('T')) {
-          // Parse as local time: "2025-10-26T14:30:00" -> local time, not UTC
+          // Parse as local time on server (which is UTC)
           const [datePart, timePart] = updates.date.split('T');
           const [year, month, day] = datePart.split('-').map(Number);
           const timeComponents = timePart.split(':').map(Number);
           const hours = timeComponents[0] || 0;
           const minutes = timeComponents[1] || 0;
           const seconds = timeComponents[2] || 0;
-          parsedDate = new Date(year, month - 1, day, hours, minutes, seconds);
+          parsedDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
         } else {
           parsedDate = new Date(updates.date);
         }
