@@ -28,6 +28,7 @@ import NotificationNavigationService from '../services/NotificationNavigationSer
 import OfflineBanner from '../components/OfflineBanner';
 import OfflineScreen from '../components/OfflineScreen';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { NativeAdComponent } from '../components/NativeAdComponent';
 import AdMobService from '../services/AdMobService';
 import { InterstitialAdModal } from '../components/InterstitialAdModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -2116,6 +2117,9 @@ const HomeScreen: React.FC = () => {
             </ScrollView>
           </View>
         )}
+
+        {/* Native Ad */}
+        {recentTransactions.length > 0 && <NativeAdComponent />}
 
         {/* AdMob Banner Ad */}
         <View style={styles.adContainer}>
