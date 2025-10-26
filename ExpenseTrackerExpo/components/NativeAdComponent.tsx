@@ -22,6 +22,17 @@ export const NativeAdComponent: React.FC<NativeAdComponentProps> = ({ refreshKey
     description: 'Get insights into your spending patterns',
     action: 'Learn More',
   });
+  const [internalRefreshKey, setInternalRefreshKey] = useState(0);
+
+  // Auto-refresh every 45 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setInternalRefreshKey(prev => prev + 1);
+      console.log('🔄 Native ad auto-refreshed');
+    }, 45000); // 45 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Mock ad content variation
@@ -31,7 +42,7 @@ export const NativeAdComponent: React.FC<NativeAdComponentProps> = ({ refreshKey
       { title: 'Financial Freedom', subtitle: 'Investment insights', description: 'Build wealth with smart decisions', action: 'Start Now' },
     ];
     setMockAdContent(variants[Math.floor(Math.random() * variants.length)]);
-  }, [refreshKey]);
+  }, [refreshKey, internalRefreshKey]);
 
   // If in production and NativeAdView is available, use real ads
   if (isProduction && !isExpoGo) {
@@ -59,8 +70,10 @@ export const NativeAdComponent: React.FC<NativeAdComponentProps> = ({ refreshKey
   }
 
   // Mock Native Ad for Expo Go
+  const combinedRefreshKey = refreshKey + internalRefreshKey;
+  
   return (
-    <View style={styles.container}>
+    <View style={styles.container} key={combinedRefreshKey}>
       <View style={styles.adContainer}>
         {/* Sponsored Label */}
         <View style={styles.sponsoredLabel}>
