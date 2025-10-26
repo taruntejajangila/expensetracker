@@ -468,7 +468,7 @@ class NotificationService {
         notificationData.title,
         notificationData.body,
         JSON.stringify(notificationData.data || {}),
-        notificationData.data?.type || 'admin_notification'
+        'info' // Use 'info' as type since allowed types are: info, success, warning, error, reminder, alert
       ]);
       
       logger.info(`✅ Notification stored in database with ID: ${result.rows[0].id}`);
