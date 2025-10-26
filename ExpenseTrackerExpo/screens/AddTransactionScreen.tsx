@@ -539,7 +539,11 @@ const AddTransactionScreen = () => {
           const minutes = String(date.getMinutes()).padStart(2, '0');
           const seconds = String(date.getSeconds()).padStart(2, '0');
           
-          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+          const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+          console.log('🔍 AddTransactionScreen: Formatted date:', formattedDate);
+          console.log('🔍 AddTransactionScreen: Original date:', date.toString());
+          
+          return formattedDate;
         };
 
         const transactionData = {

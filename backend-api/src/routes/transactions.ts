@@ -152,6 +152,7 @@ router.post('/',
       const { amount, type, category, description, date } = req.body;
 
       logger.info(`Creating transaction for user: ${userId}`);
+      logger.info(`Date received from frontend: ${date}`);
 
       // Get category ID from category name
       const categoryQuery = `
@@ -200,6 +201,8 @@ router.post('/',
         const minutes = timeComponents[1] || 0;
         const seconds = timeComponents[2] || 0;
         parsedDate = new Date(year, month - 1, day, hours, minutes, seconds);
+        logger.info(`Parsed date components: year=${year}, month=${month - 1}, day=${day}, hours=${hours}, minutes=${minutes}, seconds=${seconds}`);
+        logger.info(`Parsed date object: ${parsedDate.toISOString()}`);
       } else {
         parsedDate = new Date(date);
       }
