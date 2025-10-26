@@ -452,7 +452,9 @@ const TransactionsTab: React.FC<{
       const matches = transactionDate.getMonth() === targetMonth && 
                       transactionDate.getFullYear() === targetYear;
       
-      console.log(`🔍 Filtering transaction: date=${transaction.date}, parsed=${transactionDate.toISOString()}, target=${targetMonth}/${targetYear}, matches=${matches}`);
+      if (matches) {
+        console.log(`✅ Match: date=${transaction.date}, parsed=${transactionDate.toISOString()}, target=${targetMonth}/${targetYear}`);
+      }
       
       return matches;
     });
