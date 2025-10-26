@@ -88,16 +88,7 @@ router.get('/',
       const total = parseInt(countResult.rows[0].total);
 
       // Map transactions with bank account information
-      const mappedTransactions = result.rows.map((row: any, index) => {
-        if (index === 0) {
-          console.log('📤 Returning transaction date:', row.transaction_date);
-          console.log('📤 Date type:', typeof row.transaction_date);
-          if (row.transaction_date) {
-            console.log('📤 Date toString:', row.transaction_date.toString());
-            console.log('📤 Date toISOString:', row.transaction_date.toISOString?.());
-          }
-        }
-        return {
+      const mappedTransactions = result.rows.map((row: any) => ({
           ...row,
           type: row.transaction_type,
           date: row.transaction_date,
@@ -119,8 +110,7 @@ router.get('/',
             bankName: row.to_bank_name,
             accountNumber: row.to_account_number
           } : null
-        };
-      });
+        }));
 
       return res.json({
         success: true,
@@ -207,9 +197,6 @@ router.post('/',
         // Parse the ISO string which includes timezone information
         // JavaScript's Date constructor handles ISO strings with timezone automatically
         parsedDate = new Date(date);
-        console.log('🗄️ Backend received date string:', date);
-        console.log('🗄️ Backend parsed as Date:', parsedDate.toISOString());
-        console.log('🗄️ Backend storing to database:', parsedDate);
       } else {
         parsedDate = new Date(date);
       }

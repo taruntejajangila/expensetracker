@@ -475,14 +475,9 @@ const TransactionsTab: React.FC<{
       // Parse the date string - it should be an ISO string with timezone from backend
       const dateString = typeof date === 'string' ? date : String(date);
       
-      console.log('📅 Date string from backend:', dateString);
-      
       // Use new Date() which correctly handles ISO strings with timezone
       // For example: "2025-10-27T09:51:47.123Z" will be parsed correctly
       dateObj = new Date(dateString);
-      
-      console.log('📅 Parsed date:', dateObj.toString());
-      console.log('📅 Display time will be:', dateObj.toLocaleTimeString());
       
       // Validate that the date is valid
       if (isNaN(dateObj.getTime())) {

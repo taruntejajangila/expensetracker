@@ -538,14 +538,9 @@ const AddTransactionScreen = () => {
           // Set current time to the selected date
           dateToFormat.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
           
-          // Format as ISO string with timezone
-          // This converts local time to UTC properly
-          const formattedDate = dateToFormat.toISOString();
-          
-          console.log('🕐 Date being sent to backend:', formattedDate);
-          console.log('🕐 Local time when created:', now.toLocaleString());
-          
-          return formattedDate;
+        // Format as ISO string with timezone
+        // This converts local time to UTC properly
+        return dateToFormat.toISOString();
         };
 
         const transactionData = {
