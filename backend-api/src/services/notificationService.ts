@@ -643,7 +643,7 @@ class NotificationService {
       // Get notifications grouped by title and body to show unique broadcasts only
       const result = await this.pool.query(`
         SELECT 
-          MIN(n.id) as id,
+          n.id,
           n.title,
           n.body,
           n.message,
@@ -660,7 +660,7 @@ class NotificationService {
           END as target_type
         FROM notifications n
         WHERE n.created_at >= $3
-        GROUP BY n.title, n.body, n.message, n.data, n.type, n.user_id
+        GROUP BY n.title, n.body, n.message, n.data, n.type, n.user_id, n.id
         ORDER BY last_sent_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset, daysAgo]);
