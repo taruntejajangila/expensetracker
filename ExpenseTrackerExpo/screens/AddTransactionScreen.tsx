@@ -536,21 +536,20 @@ const AddTransactionScreen = () => {
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
           
-          // If the date is today and time is midnight (00:00:00), use current time instead
-          // This handles the case where WheelDatePicker creates a date without time info
+          // If time is midnight (00:00:00), use current time instead
+          // WheelDatePicker only selects date without time, so it defaults to midnight
           const now = new Date();
-          const isToday = year === now.getFullYear() && 
-                         month === String(now.getMonth() + 1).padStart(2, '0') && 
-                         day === String(now.getDate()).padStart(2, '0');
           const isMidnight = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
           
           let hours, minutes, seconds;
-          if (isToday && isMidnight) {
-            // Use current time for today's transactions
+          if (isMidnight) {
+            // Use current time when date is midnight (WheelDatePicker doesn't provide time)
             hours = String(now.getHours()).padStart(2, '0');
             minutes = String(now.getMinutes()).padStart(2, '0');
             seconds = String(now.getSeconds()).padStart(2, '0');
+            console.log('🔍 Using current time because midnight:', hours, minutes, seconds);
           } else {
+            // Use the actual time from the date
             hours = String(date.getHours()).padStart(2, '0');
             minutes = String(date.getMinutes()).padStart(2, '0');
             seconds = String(date.getSeconds()).padStart(2, '0');
