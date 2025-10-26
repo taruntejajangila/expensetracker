@@ -402,7 +402,7 @@ router.post('/change-password',
 
       // Get user from database to verify current password (need password hash)
       const userQuery = await pool.query(
-        'SELECT id, email, first_name, last_name, password, role FROM users WHERE id = $1',
+        'SELECT id, email, first_name, last_name, password FROM users WHERE id = $1',
         [authUser.id]
       );
       
