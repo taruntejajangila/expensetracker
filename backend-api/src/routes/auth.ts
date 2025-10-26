@@ -400,7 +400,7 @@ router.post('/change-password',
 
       // Get user from database to verify current password (need password hash)
       const userQuery = await pool.query(
-        'SELECT id, email, name, password, role FROM users WHERE id = $1',
+        'SELECT id, email, first_name, last_name, password, role FROM users WHERE id = $1',
         [authUser.id]
       );
       
@@ -445,9 +445,15 @@ router.post('/change-password',
       });
     } catch (error) {
       logger.error('Change password error:', error);
+      logger.error('Change password error details:', {
+        message: error.message,
+        stack: error.stack,
+        userId: authUser?.id
+      });
       res.status(500).json({
         success: false,
-        message: 'Failed to change password'
+        message: 'Failed to change password',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
