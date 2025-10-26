@@ -472,28 +472,21 @@ const TransactionsTab: React.FC<{
     if (date instanceof Date) {
       dateObj = date;
     } else {
-      // Ensure date is a string before calling string methods
+      // Parse the date string - it should be an ISO string with timezone from backend
       const dateString = typeof date === 'string' ? date : String(date);
       
       // Debug log to see what we're receiving
-      console.log('🔍 Date string received:', dateString);
+      console.log('🔍 Date string received from backend:', dateString);
       
-      // Parse date with time in local timezone (no timezone conversion)
-      if (dateString.includes('T')) {
-        // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
-        const [datePart, timePart] = dateString.split('T');
-        const [year, month, day] = datePart.split('-').map(Number);
-        // Handle time part with or without microseconds and timezone
-        const cleanTimePart = timePart.split('.')[0].split('+')[0].split('Z')[0]; // Remove milliseconds and timezone
-        const [hours, minutes, seconds] = (cleanTimePart || '00:00:00').split(':').map(Number);
-        dateObj = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
-      } else if (dateString.includes('-')) {
-        // Date-only format (YYYY-MM-DD) - parse as local date at midnight
-        const [year, month, day] = dateString.split('-').map(Number);
-        dateObj = new Date(year, month - 1, day);
-      } else {
-        // Fallback to standard Date parsing
-        dateObj = new Date(dateString);
+      // Use new Date() which correctly handles ISO strings with timezone
+      // For example: "2025-10-27T09:51:47.123Z" will be parsed correctly
+      dateObj = new Date(dateString);
+      console.log('🔍 Parsed Date object:', dateObj.toString());
+      console.log('🔍 Local time:', dateObj.toLocaleString());
+      
+      // Validate that the date is valid
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
       }
     }
     
