@@ -45,56 +45,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const setupNetworkListener = () => {
-    // Simple network detection using periodic checks
-    const checkNetwork = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
-        // Use a more reliable endpoint
-        const response = await fetch('https://httpbin.org/status/200', { 
-          method: 'HEAD',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        const wasOnline = isOnline;
-        const nowOnline = response.ok;
-        
-        console.log('🌐 AuthContext: Network check result:', nowOnline);
-        
-        setIsOnline(nowOnline);
-        
-        if (!wasOnline && nowOnline) {
-          console.log('🌐 AuthContext: Back online - attempting to sync');
-          setIsOfflineMode(false);
-          // Try to refresh token when back online
-          refreshToken().catch(() => {
-            console.log('🌐 AuthContext: Token refresh failed after coming online');
-          });
-        } else if (wasOnline && !nowOnline) {
-          console.log('🌐 AuthContext: Gone offline - switching to offline mode');
-          setIsOfflineMode(true);
-        }
-      } catch (error) {
-        console.log('🌐 AuthContext: Network check failed:', error.message);
-        // Don't immediately assume offline - might be a temporary issue
-        // Only set offline if we've been consistently failing
-        const wasOnline = isOnline;
-        if (wasOnline) {
-          // Give it one more chance before going offline
-          console.log('🌐 AuthContext: Network check failed, but staying online for now');
-        }
-      }
-    };
-    
-    // Check network status every 15 seconds (less frequent)
-    const interval = setInterval(checkNetwork, 15000);
-    
-    // Initial check after a short delay
-    setTimeout(checkNetwork, 1000);
-    
-    return () => clearInterval(interval);
+    // Simplified: Just assume online and let the app handle network errors gracefully
+    // Don't do aggressive network checks that can cause false positives
+    console.log('🌐 AuthContext: Network listener initialized - letting app handle network gracefully');
+    return () => {};
   };
 
   const loadUser = async () => {

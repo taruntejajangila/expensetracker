@@ -38,26 +38,6 @@ class ApiClient {
   }
 
   /**
-   * Check if device is online
-   */
-  private async isOnline(): Promise<boolean> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      
-      const response = await fetch('https://httpbin.org/status/200', { 
-        method: 'HEAD',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      return response.ok;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
    * Get stored auth token
    */
   private async getAuthToken(): Promise<string | null> {
@@ -212,17 +192,6 @@ class ApiClient {
     options: RequestInit = {},
     retryOptions: RetryOptions = {}
   ): Promise<ApiResponse<T>> {
-    // Check if device is online first
-    const online = await this.isOnline();
-    if (!online) {
-      console.log('🌐 ApiClient: Device is offline, skipping request');
-      return {
-        success: false,
-        message: 'No internet connection',
-        status: 0
-      };
-    }
-
     const {
       maxRetries = 3,
       baseDelay = 1000,
