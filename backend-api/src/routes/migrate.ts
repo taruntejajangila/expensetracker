@@ -318,4 +318,71 @@ router.post('/fix-goals-constraint-expanded', async (req: express.Request, res: 
   }
 });
 
+// Fix transaction_date column from DATE to TIMESTAMP WITH TIME ZONE
+router.post('/fix-transaction-date', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('🔧 Running migration: fix transaction_date column type');
+    
+    // Check current column type
+    const checkResult = await pool.query(`
+      SELECT data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'transactions' AND column_name = 'transaction_date'
+    `);
+    
+    const currentType = checkResult.rows[0]?.data_type;
+    logger.info('📊 Current transaction_date column type:', currentType);
+    
+    if (currentType === 'timestamp with time zone') {
+      return res.json({
+        success: true,
+        message: 'Column is already TIMESTAMP WITH TIME ZONE',
+        currentType
+      });
+    }
+    
+    if (currentType === 'date') {
+      logger.info('🔄 Changing column type from DATE to TIMESTAMP WITH TIME ZONE...');
+      
+      // Change the column type
+      await pool.query(`
+        ALTER TABLE transactions 
+        ALTER COLUMN transaction_date 
+        TYPE TIMESTAMP WITH TIME ZONE 
+        USING transaction_date::timestamp with time zone
+      `);
+      
+      logger.info('✅ Column type changed successfully');
+      
+      // Verify the change
+      const verifyResult = await pool.query(`
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'transactions' AND column_name = 'transaction_date'
+      `);
+      
+      return res.json({
+        success: true,
+        message: 'Migration completed successfully',
+        previousType: currentType,
+        newType: verifyResult.rows[0]?.data_type
+      });
+    }
+    
+    return res.json({
+      success: false,
+      message: 'Unknown column type',
+      currentType
+    });
+    
+  } catch (error: any) {
+    logger.error('❌ Transaction date migration error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Migration failed',
+      error: error.message
+    });
+  }
+});
+
 export default router;
