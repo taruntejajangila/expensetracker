@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Detect environment
+const isProduction = Constants.executionEnvironment === 'storeClient';
+
+// Import real banner if available
+let BannerAd: any = null;
+try {
+  if (isProduction) {
+    BannerAd = require('react-native-google-mobile-ads').BannerAd;
+  }
+} catch (error) {
+  console.log('BannerAd not available');
+}
 
 interface BannerAdComponentProps {
   bannerSize?: any;
 }
 
-// Google AdMob Banner - Auto-refresh every 45 seconds + screen refresh
+// Google AdMob Banner Component
 export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -20,6 +34,26 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // If in production and BannerAd is available, use real ads
+  if (isProduction && BannerAd) {
+    return (
+      <View style={styles.container} key={refreshKey}>
+        <BannerAd
+          unitId={Platform.OS === 'ios' 
+            ? 'ca-app-pub-3940256099942544/2934735716'
+            : 'ca-app-pub-3940256099942544/6300978111'}
+          size={'fullBanner'}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: false,
+          }}
+          onAdLoaded={() => console.log('✅ Real banner ad loaded')}
+          onAdFailedToLoad={(error) => console.error('❌ Banner ad failed to load:', error)}
+        />
+      </View>
+    );
+  }
+
+  // Otherwise, show mock banner (Expo Go)
   return (
     <View style={styles.container} key={refreshKey}>
       <View style={styles.innerContainer}>
@@ -54,6 +88,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
+    overflow: 'hidden',
   },
   innerContainer: {
     flex: 1,
@@ -101,20 +136,17 @@ const styles = StyleSheet.create({
     color: '#757575',
   },
   buttonContainer: {
-    marginLeft: 8,
+    marginLeft: 12,
   },
   button: {
     backgroundColor: '#1976D2',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 20,
-    minWidth: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
 });
