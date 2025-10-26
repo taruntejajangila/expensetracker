@@ -643,31 +643,30 @@ class NotificationService {
       // Get notifications grouped by title and body to show unique broadcasts only
       const result = await this.pool.query(`
         SELECT 
-          n.id,
+          MIN(n.created_at) as created_at,
           n.title,
           n.body,
           n.message,
           n.data,
           n.type,
           COUNT(*) as recipient_count,
-          MIN(n.created_at) as created_at,
           MAX(n.created_at) as last_sent_at,
           MIN(n.read_at) as read_at,
           MAX(n.updated_at) as updated_at,
           CASE 
-            WHEN n.user_id IS NULL THEN 'all_users'
+            WHEN COUNT(DISTINCT n.user_id) > 1 OR COUNT(CASE WHEN n.user_id IS NULL THEN 1 END) > 0 THEN 'all_users'
             ELSE 'specific_user'
           END as target_type
         FROM notifications n
         WHERE n.created_at >= $3
-        GROUP BY n.title, n.body, n.message, n.data, n.type, n.user_id, n.id
+        GROUP BY n.title, n.body, n.message, n.data, n.type
         ORDER BY last_sent_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset, daysAgo]);
       
       // Get total unique broadcasts
       const countResult = await this.pool.query(`
-        SELECT COUNT(DISTINCT CONCAT(n.title, n.message, COALESCE(n.user_id::text, 'null'))) as total
+        SELECT COUNT(DISTINCT CONCAT(n.title, n.message, n.data, n.type)) as total
         FROM notifications n
         WHERE n.created_at >= $1
       `, [daysAgo]);
@@ -687,7 +686,7 @@ class NotificationService {
         }
 
         return {
-          id: row.id,
+          id: `grouped-${row.title}-${row.created_at}`, // Generate a unique ID for grouped notifications
           title: row.title,
           body: row.body || row.message,
           data: parsedData,
@@ -715,6 +714,44 @@ class NotificationService {
       };
     } catch (error) {
       logger.error('Error getting notification history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get list of users who received a specific notification
+   */
+  async getNotificationRecipients(title: string, body: string, message: string, data: any, type: string): Promise<any[]> {
+    try {
+      const result = await this.pool.query(`
+        SELECT 
+          n.user_id,
+          u.email,
+          u.first_name,
+          u.last_name,
+          n.created_at as received_at,
+          n.read_at
+        FROM notifications n
+        LEFT JOIN users u ON n.user_id = u.id
+        WHERE n.title = $1 
+          AND n.body = $2 
+          AND n.message = $3 
+          AND n.data = $4 
+          AND n.type = $5
+        ORDER BY n.created_at DESC
+      `, [title, body, message, JSON.stringify(data || {}), type]);
+
+      return result.rows.map(row => ({
+        userId: row.user_id,
+        email: row.email || 'Unknown',
+        firstName: row.first_name || '',
+        lastName: row.last_name || '',
+        receivedAt: row.received_at,
+        readAt: row.read_at,
+        isRead: !!row.read_at
+      }));
+    } catch (error) {
+      logger.error('Error getting notification recipients:', error);
       throw error;
     }
   }

@@ -360,4 +360,39 @@ router.get('/history', authenticateToken, requireAdmin, async (req: any, res: an
   }
 });
 
+// Get recipients for a specific notification
+router.get('/recipients', authenticateAdmin, async (req: Request, res: Response) => {
+  try {
+    const { title, body, message, data, type } = req.query;
+
+    if (!title || !body || !message || !type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required parameters: title, body, message, type'
+      });
+    }
+
+    const recipients = await notificationService.getNotificationRecipients(
+      title as string,
+      body as string,
+      message as string,
+      data ? JSON.parse(data as string) : null,
+      type as string
+    );
+
+    res.json({
+      success: true,
+      data: recipients,
+      message: 'Notification recipients retrieved successfully'
+    });
+  } catch (error: any) {
+    logger.error('Error retrieving notification recipients:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve notification recipients',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 export default router;
