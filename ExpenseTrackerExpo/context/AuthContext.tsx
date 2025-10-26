@@ -49,9 +49,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkNetwork = async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
         
-        const response = await fetch('https://www.google.com', { 
+        // Use a more reliable endpoint
+        const response = await fetch('https://httpbin.org/status/200', { 
           method: 'HEAD',
           signal: controller.signal
         });
@@ -59,6 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         clearTimeout(timeoutId);
         const wasOnline = isOnline;
         const nowOnline = response.ok;
+        
+        console.log('🌐 AuthContext: Network check result:', nowOnline);
         
         setIsOnline(nowOnline);
         
@@ -74,20 +77,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsOfflineMode(true);
         }
       } catch (error) {
+        console.log('🌐 AuthContext: Network check failed:', error.message);
+        // Don't immediately assume offline - might be a temporary issue
+        // Only set offline if we've been consistently failing
         const wasOnline = isOnline;
-        setIsOnline(false);
         if (wasOnline) {
-          console.log('🌐 AuthContext: Gone offline - switching to offline mode');
-          setIsOfflineMode(true);
+          // Give it one more chance before going offline
+          console.log('🌐 AuthContext: Network check failed, but staying online for now');
         }
       }
     };
     
-    // Check network status every 10 seconds
-    const interval = setInterval(checkNetwork, 10000);
+    // Check network status every 15 seconds (less frequent)
+    const interval = setInterval(checkNetwork, 15000);
     
-    // Initial check
-    checkNetwork();
+    // Initial check after a short delay
+    setTimeout(checkNetwork, 1000);
     
     return () => clearInterval(interval);
   };

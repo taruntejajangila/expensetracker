@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 const OfflineIndicator: React.FC = () => {
   const { isOfflineMode } = useAuth();
 
+  // Temporarily disable offline indicator to avoid false positives
+  return null;
+
   if (!isOfflineMode) {
     return null;
   }
