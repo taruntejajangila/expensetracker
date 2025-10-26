@@ -7,6 +7,8 @@ import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 
+// Force Railway rebuild - change password route enabled
+
 const router = express.Router();
 
 // POST /api/auth/register - User registration
