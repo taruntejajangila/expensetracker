@@ -461,7 +461,7 @@ class NotificationService {
       
       const result = await this.pool.query(`
         INSERT INTO notifications (user_id, title, message, body, data, type, status, created_at)
-        VALUES ($1, $2, $3, $3, $4, $5, 'sent', NOW())
+        VALUES ($1, $2, $3, $3, $4, $5, 'unread', NOW())
         RETURNING id
       `, [
         targetUserId,
