@@ -629,8 +629,8 @@ class NotificationService {
       const countResult = await this.pool.query(`
         SELECT COUNT(*) as total
         FROM notifications
-        WHERE created_at >= NOW() - INTERVAL '${days} days'
-      `);
+        WHERE created_at >= NOW() - INTERVAL $1
+      `, [`${days} days`]);
       
       const total = parseInt(countResult.rows[0].total);
       const totalPages = Math.ceil(total / limit);
@@ -653,28 +653,39 @@ class NotificationService {
           u.name
         FROM notifications n
         LEFT JOIN users u ON n.user_id = u.id
-        WHERE n.created_at >= NOW() - INTERVAL '${days} days'
+        WHERE n.created_at >= NOW() - INTERVAL $3
         ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2
-      `, [limit, offset]);
+      `, [limit, offset, `${days} days`]);
 
-      const notifications = result.rows.map(row => ({
-        id: row.id,
-        title: row.title,
-        body: row.body || row.message,
-        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
-        type: row.type || 'info',
-        status: row.status || 'unread',
-        createdAt: row.created_at,
-        sentAt: row.read_at, // Using read_at as proxy for sent_at since sent_at doesn't exist
-        deliveredAt: row.updated_at, // Using updated_at as proxy for delivered_at
-        readAt: row.read_at,
-        targetUser: row.user_email ? {
-          email: row.user_email,
-          firstName: row.name?.split(' ')[0] || '',
-          lastName: row.name?.split(' ').slice(1).join(' ') || ''
-        } : null
-      }));
+      const notifications = result.rows.map(row => {
+        let parsedData = null;
+        try {
+          if (row.data) {
+            parsedData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+          }
+        } catch (e) {
+          logger.warn('Failed to parse notification data:', e);
+        }
+
+        return {
+          id: row.id,
+          title: row.title,
+          body: row.body || row.message,
+          data: parsedData,
+          type: row.type || 'info',
+          status: row.status || 'unread',
+          createdAt: row.created_at,
+          sentAt: row.read_at, // Using read_at as proxy for sent_at since sent_at doesn't exist
+          deliveredAt: row.updated_at, // Using updated_at as proxy for delivered_at
+          readAt: row.read_at,
+          targetUser: row.user_email ? {
+            email: row.user_email,
+            firstName: row.name?.split(' ')[0] || '',
+            lastName: row.name?.split(' ').slice(1).join(' ') || ''
+          } : null
+        };
+      });
 
       return {
         notifications,
