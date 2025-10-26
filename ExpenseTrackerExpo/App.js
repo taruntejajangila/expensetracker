@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Import all your existing screens
 import HomeScreen from './screens/HomeScreen';
+import OfflineIndicator from './components/common/OfflineIndicator';
 import ProfileScreen from './screens/ProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ChangePasswordScreen from './screens/ChangePasswordScreen';
@@ -426,6 +427,7 @@ function AppNavigator() {
   return (
     <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
+      <OfflineIndicator />
       {user ? <DrawerNavigator /> : <AuthStackNavigator />}
       
       {/* Splash Screen Ad */}

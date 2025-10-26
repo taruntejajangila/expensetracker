@@ -23,6 +23,8 @@ interface AuthContextType {
   clearAllUserData: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   isLoading: boolean;
+  isOnline: boolean;
+  isOfflineMode: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,10 +36,61 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   useEffect(() => {
     loadUser();
+    setupNetworkListener();
   }, []);
+
+  const setupNetworkListener = () => {
+    // Simple network detection using periodic checks
+    const checkNetwork = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('https://www.google.com', { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const wasOnline = isOnline;
+        const nowOnline = response.ok;
+        
+        setIsOnline(nowOnline);
+        
+        if (!wasOnline && nowOnline) {
+          console.log('🌐 AuthContext: Back online - attempting to sync');
+          setIsOfflineMode(false);
+          // Try to refresh token when back online
+          refreshToken().catch(() => {
+            console.log('🌐 AuthContext: Token refresh failed after coming online');
+          });
+        } else if (wasOnline && !nowOnline) {
+          console.log('🌐 AuthContext: Gone offline - switching to offline mode');
+          setIsOfflineMode(true);
+        }
+      } catch (error) {
+        const wasOnline = isOnline;
+        setIsOnline(false);
+        if (wasOnline) {
+          console.log('🌐 AuthContext: Gone offline - switching to offline mode');
+          setIsOfflineMode(true);
+        }
+      }
+    };
+    
+    // Check network status every 10 seconds
+    const interval = setInterval(checkNetwork, 10000);
+    
+    // Initial check
+    checkNetwork();
+    
+    return () => clearInterval(interval);
+  };
 
   const loadUser = async () => {
     try {
@@ -104,9 +157,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Check if it's a network error (no internet)
           const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
           const isTimeoutError = error instanceof Error && (error.message.includes('timeout') || error.message.includes('network'));
+          const isConnectionError = error instanceof Error && (
+            error.message.includes('Network request failed') ||
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('Connection refused')
+          );
           
-          if (isNetworkError || isTimeoutError) {
+          if (isNetworkError || isTimeoutError || isConnectionError || !isOnline) {
             console.log('🔍 AuthContext: Network error detected - keeping user logged in with stored data');
+            setIsOfflineMode(true);
             
             // Try to get cached user data from AsyncStorage
             try {
@@ -180,6 +239,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting login process...');
+      
+      // Check if we're offline
+      if (!isOnline) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
       
       const apiClient = ApiClient.getInstance();
       
@@ -277,6 +341,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('🔍 AuthContext: Starting registration process...');
+      
+      // Check if we're offline
+      if (!isOnline) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
       
       const apiClient = ApiClient.getInstance();
       
@@ -446,6 +515,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     clearAllUserData,
     refreshToken,
     isLoading,
+    isOnline,
+    isOfflineMode,
   };
 
   return (
