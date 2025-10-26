@@ -654,7 +654,8 @@ class NotificationService {
           n.read_at,
           n.updated_at,
           u.email as user_email,
-          u.name
+          u.first_name,
+          u.last_name
         FROM notifications n
         LEFT JOIN users u ON n.user_id = u.id
         WHERE n.created_at >= $3
@@ -685,8 +686,8 @@ class NotificationService {
           readAt: row.read_at,
           targetUser: row.user_email ? {
             email: row.user_email,
-            firstName: row.name?.split(' ')[0] || '',
-            lastName: row.name?.split(' ').slice(1).join(' ') || ''
+            firstName: row.first_name || '',
+            lastName: row.last_name || ''
           } : null
         };
       });
