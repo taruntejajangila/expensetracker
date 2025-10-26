@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiClient from '../utils/ApiClient';
 import { API_BASE_URL } from '../config/api.config';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 interface User {
   id: string;
@@ -221,6 +223,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Cache user data for offline mode
         await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
         console.log('✅ AuthContext: Login successful - cloud data only, cached for offline mode');
+        
+        // Auto-register for push notifications after login
+        await registerForPushNotifications();
       } else {
         throw new Error(result.message || 'Login failed');
       }
@@ -319,6 +324,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setUser(newUser);
         console.log('✅ AuthContext: Registration successful - cloud data only');
+        
+        // Auto-register for push notifications after registration
+        await registerForPushNotifications();
       } else {
         throw new Error(result.message || 'Registration failed');
       }
@@ -342,6 +350,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('✅ Logout successful - all local data cleared, cloud data only');
     } catch (error) {
       console.error('❌ AuthContext: Error during logout:', error);
+    }
+  };
+
+  const registerForPushNotifications = async () => {
+    try {
+      console.log('📱 AuthContext: Starting push notification registration...');
+      
+      // Request permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.log('📱 AuthContext: Push notification permission denied by user');
+        return;
+      }
+
+      // Get push token
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      console.log('📱 AuthContext: Push notification token received:', token);
+
+      // Register token with backend
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (!authToken) {
+        console.log('📱 AuthContext: No auth token, skipping push registration');
+        return;
+      }
+
+      const platform = Platform.OS;
+
+      const response = await fetch(`${API_BASE_URL}/notifications/register`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          platform,
+          deviceInfo: {
+            brand: Platform.OS === 'ios' ? 'Apple' : 'Google',
+            modelName: 'Unknown',
+            osName: Platform.OS,
+            osVersion: 'Unknown',
+          },
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ AuthContext: Push notification token registered successfully');
+      } else {
+        console.error('❌ AuthContext: Failed to register push token:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ AuthContext: Error registering for push notifications:', error);
+      // Don't throw - this is non-critical
     }
   };
 
