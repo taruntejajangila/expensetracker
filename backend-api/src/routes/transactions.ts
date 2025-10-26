@@ -189,20 +189,17 @@ router.post('/',
         RETURNING id, amount, transaction_type, description, transaction_date, to_account_id, from_account_id, tags, created_at
       `;
       
-      // Parse the date string as local time (not UTC)
-      // If the date string includes a 'T' (ISO format without timezone), parse it as local time
+      // Parse the date string treating it as UTC time
+      // The frontend sends "YYYY-MM-DDTHH:mm:ss" which represents the user's local time
+      // When we parse it with new Date(), JavaScript interprets it as local time on the server
+      // Since Railway server is in UTC, we need to manually construct it as UTC
       let parsedDate: Date;
       if (typeof date === 'string' && date.includes('T')) {
-        // Parse as local time: "2025-10-26T14:30:00" -> local time, not UTC
+        // Parse as UTC time since the server is in UTC and we want to preserve the time
         const [datePart, timePart] = date.split('T');
-        const [year, month, day] = datePart.split('-').map(Number);
-        const timeComponents = timePart.split(':').map(Number);
-        const hours = timeComponents[0] || 0;
-        const minutes = timeComponents[1] || 0;
-        const seconds = timeComponents[2] || 0;
-        parsedDate = new Date(year, month - 1, day, hours, minutes, seconds);
-        logger.info(`Parsed date components: year=${year}, month=${month - 1}, day=${day}, hours=${hours}, minutes=${minutes}, seconds=${seconds}`);
-        logger.info(`Parsed date object: ${parsedDate.toISOString()}`);
+        parsedDate = new Date(date + 'Z'); // Add 'Z' to indicate UTC
+        logger.info(`Date received from frontend: ${date}`);
+        logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
       } else {
         parsedDate = new Date(date);
       }
