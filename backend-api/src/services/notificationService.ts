@@ -457,9 +457,12 @@ class NotificationService {
    */
   private async storeNotificationInDatabase(notificationData: PushNotificationData, targetUserId: string | null): Promise<void> {
     try {
-      await this.pool.query(`
+      logger.info(`🔍 Attempting to store notification in database for user: ${targetUserId || 'all users'}`);
+      
+      const result = await this.pool.query(`
         INSERT INTO notifications (user_id, title, message, body, data, type, status, created_at)
         VALUES ($1, $2, $3, $3, $4, $5, 'sent', NOW())
+        RETURNING id
       `, [
         targetUserId,
         notificationData.title,
@@ -467,6 +470,8 @@ class NotificationService {
         JSON.stringify(notificationData.data || {}),
         notificationData.data?.type || 'admin_notification'
       ]);
+      
+      logger.info(`✅ Notification stored in database with ID: ${result.rows[0].id}`);
       
       // If this is a custom notification, update the custom notification with title and body
       if (notificationData.type === 'custom' && notificationData.customContent) {
@@ -477,9 +482,10 @@ class NotificationService {
         );
       }
       
-      logger.info(`Notification stored in database for user ${targetUserId || 'all users'}: ${notificationData.title}`);
+      logger.info(`✅ Notification stored in database for user ${targetUserId || 'all users'}: ${notificationData.title}`);
     } catch (error) {
-      logger.error('Error storing notification in database:', error);
+      logger.error('❌ Error storing notification in database:', error);
+      throw error; // Re-throw so the calling code knows it failed
     }
   }
 
