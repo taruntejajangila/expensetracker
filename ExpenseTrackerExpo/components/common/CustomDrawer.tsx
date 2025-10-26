@@ -124,6 +124,8 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
           <View style={styles.menuDecorativeCircle1} />
           <View style={styles.menuDecorativeCircle2} />
           <View style={styles.menuDecorativeCircle3} />
+          
+          {/* Primary Actions Section */}
           <DrawerItem
             icon="home-outline"
             label="Dashboard"
@@ -168,6 +170,12 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             isActive={currentRoute === 'AllTransaction'}
           />
           
+          {/* Add Transaction removed - accessible via floating action button */}
+          
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Financial Management Section */}
           <DrawerItem
             icon="wallet-outline"
             label="Accounts"
@@ -184,24 +192,6 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             }}
             isActive={currentRoute === 'Accounts'}
           />
-          
-          {/* Credit Cards feature hidden for v1 release */}
-          {/* <DrawerItem
-            icon="card-outline"
-            label="Credit Cards"
-            onPress={() => {
-              navigation.closeDrawer();
-              navigation.dispatch(
-                CommonActions.navigate({
-                  name: 'MainApp',
-                  params: {
-                    screen: 'CreditCards',
-                  },
-                })
-              );
-            }}
-            isActive={currentRoute === 'CreditCards'}
-          /> */}
           
           <DrawerItem
             icon="document-text-outline"
@@ -270,7 +260,11 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             }}
             isActive={currentRoute === 'Reminders'}
           />
-          
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Tools Section */}
           <DrawerItem
             icon="calculator"
             label="Loan Calculator"
@@ -304,24 +298,11 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             }}
             isActive={currentRoute === 'DebtPlans'}
           />
-          
-          <DrawerItem
-            icon="add-circle-outline"
-            label="Add Transaction"
-            onPress={() => {
-              navigation.closeDrawer();
-              navigation.dispatch(
-                CommonActions.navigate({
-                  name: 'MainApp',
-                  params: {
-                    screen: 'AddTransaction',
-                  },
-                })
-              );
-            }}
-            isActive={currentRoute === 'AddTransaction'}
-          />
-          
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Profile & Info Section */}
           <DrawerItem
             icon="person-outline"
             label="Profile"
@@ -341,27 +322,6 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             }}
             isActive={currentRoute === 'Profile'}
           />
-          
-          {/* Settings hidden as screen is empty */}
-          {/* <DrawerItem
-            icon="settings-outline"
-            label="Settings"
-            onPress={() => {
-              navigation.closeDrawer();
-              navigation.dispatch(
-                CommonActions.navigate({
-                  name: 'MainApp',
-                  params: {
-                    screen: 'Settings',
-                  },
-                })
-              );
-            }}
-            isActive={currentRoute === 'Settings'}
-          /> */}
-
-          {/* Divider */}
-          <View style={styles.divider} />
           
           <DrawerItem
             icon="help-circle-outline"
