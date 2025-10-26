@@ -953,7 +953,7 @@ const HomeScreen: React.FC = () => {
     scrollContent: {
       paddingHorizontal: theme.spacing.md,
       paddingTop: 0, // No top padding to eliminate space
-      paddingBottom: 100, // Add padding for tab bar and floating button
+      paddingBottom: 150, // Add padding for tab bar and floating button
     },
     featuredCard: {
       backgroundColor: '#FFFFFF',
