@@ -17,6 +17,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LoanService } from '../services/LoanService';
 import LoanCard from '../components/LoanCard';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
 
 interface Loan {
   id: string;
@@ -41,6 +43,7 @@ const LoansScreen: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
+  const [showAddLoanAd, setShowAddLoanAd] = useState(false);
 
   // Removed sample/mock loans; using stored loans only
 
@@ -254,7 +257,7 @@ const LoansScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.addButton}
               onPress={() => {
-                (navigation as any).navigate('AddLoan');
+                setShowAddLoanAd(true);
               }}
               activeOpacity={0.7}
             >
@@ -339,7 +342,7 @@ const LoansScreen: React.FC = () => {
                 <Text style={styles.emptyStateSubtitle} allowFontScaling={false}>Start your financial journey with smart borrowing</Text>
                 <TouchableOpacity 
                   style={styles.addLoanButton}
-                  onPress={() => (navigation as any).navigate('AddLoan')}
+                  onPress={() => setShowAddLoanAd(true)}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -381,6 +384,11 @@ const LoansScreen: React.FC = () => {
               ))}
             </ScrollView>
           )}
+        </View>
+
+        {/* Banner Ad above Payment Schedule */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
         </View>
 
         {/* Payment Schedule */}
@@ -529,7 +537,32 @@ const LoansScreen: React.FC = () => {
             </View>
           </LinearGradient>
         </View>
+
+        {/* Banner Ad at bottom of screen */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
       </ScrollView>
+
+      {/* Add Loan Interstitial Ad Modal */}
+      <InterstitialAdModal
+        visible={showAddLoanAd}
+        onClose={() => {
+          console.log('📱 Add Loan interstitial ad modal closed');
+          setShowAddLoanAd(false);
+          // Navigate after modal closes
+          setTimeout(() => {
+            (navigation as any).navigate('AddLoan');
+          }, 500);
+        }}
+        onAdClicked={() => {
+          console.log('📱 Add Loan interstitial ad clicked');
+          setShowAddLoanAd(false);
+          setTimeout(() => {
+            (navigation as any).navigate('AddLoan');
+          }, 500);
+        }}
+      />
     </View>
   );
 };
@@ -734,21 +767,13 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
   addLoanButtonText: {
     color: '#FFFFFF',
@@ -865,6 +890,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   scheduleSection: {
     marginBottom: 24,

@@ -15,6 +15,7 @@ interface SpendingAnalyticsProps {
       color: string;
       icon: string;
     }>;
+    isEmpty?: boolean;
   } | null;
 }
 
@@ -76,8 +77,8 @@ const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({ spendingData }) =
         ) : (
           <View style={styles.noDataContainer}>
             <Ionicons name="analytics-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
-            <Text style={styles.noDataText} allowFontScaling={false}>No spending data available</Text>
-            <Text style={styles.noDataSubtext} allowFontScaling={false}>Your spending analytics will appear here</Text>
+            <Text style={styles.noDataText} allowFontScaling={false}>No spending yet using this account</Text>
+            <Text style={styles.noDataSubtext} allowFontScaling={false}>Your spending analytics will appear here once you start making transactions</Text>
           </View>
         )}
       </LinearGradient>

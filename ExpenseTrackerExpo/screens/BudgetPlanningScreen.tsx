@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { categoryService, Category } from '../services/CategoryService';
 import TransactionService from '../services/transactionService';
 import BudgetService from '../services/BudgetService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 
 interface BudgetCategory {
@@ -430,59 +431,68 @@ const BudgetPlanningScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           
-          {currentBudget.categories.map((category) => {
+          {currentBudget.categories.map((category, index) => {
             const progress = getProgressPercentage(category.spentAmount, category.budgetAmount);
             const remaining = getRemainingAmount(category.budgetAmount, category.spentAmount);
             const isOverBudget = category.spentAmount > category.budgetAmount;
+            const showAd = index > 0 && index % 2 === 0;
             
             return (
-              <TouchableOpacity
-                key={category.id}
-                style={styles.categoryCard}
-                onPress={() => handleEditBudget(category)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.categoryHeader}>
-                  <View style={styles.categoryLeft}>
-                    <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-                      <Ionicons name={category.icon as any} size={20} color="#FFFFFF" />
+              <React.Fragment key={category.id}>
+                <TouchableOpacity
+                  style={styles.categoryCard}
+                  onPress={() => handleEditBudget(category)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.categoryHeader}>
+                    <View style={styles.categoryLeft}>
+                      <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+                        <Ionicons name={category.icon as any} size={20} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.categoryInfo}>
+                        <Text style={styles.categoryName} allowFontScaling={false} numberOfLines={1}>{category.name}</Text>
+                        <Text style={[
+                          styles.categoryStatus,
+                          { color: isOverBudget ? '#FF6B6B' : '#4ECDC4' }
+                        ]} allowFontScaling={false}>
+                          {isOverBudget 
+                            ? `Over by ${formatCurrency(category.spentAmount - category.budgetAmount)}`
+                            : `${formatCurrency(remaining)} remaining`
+                          }
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.categoryInfo}>
-                      <Text style={styles.categoryName} allowFontScaling={false} numberOfLines={1}>{category.name}</Text>
-                      <Text style={[
-                        styles.categoryStatus,
-                        { color: isOverBudget ? '#FF6B6B' : '#4ECDC4' }
-                      ]} allowFontScaling={false}>
-                        {isOverBudget 
-                          ? `Over by ${formatCurrency(category.spentAmount - category.budgetAmount)}`
-                          : `${formatCurrency(remaining)} remaining`
-                        }
+                    <View style={styles.categoryRight}>
+                      <Text style={styles.categoryAmount} allowFontScaling={false} numberOfLines={1}>
+                        {formatCurrency(category.spentAmount)} / {formatCurrency(category.budgetAmount)}
                       </Text>
+                      <Ionicons name="chevron-forward" size={16} color="#999" />
                     </View>
                   </View>
-                  <View style={styles.categoryRight}>
-                    <Text style={styles.categoryAmount} allowFontScaling={false} numberOfLines={1}>
-                      {formatCurrency(category.spentAmount)} / {formatCurrency(category.budgetAmount)}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color="#999" />
+                  
+                  <View style={styles.categoryProgressContainer}>
+                    <View style={styles.categoryProgressBar}>
+                      <View 
+                        style={[
+                          styles.categoryProgressFill, 
+                          { 
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: getProgressColor(progress)
+                          }
+                        ]} 
+                      />
+                    </View>
+                    <Text style={styles.categoryProgressText} allowFontScaling={false}>{Math.round(progress)}%</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 
-                <View style={styles.categoryProgressContainer}>
-                  <View style={styles.categoryProgressBar}>
-                    <View 
-                      style={[
-                        styles.categoryProgressFill, 
-                        { 
-                          width: `${Math.min(progress, 100)}%`,
-                          backgroundColor: getProgressColor(progress)
-                        }
-                      ]} 
-                    />
+                {/* Show banner ad after every 2 categories */}
+                {showAd && (
+                  <View style={styles.adContainer}>
+                    <BannerAdComponent />
                   </View>
-                  <Text style={styles.categoryProgressText} allowFontScaling={false}>{Math.round(progress)}%</Text>
-                </View>
-              </TouchableOpacity>
+                )}
+              </React.Fragment>
             );
           })}
         </View>
@@ -805,6 +815,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 3,
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   categoriesSection: {
     marginBottom: 24,

@@ -156,7 +156,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
         createTimeoutPromise(1500) // Shorter timeout for faster detection
       ]);
       
-      if (connectivityResponse.ok) {
+      if ((connectivityResponse as Response).ok) {
         return true;
       }
     } catch (error) {

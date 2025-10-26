@@ -24,6 +24,8 @@ import OfflineScreen from '../components/OfflineScreen';
 import { useScroll } from '../context/ScrollContext';
 import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
 
 interface SavingsGoal {
   id: string;
@@ -49,6 +51,7 @@ const SavingsGoalsScreen: React.FC = () => {
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddGoalAd, setShowAddGoalAd] = useState(false);
 
   const formatCurrency = (amount: number) => {
     const isNegative = amount < 0;
@@ -267,7 +270,7 @@ const SavingsGoalsScreen: React.FC = () => {
   const overallProgress = getProgress(totalCurrent, totalTarget);
 
   // Header Component
-  const SavingsGoalsHeader: React.FC<{ theme: any; insets: any }> = ({ theme, insets }) => {
+  const SavingsGoalsHeader: React.FC<{ theme: any; insets: any; onAddPress: () => void }> = ({ theme, insets, onAddPress }) => {
     const headerPaddingTop = Platform.OS === 'android' ? insets.top + 5 : insets.top + 10;
     
     return (
@@ -292,7 +295,7 @@ const SavingsGoalsScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity 
               style={styles.addButton}
-              onPress={() => navigation.navigate('AddGoal' as never)}
+              onPress={onAddPress}
             >
               <Ionicons name="add" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
@@ -332,7 +335,11 @@ const SavingsGoalsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <SavingsGoalsHeader theme={theme} insets={insets} />
+      <SavingsGoalsHeader 
+        theme={theme} 
+        insets={insets} 
+        onAddPress={() => setShowAddGoalAd(true)}
+      />
       
       <ScrollView
         style={styles.content}
@@ -389,13 +396,15 @@ const SavingsGoalsScreen: React.FC = () => {
         {/* Goals Section */}
         <View style={styles.goalsSection}>
           
-          {goals.map(goal => {
+          {goals.map((goal, index) => {
             const progress = getProgress(goal.currentAmount, goal.targetAmount);
             const isCompleted = goal.currentAmount >= goal.targetAmount;
             const statusColor = getStatusColor(goal.currentAmount, goal.targetAmount);
+            const showAd = index > 0 && index % 2 === 0;
             
             return (
-              <View key={goal.id} style={styles.goalCardContainer}>
+              <React.Fragment key={goal.id}>
+              <View style={styles.goalCardContainer}>
                 <TouchableOpacity
                   style={[styles.goalCard, { borderLeftColor: goal.color || '#007AFF' }]}
                   onPress={() => handleUpdateProgress(goal)}
@@ -521,6 +530,14 @@ const SavingsGoalsScreen: React.FC = () => {
                   </View>
                 </TouchableOpacity>
               </View>
+              
+              {/* Show banner ad after every 2 goals */}
+              {showAd && (
+                <View style={styles.adContainer}>
+                  <BannerAdComponent />
+                </View>
+              )}
+              </React.Fragment>
             );
           })}
         </View>
@@ -542,12 +559,17 @@ const SavingsGoalsScreen: React.FC = () => {
             </Text>
             <TouchableOpacity
               style={styles.createFirstGoalButton}
-              onPress={() => navigation.navigate('AddGoal' as never)}
+              onPress={() => setShowAddGoalAd(true)}
             >
               <Text style={styles.createFirstGoalButtonText} allowFontScaling={false}>Create Your First Goal</Text>
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Banner Ad above Tips Section */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
 
         {/* Tips Section */}
         <View style={styles.tipsSection}>
@@ -722,6 +744,11 @@ const SavingsGoalsScreen: React.FC = () => {
                     placeholderTextColor={theme.colors.textSecondary} allowFontScaling={false} />
                 </View>
                 
+                {/* Banner Ad above Cancel and Update buttons */}
+                <View style={styles.modalAdContainer}>
+                  <BannerAdComponent />
+                </View>
+                
                 <View style={styles.modalButtons}>
                   <TouchableOpacity 
                     style={styles.modalCancelButton} 
@@ -742,6 +769,25 @@ const SavingsGoalsScreen: React.FC = () => {
            </View>
          </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Interstitial Ad Modal for Add Goal */}
+      <InterstitialAdModal
+        visible={showAddGoalAd}
+        onClose={() => {
+          console.log('📱 Add Goal interstitial ad modal closed');
+          setShowAddGoalAd(false);
+          setTimeout(() => {
+            navigation.navigate('AddGoal' as never);
+          }, 500);
+        }}
+        onAdClicked={() => {
+          console.log('📱 Add Goal interstitial ad clicked');
+          setShowAddGoalAd(false);
+          setTimeout(() => {
+            navigation.navigate('AddGoal' as never);
+          }, 500);
+        }}
+      />
     </View>
   );
 };
@@ -911,6 +957,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   goalsSection: {
     marginBottom: 32,
@@ -1338,6 +1390,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     lineHeight: 16,
     paddingHorizontal: 8,
     fontStyle: 'italic',
+  },
+  modalAdContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   modalButtons: {
     flexDirection: 'row',

@@ -17,6 +17,8 @@ import { useScroll } from '../context/ScrollContext';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import WheelDatePicker from '../components/WheelDatePicker';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +54,7 @@ const LoanCalculatorScreen: React.FC = () => {
   const [amortization, setAmortization] = useState<AmortizationEntry[]>([]);
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [showCalculateAd, setShowCalculateAd] = useState(false);
 
   const calculateLoan = () => {
     const amount = parseFloat(loanAmount);
@@ -406,6 +409,13 @@ const LoanCalculatorScreen: React.FC = () => {
   termTypeTextActive: {
     color: '#FFFFFF',
   },
+   adContainer: {
+     alignItems: 'center',
+     paddingVertical: 4,
+     marginTop: 16,
+     marginBottom: 16,
+     backgroundColor: 'transparent',
+   },
    buttonContainer: {
      marginTop: 20,
    },
@@ -633,11 +643,16 @@ const LoanCalculatorScreen: React.FC = () => {
             />
           </View>
 
+          {/* Banner Ad above Calculate Loan Button */}
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+
            {/* Action Button */}
            <View style={styles.buttonContainer}>
              <TouchableOpacity 
                style={styles.primaryButton} 
-               onPress={calculateLoan}
+               onPress={() => setShowCalculateAd(true)}
                disabled={isCalculating}
              >
                <Text style={styles.primaryButtonText}>
@@ -689,6 +704,13 @@ const LoanCalculatorScreen: React.FC = () => {
             </View>
           )}
 
+          {/* Banner Ad between Results and Amortization Schedule */}
+          {calculation && showAmortization && amortization.length > 0 && (
+            <View style={styles.adContainer}>
+              <BannerAdComponent />
+            </View>
+          )}
+
           {/* Amortization Schedule */}
           {showAmortization && amortization.length > 0 && (
             <View style={styles.amortizationCard}>
@@ -716,6 +738,25 @@ const LoanCalculatorScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+
+      {/* Interstitial Ad Modal for Calculate Loan */}
+      <InterstitialAdModal
+        visible={showCalculateAd}
+        onClose={() => {
+          console.log('📱 Calculate Loan interstitial ad modal closed');
+          setShowCalculateAd(false);
+          setTimeout(() => {
+            calculateLoan();
+          }, 500);
+        }}
+        onAdClicked={() => {
+          console.log('📱 Calculate Loan interstitial ad clicked');
+          setShowCalculateAd(false);
+          setTimeout(() => {
+            calculateLoan();
+          }, 500);
+        }}
+      />
     </View>
   );
 };

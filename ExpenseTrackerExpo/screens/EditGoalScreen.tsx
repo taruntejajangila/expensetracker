@@ -16,6 +16,7 @@ import WheelDatePicker from '../components/WheelDatePicker';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GoalService from '../services/GoalService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface EditGoalScreenProps {
   route: {
@@ -306,6 +307,11 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
           </View>
         </View>
 
+        {/* Banner Ad above Deadline */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
+
         {/* Deadline Input */}
         <View style={styles.inputSection}>
           <Text style={styles.inputLabel} allowFontScaling={false}>Deadline</Text>
@@ -574,6 +580,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   inputSection: {
     marginHorizontal: 20,

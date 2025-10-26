@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import WheelDatePicker from '../components/WheelDatePicker';
 import GoalService from '../services/GoalService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface AddGoalScreenProps {
   navigation: any;
@@ -290,20 +291,6 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
       >
 
-        {/* Auto-fill Button */}
-        <View style={styles.autoFillContainer}>
-          <TouchableOpacity 
-            style={styles.autoFillButton}
-            onPress={handleAutoFill}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="flash" size={20} color="#FFFFFF" />
-            <Text style={styles.autoFillButtonText} allowFontScaling={false}>
-              Select Goal Template
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Goal Preview Card */}
         <View style={styles.previewCard}>
           <LinearGradient
@@ -551,6 +538,11 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </Modal>
 
+        {/* Banner Ad above Deadline */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
+
         {/* Deadline Input */}
         <View style={styles.inputSection}>
           <Text style={styles.inputLabel} allowFontScaling={false}>Deadline</Text>
@@ -731,6 +723,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   inputSection: {
     marginHorizontal: 20,

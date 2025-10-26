@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelDatePicker from '../components/WheelDatePicker';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 // Import new components and types
 import { Reminder } from '../types/PaymentTypes';
@@ -639,6 +640,13 @@ const RemindersScreen: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
+    },
+    adContainer: {
+      alignItems: 'center',
+      paddingVertical: 4,
+      marginTop: 24,
+      marginBottom: 24,
+      backgroundColor: 'transparent',
     },
     // Header Styles - Matching AccountsScreen
     headerContainer: {
@@ -1755,6 +1763,11 @@ const RemindersScreen: React.FC = () => {
         </View>
           </>
         )}
+        
+        {/* Banner Ad at the bottom of the screen */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
       </ScrollView>
 
       {/* Add/Edit Modal */}

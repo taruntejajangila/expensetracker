@@ -102,6 +102,8 @@ function TabNavigator() {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'AllTransactions') {
+            iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -141,6 +143,7 @@ function TabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="AllTransactions" component={AllTransactionScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       {/* Settings hidden as screen is empty */}
       {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
@@ -283,14 +286,20 @@ function AppNavigator() {
     checkOnboardingStatus();
   }, [user]); // Add user dependency
 
-  // Mock AdMob initialization for Expo Go
+  // Initialize AdMob
   useEffect(() => {
     const initializeAdMob = async () => {
       try {
-        console.log('Mock: AdMob initialization skipped (requires development build)');
+        // Import AdMob service dynamically
+        const AdMobService = require('./services/AdMobService').default;
+        
+        // Initialize AdMob
+        await AdMobService.initialize();
+        console.log('✅ AdMob initialized successfully');
         setAdMobInitialized(true);
       } catch (error) {
-        console.log('Mock: AdMob initialization failed:', error);
+        console.error('❌ AdMob initialization failed:', error);
+        // Still set as initialized so app continues to work
         setAdMobInitialized(true);
       }
     };

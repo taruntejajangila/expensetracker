@@ -17,6 +17,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import TransactionService from '../services/transactionService';
 import OfflineScreen from '../components/OfflineScreen';
 import { useNetwork } from '../context/NetworkContext';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -96,6 +97,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
     backgroundColor: '#FFFFFF',
+  },
+  adContainer: {
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: '#E0E0E0',
+    borderBottomColor: '#E0E0E0',
   },
   transactionLeft: {
     flexDirection: 'row',
@@ -429,24 +440,34 @@ const TransactionsTab: React.FC<{
       return 'Invalid Date';
     }
     
-    // Ensure date is a string before calling string methods
-    const dateString = typeof date === 'string' ? date : String(date);
-    
-    // Parse date with time in local timezone (no timezone conversion)
+    // Convert date to Date object if it's already a Date
     let dateObj: Date;
-    if (dateString.includes('T')) {
-      // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
-      const [datePart, timePart] = dateString.split('T');
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number);
-      dateObj = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
-    } else if (dateString.includes('-')) {
-      // Date-only format (YYYY-MM-DD) - parse as local date at midnight
-      const [year, month, day] = dateString.split('-').map(Number);
-      dateObj = new Date(year, month - 1, day);
+    if (date instanceof Date) {
+      dateObj = date;
     } else {
-      // Fallback to standard Date parsing
-      dateObj = new Date(dateString);
+      // Ensure date is a string before calling string methods
+      const dateString = typeof date === 'string' ? date : String(date);
+      
+      // Debug log to see what we're receiving
+      console.log('🔍 Date string received:', dateString);
+      
+      // Parse date with time in local timezone (no timezone conversion)
+      if (dateString.includes('T')) {
+        // ISO-like format with time: "2025-10-21T15:30:00" (no timezone)
+        const [datePart, timePart] = dateString.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        // Handle time part with or without microseconds and timezone
+        const cleanTimePart = timePart.split('.')[0].split('+')[0].split('Z')[0]; // Remove milliseconds and timezone
+        const [hours, minutes, seconds] = (cleanTimePart || '00:00:00').split(':').map(Number);
+        dateObj = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
+      } else if (dateString.includes('-')) {
+        // Date-only format (YYYY-MM-DD) - parse as local date at midnight
+        const [year, month, day] = dateString.split('-').map(Number);
+        dateObj = new Date(year, month - 1, day);
+      } else {
+        // Fallback to standard Date parsing
+        dateObj = new Date(dateString);
+      }
     }
     
     // Check if date is valid
@@ -480,43 +501,55 @@ const TransactionsTab: React.FC<{
         </View>
       ) : filteredTransactions.length > 0 ? (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          {filteredTransactions.map((transaction, index) => (
-            <TouchableOpacity 
-              key={transaction.id} 
-              style={styles.transactionItem}
-              onPress={() => (navigation as any).navigate('TransactionDetail', { transactionId: transaction.id })}
-            >
-              <View style={styles.transactionLeft}>
-                <View style={[styles.categoryIcon, { backgroundColor: transaction.categorycolor || transaction.color || '#007AFF' }]}>
-                  <Ionicons name={transaction.categoryicon || transaction.icon || 'receipt'} size={20} color="#FFFFFF" />
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionTitle} allowFontScaling={false}>{transaction.description || transaction.title}</Text>
-                  <Text style={styles.transactionCategory} allowFontScaling={false}>{transaction.category}</Text>
-                </View>
-              </View>
-              <View style={styles.transactionRight}>
-                <View style={styles.amountContainer}>
-                  <Ionicons 
-                    name={transaction.type === 'expense' ? 'arrow-up' : 'arrow-down'} 
-                    size={12} 
-                    color={transaction.type === 'expense' ? '#FF3B30' : '#34C759'} 
-                    style={{ 
-                      transform: [{ rotate: '45deg' }], 
-                      marginRight: 4 
-                    }} 
-                  />
-                  <Text style={[
-                    styles.transactionAmount,
-                    { color: transaction.type === 'expense' ? '#FF3B30' : '#34C759' }
-                  ]} allowFontScaling={false}>
-                    ₹{transaction.amount ? parseFloat(transaction.amount).toFixed(2) : '0.00'}
-                  </Text>
-                </View>
-                <Text style={styles.transactionDate} allowFontScaling={false}>{formatTransactionDate(transaction.date)}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {filteredTransactions.map((transaction, index) => {
+            const showAd = index > 0 && index % 5 === 0;
+            
+            return (
+              <React.Fragment key={transaction.id}>
+                <TouchableOpacity 
+                  style={styles.transactionItem}
+                  onPress={() => (navigation as any).navigate('TransactionDetail', { transactionId: transaction.id })}
+                >
+                  <View style={styles.transactionLeft}>
+                    <View style={[styles.categoryIcon, { backgroundColor: transaction.categorycolor || transaction.color || '#007AFF' }]}>
+                      <Ionicons name={transaction.categoryicon || transaction.icon || 'receipt'} size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionTitle} allowFontScaling={false}>{transaction.description || transaction.title}</Text>
+                      <Text style={styles.transactionCategory} allowFontScaling={false}>{transaction.category}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <View style={styles.amountContainer}>
+                      <Ionicons 
+                        name={transaction.type === 'expense' ? 'arrow-up' : 'arrow-down'} 
+                        size={12} 
+                        color={transaction.type === 'expense' ? '#FF3B30' : '#34C759'} 
+                        style={{ 
+                          transform: [{ rotate: '45deg' }], 
+                          marginRight: 4 
+                        }} 
+                      />
+                      <Text style={[
+                        styles.transactionAmount,
+                        { color: transaction.type === 'expense' ? '#FF3B30' : '#34C759' }
+                      ]} allowFontScaling={false}>
+                        ₹{transaction.amount ? parseFloat(transaction.amount).toFixed(2) : '0.00'}
+                      </Text>
+                    </View>
+                    <Text style={styles.transactionDate} allowFontScaling={false}>{formatTransactionDate(transaction.date)}</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                {/* Show banner ad after every 6 transactions */}
+                {showAd && (
+                  <View style={styles.adContainer}>
+                    <BannerAdComponent />
+                  </View>
+                )}
+              </React.Fragment>
+            );
+          })}
         </ScrollView>
       ) : (
         <View style={styles.emptyState}>
@@ -680,29 +713,42 @@ const CategoriesTab: React.FC<{
       ) : categorySpending.length > 0 ? (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
           {/* Category List */}
-          {categorySpending.map((category, index) => (
-            <View key={category.category} style={styles.categoryItem}>
-              <View style={styles.categoryLeft}>
-                <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-                  <Ionicons name={category.icon as any} size={20} color="#FFFFFF" />
+          {categorySpending.map((category, index) => {
+            const showAd = index > 0 && index % 3 === 0;
+            
+            return (
+              <React.Fragment key={category.category}>
+                <View style={styles.categoryItem}>
+                  <View style={styles.categoryLeft}>
+                    <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+                      <Ionicons name={category.icon as any} size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.categoryDetails}>
+                      <Text style={styles.categoryName} allowFontScaling={false}>
+                        {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
+                      </Text>
+                      <Text style={styles.categoryTransactionCount} allowFontScaling={false}>
+                        {category.count} transaction{category.count !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.categoryRight}>
+                    <Text style={styles.categoryAmount} allowFontScaling={false}>₹{category.amount ? category.amount.toFixed(2) : '0.00'}</Text>
+                    <Text style={styles.categoryPercentage} allowFontScaling={false}>
+                      {getPercentage(category.amount).toFixed(1)}%
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.categoryDetails}>
-                  <Text style={styles.categoryName} allowFontScaling={false}>
-                    {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
-                  </Text>
-                  <Text style={styles.categoryTransactionCount} allowFontScaling={false}>
-                    {category.count} transaction{category.count !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.categoryRight}>
-                <Text style={styles.categoryAmount} allowFontScaling={false}>₹{category.amount ? category.amount.toFixed(2) : '0.00'}</Text>
-                <Text style={styles.categoryPercentage} allowFontScaling={false}>
-                  {getPercentage(category.amount).toFixed(1)}%
-                </Text>
-              </View>
-            </View>
-          ))}
+                
+                {/* Show banner ad after every 3 categories */}
+                {showAd && (
+                  <View style={styles.adContainer}>
+                    <BannerAdComponent />
+                  </View>
+                )}
+              </React.Fragment>
+            );
+          })}
         </ScrollView>
       ) : (
         <View style={styles.emptyState}>

@@ -18,6 +18,7 @@ import BankCard from '../components/BankCard';
 import SpendingAnalytics from '../components/SpendingAnalytics';
 import RecentActivity from '../components/RecentActivity';
 import TransactionService, { Transaction } from '../services/transactionService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface AccountParam {
   id: string;
@@ -156,61 +157,38 @@ const BankAccountDetailScreen: React.FC = () => {
         setTransactions(accountTransactions);
         calculateSpendingData(accountTransactions);
       } else {
-        // Simulate some transactions for demo purposes
-        const simulatedTransactions: Transaction[] = [
-          {
-            id: '1',
-            title: 'Coffee Shop',
-            amount: 250,
-            category: 'food',
-            date: new Date(),
-            color: '#FF6B6B',
-            icon: 'cafe',
-            note: `Account ${currentAccount.name}`,
-            type: 'expense' as const,
-            accountId: currentAccount.id
-          },
-          {
-            id: '2',
-            title: 'Grocery Store',
-            amount: 1200,
-            category: 'shopping',
-            date: new Date(Date.now() - 24 * 60 * 60 * 1000),
-            color: '#4ECDC4',
-            icon: 'basket',
-            note: `Account ${currentAccount.name}`,
-            type: 'expense' as const,
-            accountId: currentAccount.id
-          },
-          {
-            id: '3',
-            title: 'Gas Station',
-            amount: 800,
-            category: 'transport',
-            date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-            color: '#45B7D1',
-            icon: 'car',
-            note: `Account ${currentAccount.name}`,
-            type: 'expense' as const,
-            accountId: currentAccount.id
-          }
-        ];
-        setTransactions(simulatedTransactions);
-        calculateSpendingData(simulatedTransactions);
+        setTransactions([]);
+        // Call calculateSpendingData with empty array to show empty state
+        calculateSpendingData([]);
       }
     } catch (error) {
       console.error('Error loading transactions:', error);
       setTransactions([]);
-      setSpendingData(null);
+      // Call calculateSpendingData with empty array to show empty state
+      calculateSpendingData([]);
     }
   };
 
   const calculateSpendingData = (transactions: Transaction[]) => {
-    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+    // Filter only expense transactions
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    
+    // Always set spending data, even if there are no expense transactions
+    if (expenseTransactions.length === 0) {
+      setSpendingData({
+        totalSpent: 0,
+        categoryBreakdown: {},
+        topCategories: [],
+        isEmpty: true
+      });
+      return;
+    }
+    
+    const totalSpent = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
     const categoryBreakdown: { [key: string]: number } = {};
     
     // Group by category
-    transactions.forEach(t => {
+    expenseTransactions.forEach(t => {
       if (categoryBreakdown[t.category]) {
         categoryBreakdown[t.category] += t.amount;
       } else {
@@ -233,7 +211,8 @@ const BankAccountDetailScreen: React.FC = () => {
     setSpendingData({
       totalSpent,
       categoryBreakdown,
-      topCategories
+      topCategories,
+      isEmpty: false
     });
   };
 
@@ -296,6 +275,7 @@ const BankAccountDetailScreen: React.FC = () => {
 
 
   
+  const styles = createStyles(theme, insets);
 
   if (!currentAccount) {
     return (
@@ -389,8 +369,6 @@ const BankAccountDetailScreen: React.FC = () => {
     }
   };
 
-  const styles = createStyles(theme, insets);
-
   return (
     <View style={styles.container}>
       {/* Header with Safe Area */}
@@ -420,10 +398,24 @@ const BankAccountDetailScreen: React.FC = () => {
           />
         </View>
 
-        {/* Spending Analytics Component */}
-        <View style={styles.analyticsContainer}>
-          <SpendingAnalytics spendingData={spendingData} />
+        {/* Banner Ad below Account Card */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
         </View>
+
+        {/* Spending Analytics Component */}
+        {spendingData && (
+          <View style={styles.analyticsContainer}>
+            <SpendingAnalytics spendingData={spendingData} />
+          </View>
+        )}
+
+        {/* Banner Ad below Spending Analytics */}
+        {spendingData && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Recent Activity Component */}
         <View style={styles.activityContainer}>
@@ -515,6 +507,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   analyticsContainer: {
     marginHorizontal: -20, // Offset parent padding to make card full width
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
       activityContainer: {
       // Let RecentActivity component handle its own spacing

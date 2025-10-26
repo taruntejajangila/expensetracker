@@ -6,6 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { LoanService } from '../services/LoanService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BannerAdComponent } from '../components/AdMobComponents';
  
 import { useTheme } from '../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,6 +31,15 @@ const AddLoanScreen: React.FC = () => {
     const [emiDate, setEmiDate] = useState<Date | null>(null);
 
 	const styles = createStyles(theme);
+
+    // Function to capitalize first letter of each word
+    const toTitleCase = (text: string): string => {
+        return text
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
 
     const isValid = useMemo(() => {
 		const amount = Number(principal);
@@ -271,7 +281,7 @@ const AddLoanScreen: React.FC = () => {
                         placeholder="Enter loan title"
                         placeholderTextColor="#9CA3AF"
                         value={name}
-                        onChangeText={setName}
+                        onChangeText={(text) => setName(toTitleCase(text))}
                         returnKeyType="next" allowFontScaling={false} />
                 </View>
 
@@ -294,7 +304,7 @@ const AddLoanScreen: React.FC = () => {
                         placeholder="Enter bank/financial institution name"
                         placeholderTextColor="#9CA3AF"
                         value={lender}
-                        onChangeText={setLender}
+                        onChangeText={(text) => setLender(toTitleCase(text))}
                         returnKeyType="next" allowFontScaling={false} />
                 </View>
 
@@ -328,6 +338,11 @@ const AddLoanScreen: React.FC = () => {
                         </View>
                         <Text style={styles.helperText} allowFontScaling={false}>Annual interest percentage</Text>
                     </View>
+                </View>
+
+                {/* Banner Ad above Loan Tenure */}
+                <View style={styles.adContainer}>
+                    <BannerAdComponent />
                 </View>
 
                 {/* Loan Tenure (full width) */}
@@ -390,7 +405,7 @@ const AddLoanScreen: React.FC = () => {
 				<TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
 					<Text style={styles.cancelButtonText} allowFontScaling={false}>Cancel</Text>
 				</TouchableOpacity>
-                <TouchableOpacity style={[styles.saveButton, !isValid && styles.saveButtonDisabled]} onPress={async () => {
+                <TouchableOpacity style={[styles.saveButtonFooter, !isValid && styles.saveButtonDisabled]} onPress={async () => {
                     if (!isValid) return;
                     const annualRate = Number(interestRate);
                     const tenureNum = Number(termYears);
@@ -533,6 +548,18 @@ const createStyles = (theme: any) => StyleSheet.create({
         shadowOpacity: 0,
         elevation: 0,
     },
+    saveButtonGradient: {
+        flex: 1,
+        height: 56,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.4,
+    },
     scrollView: {
         flex: 1,
     },
@@ -557,6 +584,12 @@ const createStyles = (theme: any) => StyleSheet.create({
 	firstFormGroup: {
 		marginTop: 8,
 	},
+    adContainer: {
+        alignItems: 'center',
+        paddingVertical: 4,
+        marginBottom: 16,
+        backgroundColor: 'transparent',
+    },
     formGroup: {
         marginBottom: 24,
     },
@@ -582,11 +615,6 @@ const createStyles = (theme: any) => StyleSheet.create({
 		fontSize: 14,
 		color: '#111827',
 		backgroundColor: '#FFFFFF',
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.05,
-		shadowRadius: 4,
-		elevation: 2,
     },
 	inputWithAdornment: {
 		flexDirection: 'row',
@@ -597,11 +625,6 @@ const createStyles = (theme: any) => StyleSheet.create({
 		backgroundColor: '#FFFFFF',
 		paddingHorizontal: 20,
 		paddingVertical: 16,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.05,
-		shadowRadius: 4,
-		elevation: 2,
 	},
 	adornment: {
 		fontSize: 14,
@@ -794,40 +817,11 @@ const createStyles = (theme: any) => StyleSheet.create({
 		color: '#007AFF',
 		fontWeight: '700',
 	},
-	saveButton: {
-		flex: 1,
-		borderRadius: 16,
-		overflow: 'hidden',
-		shadowColor: '#667eea',
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.3,
-		shadowRadius: 8,
-		elevation: 6,
-	},
-	saveButtonDisabled: {
-		opacity: 0.6,
-		shadowOpacity: 0,
-		elevation: 0,
-	},
-	saveButtonText: {
-		color: '#FFFFFF',
-		fontSize: 16,
-		fontWeight: '700',
-		letterSpacing: 0.4,
-	},
-	saveButtonGradient: {
-		flex: 1,
-		height: 56,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
 	actionsRow: {
 		flexDirection: 'row',
 		gap: 16,
 		marginTop: 32,
 		paddingTop: 24,
-		borderTopWidth: 1,
-		borderTopColor: '#E5E7EB',
 	},
 	cancelButton: {
 		flex: 1,
@@ -849,6 +843,12 @@ const createStyles = (theme: any) => StyleSheet.create({
 		fontSize: 16,
 		fontWeight: '600',
 		letterSpacing: 0.3,
+	},
+	saveButtonFooter: {
+		flex: 1,
+		borderRadius: 16,
+		height: 56,
+		overflow: 'hidden',
 	},
 });
 

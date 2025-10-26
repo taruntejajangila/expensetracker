@@ -31,12 +31,17 @@ export const InterstitialAdModal: React.FC<InterstitialAdModalProps> = ({
     // Ad clicked - simulating app store redirect
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
     <Modal
       visible={visible}
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
     >
       <View style={styles.overlay}>
         <View style={styles.adContainer}>

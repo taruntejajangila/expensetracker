@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, CommonActions } from '@react-navigation/native';
 import TransactionService, { Transaction } from '../services/transactionService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 type TransactionDetailRouteProp = RouteProp<{
   TransactionDetail: { transactionId: string };
@@ -104,9 +105,9 @@ const formatDateWithTime = (dateString: string | Date): string => {
       const [datePart, timePart] = dateString.split('T');
       const [year, month, day] = datePart.split('-').map(Number);
       
-      // Handle timezone marker (Z) by removing it
-      const cleanTimePart = (timePart || '00:00:00').split('Z')[0];
-      const [hours, minutes, seconds] = cleanTimePart.split(':').map(Number);
+      // Handle time part with or without microseconds and timezone
+      const cleanTimePart = timePart.split('.')[0].split('+')[0].split('Z')[0]; // Remove milliseconds and timezone
+      const [hours, minutes, seconds] = (cleanTimePart || '00:00:00').split(':').map(Number);
       date = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
     } else if (dateString.includes('-')) {
       // Date-only format (YYYY-MM-DD) - parse as local date at midnight
@@ -657,7 +658,7 @@ const TransactionDetailScreen: React.FC = () => {
       backgroundColor: '#A55B4B',
       borderRadius: 24,
       padding: 16,
-      marginBottom: 24,
+      marginBottom: 8,
       alignSelf: 'center',
       borderWidth: 1,
       borderColor: '#FED7AA',
@@ -665,13 +666,21 @@ const TransactionDetailScreen: React.FC = () => {
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+    adContainer: {
+      width: 420,
+      alignSelf: 'center',
+      alignItems: 'center',
+      paddingVertical: 4,
+      marginBottom: 8,
+      backgroundColor: 'transparent',
+    },
     notesCard: {
       width: 420,
       minHeight: 120,
       backgroundColor: '#E8988A',
       borderRadius: 24,
       padding: 16,
-      marginBottom: 24,
+      marginBottom: 0,
       alignSelf: 'center',
       borderWidth: 1,
       borderColor: '#E5E5E5',
@@ -1029,7 +1038,7 @@ const TransactionDetailScreen: React.FC = () => {
     actionButtonsContainer: {
       flexDirection: 'row',
       gap: 12,
-      marginTop: 20,
+      marginTop: -16,
       paddingBottom: 40,
     },
     actionButton: {
@@ -1209,6 +1218,11 @@ const TransactionDetailScreen: React.FC = () => {
               </View>
             );
           })()}
+          
+          {/* Banner Ad above Account Card */}
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
           
           {/* Card below image */}
           <View style={styles.imageCard}>

@@ -12,13 +12,14 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TransactionService, { Transaction } from '../services/transactionService';
 import AccountService from '../services/AccountService';
 // Credit card functionality hidden for v1 release
 // import CreditCardService from '../services/CreditCardService';
 
 import { InterstitialAdModal } from '../components/InterstitialAdModal';
-import { BannerAd } from '../components/AdMobComponents';
+import { BannerAdComponent } from '../components/AdMobComponents';
 import WheelDatePicker from '../components/WheelDatePicker';
 
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -192,10 +193,33 @@ const AddTransactionScreen = () => {
     })();
   }, []);
 
+  // Load persisted ad counter value on mount
+  useEffect(() => {
+    const loadAdCounter = async () => {
+      try {
+        const savedCount = await AsyncStorage.getItem('transactionsUntilAd');
+        if (savedCount !== null) {
+          const count = parseInt(savedCount, 10);
+          setTransactionsUntilAd(count);
+          console.log(`📊 Loaded ad counter: ${count}`);
+        }
+      } catch (error) {
+        console.error('❌ Error loading ad counter:', error);
+      }
+    };
+    
+    loadAdCounter();
+  }, []);
+
   // Load categories when component mounts
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Debug: Log when showInterstitialAd changes
+  useEffect(() => {
+    console.log('🔍 showInterstitialAd state changed to:', showInterstitialAd);
+  }, [showInterstitialAd]);
 
   // Categories are loaded once when component mounts - no need to refresh on every focus
 
@@ -204,10 +228,25 @@ const AddTransactionScreen = () => {
   const loadCategories = async () => {
     try {
       setIsLoadingCategories(true);
-      const fetchedCategories = await categoryService.getCategories();
-      setCategories(fetchedCategories);
+      
+      // Set a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Category loading timeout')), 5000)
+      );
+      
+      const fetchedCategories = await Promise.race([
+        categoryService.getCategories(),
+        timeoutPromise
+      ]);
+      
+      setCategories(fetchedCategories as Category[]);
+      console.log('✅ Categories loaded successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to load categories. Please try again.');
+      console.error('❌ Error loading categories:', error);
+      // Don't show alert on timeout, just continue with empty categories
+      if (!error?.message?.includes('timeout')) {
+        Alert.alert('Error', 'Failed to load categories. Please try again.');
+      }
     } finally {
       setIsLoadingCategories(false);
     }
@@ -216,21 +255,47 @@ const AddTransactionScreen = () => {
   // Set up interstitial ad callback
   useEffect(() => {
     const { interstitialAd } = require('../services/AdMobService');
-    interstitialAd.setShowAdCallback(() => {
-      setShowInterstitialAd(true);
-    });
+    if (interstitialAd && interstitialAd.setShowAdCallback) {
+      interstitialAd.setShowAdCallback(() => {
+        setShowInterstitialAd(true);
+      });
+    }
   }, []);
 
   // Function to update ad counter
   const updateAdCounter = async () => {
     try {
-      // TODO: Implement TransactionAdService
-      // const count = await TransactionAdService.getTransactionsUntilAd();
-      // setTransactionsUntilAd(count);
+      // Always read fresh value from AsyncStorage to avoid stale state
+      const savedCount = await AsyncStorage.getItem('transactionsUntilAd');
+      const currentCount = savedCount !== null ? parseInt(savedCount, 10) : transactionsUntilAd;
+      
+      console.log(`📊 Current counter from storage: ${currentCount}`);
+      
+      // Decrease the counter
+      const newCount = currentCount - 1;
+      setTransactionsUntilAd(newCount);
+      
+      // Save to AsyncStorage to persist across app restarts
+      await AsyncStorage.setItem('transactionsUntilAd', newCount.toString());
+      
+      console.log(`📊 Transactions until ad: ${newCount}`);
+      
+      // Show interstitial ad when counter reaches 0
+      if (newCount <= 0) {
+        console.log('📱 Showing interstitial ad after transaction limit');
+        console.log('📱 showInterstitialAd will be set to true');
+        setShowInterstitialAd(true);
+        console.log('📱 showInterstitialAd state updated');
+        
+        // Reset counter to 5 for next round
+        setTransactionsUntilAd(5);
+        await AsyncStorage.setItem('transactionsUntilAd', '5');
+      }
     } catch (error) {
-      // Silent fail for ad counter update
+      console.error('❌ Error updating ad counter:', error);
     }
   };
+
 
 
 
@@ -465,8 +530,16 @@ const AddTransactionScreen = () => {
 
         // Format date as proper ISO string with timezone information
         const formatDateTimeLocal = (date: Date): string => {
-          // Use toISOString() to get proper UTC time that backend can handle correctly
-          return date.toISOString();
+          // Preserve the current time (hours, minutes, seconds) when creating the timestamp
+          // Don't use toISOString() as it converts to UTC and may change the date/time
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          
+          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
         };
 
         const transactionData = {
@@ -512,8 +585,20 @@ const AddTransactionScreen = () => {
           await TransactionService.saveTransaction(transactionData);
           // Note: Account balance adjustments are now handled by the backend
           
+          // Check current count from AsyncStorage BEFORE decrementing
+          const savedCount = await AsyncStorage.getItem('transactionsUntilAd');
+          const currentCount = savedCount !== null ? parseInt(savedCount, 10) : 5;
+          const shouldShowAd = currentCount === 1; // Check BEFORE decrementing
+          
           // Update ad counter after saving new transaction
-          updateAdCounter();
+          await updateAdCounter();
+          
+          // Check if we need to show interstitial ad - if yes, wait for user to close it
+          if (shouldShowAd || showInterstitialAd) {
+            // Don't navigate yet, let the modal show first
+            console.log('📱 Ad will show, waiting for user to close modal...');
+            return; // Exit early to let modal show
+          }
         }
 
         if (saveAndAddAnother && !isEditMode) {
@@ -1187,18 +1272,38 @@ const AddTransactionScreen = () => {
         {/* Interstitial Ad Modal */}
         <InterstitialAdModal
           visible={showInterstitialAd}
-          onClose={() => setShowInterstitialAd(false)}
-                  onAdClicked={() => setShowInterstitialAd(false)}
+          onClose={() => {
+            console.log('📱 Interstitial ad modal closed');
+            setShowInterstitialAd(false);
+            // Navigate to home screen after modal closes
+            setTimeout(() => {
+              navigation.navigate('MainApp', { 
+                screen: 'MainTabs', 
+                params: { 
+                  screen: 'Home',
+                  params: { refresh: true }
+                }
+              });
+            }, 500);
+          }}
+          onAdClicked={() => {
+            console.log('📱 Interstitial ad clicked');
+            setShowInterstitialAd(false);
+            setTimeout(() => {
+              navigation.navigate('MainApp', { 
+                screen: 'MainTabs', 
+                params: { 
+                  screen: 'Home',
+                  params: { refresh: true }
+                }
+              });
+            }, 500);
+          }}
         />
 
         {/* Bottom Banner Ad */}
         <View style={[styles.bannerAdContainer, { paddingBottom: insets.bottom }]}>
-          <BannerAd 
-            size="smartBannerPortrait"
-            position="bottom"
-                    onAdLoaded={() => {}}
-        onAdFailed={() => {}}
-          />
+          <BannerAdComponent />
         </View>
       </SafeAreaView>
   );
@@ -1649,8 +1754,6 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     zIndex: 1000,
     paddingTop: 8, // Add some top padding for the ad
   },

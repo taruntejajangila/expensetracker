@@ -16,6 +16,7 @@ import { LoanService, StoredLoan } from '../services/LoanService';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 const DebtPlansScreen: React.FC = () => {
   const { scrollY } = useScroll();
@@ -495,6 +496,11 @@ const DebtPlansScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Banner Ad above Recommended Payoff Order */}
+      <View style={styles.adContainer}>
+        <BannerAdComponent />
+      </View>
+
       {/* Recommended Payoff Order Card */}
       <View style={styles.cardContainer}>
         <View style={[styles.card, styles.payoffCard]}>
@@ -650,6 +656,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   // Header Styles
   headerContainer: {
@@ -966,10 +979,6 @@ const styles = StyleSheet.create({
   },
   methodIcon: {
     marginRight: 8,
-  },
-  methodTextContainer: {
-    flex: 1,
-    marginLeft: 4,
   },
   selectedMethodDescription: {
     color: '#FFFFFF',

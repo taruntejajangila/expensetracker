@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScroll } from '../context/ScrollContext';
 import { LoanService, StoredLoan } from '../services/LoanService';
 import { Ionicons } from '@expo/vector-icons';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 const { width } = Dimensions.get('window');
 
@@ -217,6 +218,11 @@ const LoanAmortizationScreen: React.FC = () => {
              <Text style={styles.summaryValue} allowFontScaling={false}>{dateFmt(loan.emiStartDate || loan.nextPaymentDate)}</Text>
            </View>
          </View>
+
+         {/* Banner Ad below Loan Summary Card */}
+         <View style={styles.adContainer}>
+           <BannerAdComponent />
+         </View>
          
          
 
@@ -286,6 +292,11 @@ const LoanAmortizationScreen: React.FC = () => {
              })}
            </ScrollView>
          </View>
+
+         {/* Banner Ad at the end of the screen */}
+         <View style={styles.adContainer}>
+           <BannerAdComponent />
+         </View>
       </ScrollView>
     </View>
   );
@@ -295,6 +306,13 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginTop: 16,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
 
   // Header Styles
@@ -373,7 +391,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     elevation: 6,
   },
   summaryTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 16,
@@ -389,19 +407,19 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '600',
   },
   summaryValue: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '700',
   },
 
   // Table Styles
   tableTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 24,
@@ -444,7 +462,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   headerText: {
     width: 90, // Further reduced column width for tighter spacing
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
@@ -483,43 +501,43 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 0,
   },
   cellNumberText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
     color: '#667eea',
     textAlign: 'center',
   },
   cellDateText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#475569',
     textAlign: 'center',
   },
   cellAmountText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#059669',
     textAlign: 'center',
   },
   cellPrincipalText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#DC2626',
     textAlign: 'center',
   },
   cellInterestText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#EA580C',
     textAlign: 'center',
   },
   cellExtraText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#7C3AED',
     textAlign: 'center',
   },
   cellBalanceText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1E40AF',
     textAlign: 'center',

@@ -16,7 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AccountService from '../services/AccountService';
-import { LinearGradient } from 'expo-linear-gradient';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface AccountFormData {
   nickname: string;
@@ -363,24 +363,9 @@ const AddAccountScreen: React.FC = () => {
             {errors.accountType && <Text style={styles.errorText} allowFontScaling={false}>{errors.accountType}</Text>}
           </View>
 
-          {/* Security Section */}
-          <View style={styles.securitySection}>
-            <LinearGradient
-              colors={['rgba(102, 126, 234, 0.1)', 'rgba(118, 75, 162, 0.1)']}
-              style={styles.securityGradient}
-            >
-              <View style={styles.securityHeader}>
-                <View style={styles.securityIconContainer}>
-                  <Ionicons name="shield-checkmark" size={20} color="#667eea" />
-                </View>
-                <View style={styles.securityTextContainer}>
-                  <Text style={styles.securityTitle} allowFontScaling={false}>Your Security Matters</Text>
-                  <Text style={styles.securityText} allowFontScaling={false}>
-                    We never store your banking credentials. All connections are encrypted with 256-bit security.
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
+          {/* Banner Ad */}
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
           </View>
 
           {/* Action Buttons */}
@@ -399,24 +384,17 @@ const AddAccountScreen: React.FC = () => {
               disabled={isLoading}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.saveButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                {isLoading ? (
-                  <>
-                    <ActivityIndicator size="small" color="#FFFFFF" style={styles.saveButtonSpinner} />
-                    <Text style={styles.saveButtonText} allowFontScaling={false}>Saving...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="save-outline" size={18} color="#FFFFFF" style={styles.saveButtonIcon} />
-                    <Text style={styles.saveButtonText} allowFontScaling={false}>{isEdit ? 'Save Changes' : 'Save Account'}</Text>
-                  </>
-                )}
-              </LinearGradient>
+              {isLoading ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" style={styles.saveButtonSpinner} />
+                  <Text style={styles.saveButtonText} allowFontScaling={false}>Saving...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="save-outline" size={18} color="#FFFFFF" style={styles.saveButtonIcon} />
+                  <Text style={styles.saveButtonText} allowFontScaling={false}>{isEdit ? 'Save Changes' : 'Save Account'}</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -478,7 +456,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
     scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   // Welcome section removed styles
   formContainer: {
@@ -611,42 +589,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.text,
     fontWeight: '500',
   },
-  securitySection: {
-    marginTop: 8,
-    marginBottom: 32,
-  },
-  securityGradient: {
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(102, 126, 234, 0.2)',
-  },
-  securityHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  securityIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+  adContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  securityTextContainer: {
-    flex: 1,
-  },
-  securityTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 8,
-  },
-  securityText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    lineHeight: 20,
+    paddingVertical: 4,
+    marginTop: 8,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -677,23 +625,21 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   saveButton: {
     flex: 2,
+    backgroundColor: '#764ba2',
     borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  saveButtonGradient: {
-    minHeight: 50,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saveButtonDisabled: {
     opacity: 0.7,

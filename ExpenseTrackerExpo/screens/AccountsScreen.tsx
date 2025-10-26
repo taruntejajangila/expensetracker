@@ -22,6 +22,8 @@ import CashWallet from '../components/CashWallet';
 import SpendingAnalytics from '../components/SpendingAnalytics';
 import RecentActivity from '../components/RecentActivity';
 import TransactionService from '../services/transactionService';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
 
 
 
@@ -53,18 +55,14 @@ const AccountsScreen: React.FC = () => {
   const [spendingData, setSpendingData] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const buttonScale = useRef(new Animated.Value(1)).current;
+  
+  // Add account ad state
+  const [showAddAccountAd, setShowAddAccountAd] = useState(false);
 
 
   useEffect(() => {
     loadAccounts();
-
-    
-    
-    
-
   }, []);
-
-
 
   useFocusEffect(
     React.useCallback(() => {
@@ -235,11 +233,14 @@ const AccountsScreen: React.FC = () => {
   };
 
   const calculateSpendingData = (transactions: Transaction[]) => {
-    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+    // Filter only expense transactions
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    
+    const totalSpent = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
     const categoryBreakdown: { [key: string]: number } = {};
     
     // Group by category
-    transactions.forEach(t => {
+    expenseTransactions.forEach(t => {
       if (categoryBreakdown[t.category]) {
         categoryBreakdown[t.category] += t.amount;
       } else {
@@ -353,7 +354,7 @@ const AccountsScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.addButton}
               onPress={() => {
-                navigation.navigate('AddAccount' as never);
+                setShowAddAccountAd(true);
               }}
             >
               <Ionicons name="add" size={24} color={theme.colors.text} />
@@ -479,7 +480,9 @@ const AccountsScreen: React.FC = () => {
                   <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
                     <TouchableOpacity 
                       style={styles.addAccountButton}
-                      onPress={() => (navigation as any).navigate('AddAccount')}
+                      onPress={() => {
+                        setShowAddAccountAd(true);
+                      }}
                       onPressIn={handleButtonPressIn}
                       onPressOut={handleButtonPressOut}
                       activeOpacity={1}
@@ -494,6 +497,11 @@ const AccountsScreen: React.FC = () => {
           })()}
         </View>
 
+        {/* Banner Ad above Cash Wallet */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
+
         {/* Cash Wallet Component */}
         <View style={styles.cashWalletContainer}>
           <CashWallet 
@@ -506,9 +514,19 @@ const AccountsScreen: React.FC = () => {
           />
         </View>
 
+        {/* Banner Ad above Smart Insights */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
+
         {/* Spending Analytics Component */}
         <View style={styles.analyticsContainer}>
           <SpendingAnalytics spendingData={spendingData} />
+        </View>
+
+        {/* Banner Ad below Spending Analytics */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
         </View>
 
         {/* Recent Activity Component */}
@@ -571,6 +589,26 @@ const AccountsScreen: React.FC = () => {
         </LinearGradient>
 
       </ScrollView>
+
+      {/* Add Account Interstitial Ad Modal */}
+      <InterstitialAdModal
+        visible={showAddAccountAd}
+        onClose={() => {
+          console.log('📱 Add Account interstitial ad modal closed');
+          setShowAddAccountAd(false);
+          // Navigate after modal closes
+          setTimeout(() => {
+            navigation.navigate('AddAccount' as never);
+          }, 500);
+        }}
+        onAdClicked={() => {
+          console.log('📱 Add Account interstitial ad clicked');
+          setShowAddAccountAd(false);
+          setTimeout(() => {
+            navigation.navigate('AddAccount' as never);
+          }, 500);
+        }}
+      />
     </View>
   );
 };
@@ -1029,6 +1067,12 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   },
   activityContainer: {
     // Let RecentActivity component handle its own spacing
+  },
+  adContainer: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   cashWalletContainer: {
     marginHorizontal: -16, // Offset parent padding to make card full width (same as analyticsContainer)

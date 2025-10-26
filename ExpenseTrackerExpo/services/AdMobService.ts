@@ -1,44 +1,57 @@
-// Mock AdMobService for testing
-export const interstitialAd = {
-  load: () => {
-    console.log('Loading interstitial ad');
-    return Promise.resolve();
-  },
-  show: () => {
-    console.log('Showing interstitial ad');
-    return Promise.resolve();
-  },
-  isLoaded: () => {
-    return true;
-  },
-  setShowAdCallback: (callback: () => void) => {
-    console.log('Setting show ad callback');
-    // Store the callback for later use if needed
-    (interstitialAd as any).showCallback = callback;
-  }
+import { Alert, Platform } from 'react-native';
+
+// Mock AdMob Service - Realistic mock ads for Expo Go
+// In production builds, this will be replaced with real AdMob implementation
+
+export const initialize = async () => {
+  console.log('✅ AdMob service initialized (realistic mock)');
 };
 
-export const bannerAd = {
-  load: () => {
-    console.log('Loading banner ad');
-    return Promise.resolve();
+export const loadInterstitial = async () => {
+  console.log('✅ Interstitial loaded (mock)');
+};
+
+export const showInterstitial = async () => {
+  console.log('📱 Showing mock interstitial ad');
+  
+  // Show a realistic mock ad alert
+  Alert.alert(
+    'Advertisement',
+    'This is a mock ad placeholder. In production builds, you will see real Google AdMob interstitial ads here.\n\nThese ads help support the app and keep it free to use.',
+    [
+      {
+        text: 'Got it',
+        style: 'default',
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
+export const isInterstitialLoaded = async () => {
+  return true;
+};
+
+export const getBannerAdUnitId = () => {
+  return 'ca-app-pub-3940256099942544/6300978111'; // Google test ad ID
+};
+
+// Create mock interstitialAd object with setShowAdCallback
+export const interstitialAd = {
+  setShowAdCallback: (callback: () => void) => {
+    // Mock: Store callback but don't do anything
+    console.log('🔧 Interstitial ad callback set (mock)');
   },
   show: () => {
-    console.log('Showing banner ad');
-    return Promise.resolve();
+    console.log('📱 Showing interstitial ad');
   },
-  hide: () => {
-    console.log('Hiding banner ad');
-    return Promise.resolve();
-  }
 };
 
 export default {
+  initialize,
+  loadInterstitial,
+  showInterstitial,
+  isInterstitialLoaded,
+  getBannerAdUnitId,
   interstitialAd,
-  bannerAd,
-  initialize: () => {
-    console.log('Initializing AdMob service');
-    return Promise.resolve();
-  }
 };
-

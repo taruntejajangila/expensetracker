@@ -17,6 +17,7 @@ import { useNavigation, NavigationProp, CommonActions, useFocusEffect } from '@r
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import TransactionService from '../services/transactionService';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 const { width } = Dimensions.get('window');
 
@@ -393,6 +394,12 @@ const SpentInMonthScreen: React.FC = () => {
       fontSize: theme.fontSize.md,
       fontWeight: 'bold',
       color: theme.colors.text,
+    },
+    adContainer: {
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     card: {
        backgroundColor: '#FFFFFF',
@@ -815,6 +822,13 @@ const SpentInMonthScreen: React.FC = () => {
           </View>
          </View>
          
+         {/* AdMob Banner Ad - Above Recent Transactions */}
+         {!loading && (
+           <View style={styles.adContainer}>
+             <BannerAdComponent />
+           </View>
+         )}
+         
          {/* Recent Transactions Card - Always show when not loading */}
          {!loading && (
            <View style={styles.card}>
@@ -1022,15 +1036,20 @@ const SpentInMonthScreen: React.FC = () => {
                </View>
              )}
 
+          </View>
+         )}
+         
+         {/* Banner Ad at the bottom of the screen */}
+         {!loading && (
+           <View style={styles.adContainer}>
+             <BannerAdComponent />
            </View>
          )}
          
-                   {/* Empty content area - ready for future data */}
-          
-          {/* Extra spacing to ensure last item is visible */}
-          <View style={{ height: 50 }} />
-         
-       </ScrollView>
+         {/* Extra spacing to ensure last item is visible */}
+         <View style={{ height: 50 }} />
+        
+      </ScrollView>
     </View>
   );
 };

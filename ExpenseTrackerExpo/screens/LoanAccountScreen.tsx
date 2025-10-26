@@ -8,6 +8,8 @@ import { LoanService, StoredLoan } from '../services/LoanService';
 import { Ionicons } from '@expo/vector-icons';
 import { interstitialAd } from '../services/AdMobService';
 import LoanCard from '../components/LoanCard';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
 
 const LoanAccountScreen: React.FC = () => {
 	const { theme } = useTheme();
@@ -19,6 +21,7 @@ const LoanAccountScreen: React.FC = () => {
 	
 	const [loan, setLoan] = useState<StoredLoan | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
+	const [showAmortizationAd, setShowAmortizationAd] = useState(false);
 	
 
 
@@ -365,6 +368,11 @@ const LoanAccountScreen: React.FC = () => {
 					/>
 				</View>
 
+				{/* Banner Ad below Loan Card */}
+				<View style={styles.adContainer}>
+					<BannerAdComponent />
+				</View>
+
 				{/* Enhanced Loan Summary Card - Old Format */}
 				<View style={styles.loanSummaryCard}>
 					<View style={styles.loanSummaryHeader}>
@@ -409,7 +417,7 @@ const LoanAccountScreen: React.FC = () => {
 					<TouchableOpacity 
 						style={styles.amortizationButton}
 						onPress={() => {
-							(navigation as any).navigate('LoanAmortization', { loanId: loan.id });
+							setShowAmortizationAd(true);
 						}}
 						activeOpacity={0.7}
 					>
@@ -419,6 +427,11 @@ const LoanAccountScreen: React.FC = () => {
 					</TouchableOpacity>
 					
 
+				</View>
+
+				{/* Banner Ad above Alerts & Reminders */}
+				<View style={styles.adContainer}>
+					<BannerAdComponent />
 				</View>
 
 				{/* Alerts & Reminders Section */}
@@ -437,6 +450,25 @@ const LoanAccountScreen: React.FC = () => {
 
 
 			</ScrollView>
+
+			{/* Interstitial Ad Modal for Amortization Schedule */}
+			<InterstitialAdModal
+				visible={showAmortizationAd}
+				onClose={() => {
+					console.log('📱 Amortization Schedule interstitial ad modal closed');
+					setShowAmortizationAd(false);
+					setTimeout(() => {
+						(navigation as any).navigate('LoanAmortization', { loanId: loan?.id });
+					}, 500);
+				}}
+				onAdClicked={() => {
+					console.log('📱 Amortization Schedule interstitial ad clicked');
+					setShowAmortizationAd(false);
+					setTimeout(() => {
+						(navigation as any).navigate('LoanAmortization', { loanId: loan?.id });
+					}, 500);
+				}}
+			/>
 		</View>
 	);
 };
@@ -533,14 +565,14 @@ const createStyles = (theme: any) => StyleSheet.create({
 		borderBottomColor: 'rgba(255, 255, 255, 0.3)',
 	},
 	loanSummaryTitle: {
-		fontSize: 22,
+		fontSize: 16,
 		fontWeight: '800',
 		color: '#FFFFFF',
 		marginBottom: 8,
 		letterSpacing: 0.5,
 	},
 	loanSummaryLender: {
-		fontSize: 16,
+		fontSize: 14,
 		color: 'rgba(255, 255, 255, 0.9)',
 		fontWeight: '600',
 		letterSpacing: 0.3,
@@ -673,6 +705,12 @@ const createStyles = (theme: any) => StyleSheet.create({
 	},
 	
 	// Alerts & Reminders Card Styles
+	adContainer: {
+		alignItems: 'center',
+		paddingVertical: 4,
+		marginBottom: 16,
+		backgroundColor: 'transparent',
+	},
 	alertsCard: {
 		backgroundColor: '#F59E0B',
 		borderRadius: 20,
@@ -692,7 +730,7 @@ const createStyles = (theme: any) => StyleSheet.create({
 		borderBottomColor: 'rgba(255, 255, 255, 0.3)',
 	},
 	alertsTitle: {
-		fontSize: 20,
+		fontSize: 16,
 		fontWeight: '800',
 		color: '#FFFFFF',
 		letterSpacing: 0.5,
@@ -704,7 +742,7 @@ const createStyles = (theme: any) => StyleSheet.create({
 		marginBottom: 8,
 	},
 	alertText: {
-		fontSize: 16,
+		fontSize: 14,
 		color: 'rgba(255, 255, 255, 0.95)',
 		fontWeight: '600',
 		letterSpacing: 0.3,

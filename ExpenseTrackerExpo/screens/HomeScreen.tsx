@@ -27,7 +27,10 @@ import DailyReminderService from '../services/DailyReminderService';
 import NotificationNavigationService from '../services/NotificationNavigationService';
 import OfflineBanner from '../components/OfflineBanner';
 import OfflineScreen from '../components/OfflineScreen';
-import { BannerAd, showInterstitialAd } from '../components/AdMobComponents';
+import { BannerAdComponent } from '../components/AdMobComponents';
+import AdMobService from '../services/AdMobService';
+import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/api.config';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
@@ -141,6 +144,10 @@ const HomeScreen: React.FC = () => {
   
   // Global request deduplication
   const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  // Money Manager ad state
+  const [moneyManagerClicks, setMoneyManagerClicks] = useState(5); // Start at 5, counts down
+  const [showMoneyManagerAd, setShowMoneyManagerAd] = useState(false);
   
   
   const loadAds = async () => {
@@ -266,6 +273,14 @@ const HomeScreen: React.FC = () => {
     
     // Set global loading flag
     setIsLoadingData(true);
+    
+    // Set a safety timeout to clear loading after 10 seconds
+    const loadingTimeout = setTimeout(() => {
+      console.log('⚠️ Loading timeout - clearing loading state');
+      setLoading(false);
+      setIsLoading(false);
+      setIsLoadingData(false);
+    }, 10000);
     
     try {
       // Only set loading if not already loading
@@ -420,10 +435,16 @@ const HomeScreen: React.FC = () => {
       setIsDataStale(false);
       setLoading(false);
       setIsLoading(false);
+      
+      // Clear the timeout since we loaded successfully
+      clearTimeout(loadingTimeout);
     } catch (error) {
       console.error('❌ HomeScreen: Error loading transaction data:', error);
       setLoading(false);
       setIsLoading(false);
+      
+      // Clear the timeout in error case too
+      clearTimeout(loadingTimeout);
     } finally {
       // Always clear the global loading flag
       setIsLoadingData(false);
@@ -442,6 +463,12 @@ const HomeScreen: React.FC = () => {
     if (isLoadingData) {
       return;
     }
+    
+    // Set a safety timeout to clear loading after 10 seconds
+    const loadingTimeout = setTimeout(() => {
+      console.log('⚠️ Stats loading timeout - clearing loading state');
+      setIsLoading(false);
+    }, 10000);
     
     try {
       // Only set loading if not already loading
@@ -524,6 +551,8 @@ const HomeScreen: React.FC = () => {
       setStats(realStats);
       setIsLoading(false);
       
+      // Clear the timeout since we loaded successfully
+      clearTimeout(loadingTimeout);
     } catch (error) {
       console.error('❌ HomeScreen: Error loading stats:', error);
       // Set default stats on error
@@ -534,6 +563,9 @@ const HomeScreen: React.FC = () => {
         topCategories: []
       });
       setIsLoading(false);
+      
+      // Clear the timeout in error case too
+      clearTimeout(loadingTimeout);
     }
   }, []); // Remove dependencies to prevent re-creation
 
@@ -572,6 +604,23 @@ const HomeScreen: React.FC = () => {
         clearTimeout(loadDataTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Load and persist Money Manager click counter
+  useEffect(() => {
+    const loadClickCounter = async () => {
+      try {
+        const savedCount = await AsyncStorage.getItem('moneyManagerClicks');
+        if (savedCount !== null) {
+          const count = parseInt(savedCount, 10);
+          setMoneyManagerClicks(count);
+          console.log(`📊 Money Manager clicks: ${count}`);
+        }
+      } catch (error) {
+        console.error('❌ Error loading Money Manager click counter:', error);
+      }
+    };
+    loadClickCounter();
   }, []);
 
   // Banner auto-scroll functionality
@@ -1877,7 +1926,33 @@ const HomeScreen: React.FC = () => {
         
         <TouchableOpacity 
           style={styles.featuredCard}
-          onPress={() => navigation.navigate('SpentInMonth' as never)}
+          onPress={async () => {
+            try {
+              // Read current count from AsyncStorage
+              const savedCount = await AsyncStorage.getItem('moneyManagerClicks');
+              const currentCount = savedCount !== null ? parseInt(savedCount, 10) : 5;
+              
+              const newCount = currentCount - 1;
+              await AsyncStorage.setItem('moneyManagerClicks', newCount.toString());
+              setMoneyManagerClicks(newCount);
+              
+              console.log(`📊 Money Manager clicks remaining: ${newCount}`);
+              
+              if (newCount <= 0) {
+                // Show ad before navigating
+                console.log('📱 Showing Money Manager interstitial ad');
+                setShowMoneyManagerAd(true);
+                // Reset counter to 5 for next round
+                await AsyncStorage.setItem('moneyManagerClicks', '5');
+              } else {
+                // Navigate immediately
+                navigation.navigate('SpentInMonth' as never);
+              }
+            } catch (error) {
+              console.error('❌ Error handling Money Manager click:', error);
+              navigation.navigate('SpentInMonth' as never);
+            }
+          }}
         >
           <View style={styles.cardHeader}>
             <View style={styles.leftSection}>
@@ -2044,12 +2119,7 @@ const HomeScreen: React.FC = () => {
 
         {/* AdMob Banner Ad */}
         <View style={styles.adContainer}>
-          <BannerAd 
-            size="smartBannerPortrait"
-            position="inline"
-            onAdLoaded={() => {}}
-            onAdFailed={(error: any) => {}}
-          />
+          <BannerAdComponent />
         </View>
 
         {/* Quick Action Buttons */}
@@ -2199,6 +2269,13 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
+        {/* AdMob Banner Ad - Below Smart Insights */}
+        {!loading && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
+
         {/* Top Spending Categories */}
         {!loading && spendingCategories.length > 0 && (
           <View style={styles.spendingCategoriesCard}>
@@ -2333,6 +2410,25 @@ const HomeScreen: React.FC = () => {
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
 
+      {/* Money Manager Interstitial Ad Modal */}
+      <InterstitialAdModal
+        visible={showMoneyManagerAd}
+        onClose={() => {
+          console.log('📱 Money Manager interstitial ad modal closed');
+          setShowMoneyManagerAd(false);
+          // Navigate after modal closes
+          setTimeout(() => {
+            navigation.navigate('SpentInMonth' as never);
+          }, 500);
+        }}
+        onAdClicked={() => {
+          console.log('📱 Money Manager interstitial ad clicked');
+          setShowMoneyManagerAd(false);
+          setTimeout(() => {
+            navigation.navigate('SpentInMonth' as never);
+          }, 500);
+        }}
+      />
 
     </View>
   );
