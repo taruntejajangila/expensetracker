@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import notificationService from '../services/notificationService';
 import { getPool } from '../config/database';
@@ -173,7 +173,7 @@ router.post('/mark-all-read', authenticateToken, async (req: any, res: any) => {
 });
 
 // POST /api/notifications/send - Send notification (admin only)
-router.post('/send', authenticateToken, async (req: any, res: any) => {
+router.post('/send', authenticateToken, requireAdmin, async (req: any, res: any) => {
   try {
     const { title, body, targetAll, userEmail, userEmails, data, type, customContent } = req.body;
     
@@ -337,7 +337,7 @@ router.get('/custom/:id', async (req: any, res: any) => {
 });
 
 // GET /api/notifications/history - Get notification history (admin only)
-router.get('/history', authenticateToken, async (req: any, res: any) => {
+router.get('/history', authenticateToken, requireAdmin, async (req: any, res: any) => {
   try {
     const days = parseInt(req.query.days as string) || 7;
     const limit = parseInt(req.query.limit as string) || 20;

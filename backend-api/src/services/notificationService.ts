@@ -642,13 +642,13 @@ class NotificationService {
           n.id,
           n.title,
           n.body,
+          n.message,
           n.data,
           n.type,
           n.status,
           n.created_at,
-          n.sent_at,
-          n.delivered_at,
           n.read_at,
+          n.updated_at,
           u.email as user_email,
           u.name
         FROM notifications n
@@ -661,17 +661,18 @@ class NotificationService {
       const notifications = result.rows.map(row => ({
         id: row.id,
         title: row.title,
-        body: row.body,
+        body: row.body || row.message,
         data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
-        type: row.type,
-        status: row.status,
+        type: row.type || 'info',
+        status: row.status || 'unread',
         createdAt: row.created_at,
-        sentAt: row.sent_at,
-        deliveredAt: row.delivered_at,
+        sentAt: row.read_at, // Using read_at as proxy for sent_at since sent_at doesn't exist
+        deliveredAt: row.updated_at, // Using updated_at as proxy for delivered_at
         readAt: row.read_at,
         targetUser: row.user_email ? {
           email: row.user_email,
-          name: row.name
+          firstName: row.name?.split(' ')[0] || '',
+          lastName: row.name?.split(' ').slice(1).join(' ') || ''
         } : null
       }));
 
