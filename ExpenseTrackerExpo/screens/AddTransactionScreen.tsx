@@ -543,13 +543,10 @@ const AddTransactionScreen = () => {
             // Use current time when date is midnight (WheelDatePicker doesn't provide time)
             dateToFormat = new Date(date);
             dateToFormat.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-            console.log('🔍 Using current time because midnight');
           }
           
           // Format as ISO string with timezone: "2025-10-27T15:21:47+05:30"
           const formattedDate = dateToFormat.toISOString();
-          console.log('🔍 AddTransactionScreen: Formatted date with timezone:', formattedDate);
-          console.log('🔍 AddTransactionScreen: Original date:', dateToFormat.toString());
           
           return formattedDate;
         };

@@ -197,9 +197,6 @@ router.post('/',
         // Parse the ISO string which includes timezone information
         // JavaScript's Date constructor handles ISO strings with timezone automatically
         parsedDate = new Date(date);
-        logger.info(`Date received from frontend: ${date}`);
-        logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
-        logger.info(`Parsed timestamp in milliseconds: ${parsedDate.getTime()}`);
       } else {
         parsedDate = new Date(date);
       }
@@ -537,8 +534,6 @@ router.put('/:id',
         if (typeof updates.date === 'string') {
           // Parse the ISO string which includes timezone information
           parsedDate = new Date(updates.date);
-          logger.info(`Updating transaction with date: ${updates.date}`);
-          logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
         } else {
           parsedDate = new Date(updates.date);
         }
