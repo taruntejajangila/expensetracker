@@ -542,6 +542,9 @@ const AddTransactionScreen = () => {
           // This converts local time to UTC properly
           const formattedDate = dateToFormat.toISOString();
           
+          console.log('🕐 Date being sent to backend:', formattedDate);
+          console.log('🕐 Local time when created:', now.toLocaleString());
+          
           return formattedDate;
         };
 
