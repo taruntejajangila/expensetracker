@@ -342,7 +342,8 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
             isActive={currentRoute === 'Profile'}
           />
           
-          <DrawerItem
+          {/* Settings hidden as screen is empty */}
+          {/* <DrawerItem
             icon="settings-outline"
             label="Settings"
             onPress={() => {
@@ -357,7 +358,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
               );
             }}
             isActive={currentRoute === 'Settings'}
-          />
+          /> */}
 
           {/* Divider */}
           <View style={styles.divider} />
