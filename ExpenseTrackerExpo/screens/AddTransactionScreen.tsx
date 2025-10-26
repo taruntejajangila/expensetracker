@@ -530,22 +530,16 @@ const AddTransactionScreen = () => {
 
         // Format date as proper ISO string with timezone information
         const formatDateTimeLocal = (date: Date): string => {
-          // Send the date with timezone information
-          // This ensures the backend knows exactly what local time the user intended
+          // Always use current time when date is selected
+          // WheelDatePicker only selects date without time, so we need to add time
           const now = new Date();
-          let dateToFormat = date;
+          const dateToFormat = new Date(date);
           
-          // If time is midnight (00:00:00), use current time instead
-          // WheelDatePicker only selects date without time, so it defaults to midnight
-          const isMidnight = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
+          // Set current time to the selected date
+          dateToFormat.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
           
-          if (isMidnight) {
-            // Use current time when date is midnight (WheelDatePicker doesn't provide time)
-            dateToFormat = new Date(date);
-            dateToFormat.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-          }
-          
-          // Format as ISO string with timezone: "2025-10-27T15:21:47+05:30"
+          // Format as ISO string with timezone
+          // This converts local time to UTC properly
           const formattedDate = dateToFormat.toISOString();
           
           return formattedDate;
