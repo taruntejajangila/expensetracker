@@ -241,7 +241,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       amount DECIMAL(12,2) NOT NULL,
       description TEXT NOT NULL,
       transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer')),
-      transaction_date DATE NOT NULL,
+      transaction_date TIMESTAMP WITH TIME ZONE NOT NULL,
       location VARCHAR(255),
       tags TEXT[],
       notes TEXT,
