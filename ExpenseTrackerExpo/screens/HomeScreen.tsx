@@ -2121,11 +2121,6 @@ const HomeScreen: React.FC = () => {
         {/* Native Ad */}
         {recentTransactions.length > 0 && <NativeAdComponent />}
 
-        {/* AdMob Banner Ad */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
-
         {/* Quick Action Buttons */}
         <View style={styles.quickActionContainer}>
           <TouchableOpacity 
