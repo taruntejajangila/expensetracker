@@ -426,10 +426,35 @@ const TransactionsTab: React.FC<{
     
     return transactions.filter(transaction => {
       if (!transaction || !transaction.date) return false;
-      const transactionDate = new Date(transaction.date);
+      
+      // Parse date with the same logic as display function
+      let transactionDate: Date;
+      if (transaction.date instanceof Date) {
+        transactionDate = transaction.date;
+      } else {
+        const dateString = typeof transaction.date === 'string' ? transaction.date : String(transaction.date);
+        
+        if (dateString.includes('T')) {
+          const [datePart, timePart] = dateString.split('T');
+          const [year, month, day] = datePart.split('-').map(Number);
+          const cleanTimePart = timePart.split('.')[0].split('+')[0].split('Z')[0];
+          const [hours, minutes, seconds] = (cleanTimePart || '00:00:00').split(':').map(Number);
+          transactionDate = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
+        } else if (dateString.includes('-')) {
+          const [year, month, day] = dateString.split('-').map(Number);
+          transactionDate = new Date(year, month - 1, day);
+        } else {
+          transactionDate = new Date(dateString);
+        }
+      }
+      
       if (isNaN(transactionDate.getTime())) return false;
-      return transactionDate.getMonth() === targetMonth && 
-             transactionDate.getFullYear() === targetYear;
+      const matches = transactionDate.getMonth() === targetMonth && 
+                      transactionDate.getFullYear() === targetYear;
+      
+      console.log(`🔍 Filtering transaction: date=${transaction.date}, parsed=${transactionDate.toISOString()}, target=${targetMonth}/${targetYear}, matches=${matches}`);
+      
+      return matches;
     });
   }, [transactions, selectedMonth]);
 
