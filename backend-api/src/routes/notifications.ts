@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { logger } from '../utils/logger';
@@ -361,7 +361,7 @@ router.get('/history', authenticateToken, requireAdmin, async (req: any, res: an
 });
 
 // Get recipients for a specific notification
-router.get('/recipients', authenticateAdmin, async (req: Request, res: Response) => {
+router.get('/recipients', authenticateToken, requireAdmin, async (req: any, res: any) => {
   try {
     const { title, body, message, data, type } = req.query;
 
@@ -372,11 +372,13 @@ router.get('/recipients', authenticateAdmin, async (req: Request, res: Response)
       });
     }
 
+    const parsedData = data ? JSON.parse(data as string) : null;
+    
     const recipients = await notificationService.getNotificationRecipients(
       title as string,
       body as string,
       message as string,
-      data ? JSON.parse(data as string) : null,
+      parsedData,
       type as string
     );
 
