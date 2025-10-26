@@ -291,10 +291,6 @@ const HomeScreen: React.FC = () => {
         return txnDate.getFullYear() === currentYear && txnDate.getMonth() === currentMonth;
       });
       
-        totalTransactions: transactions?.length || 0,
-        currentMonthTransactions: currentMonthTransactions.length,
-      });
-      
       // Separate current month transactions by type
       const incomeTransactions = currentMonthTransactions.filter(t => t.type === 'income');
       const expenseTransactions = currentMonthTransactions.filter(t => t.type === 'expense');
@@ -325,22 +321,9 @@ const HomeScreen: React.FC = () => {
       // const totalCreditCardExpenses = creditCardExpenses
       //   .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
       
-      // Debug logging for transactions (v1 - no credit cards)
-        totalExpenseTransactions: expenseTransactions.length,
-        totalCashExpenses,
-        // Credit card expenses hidden for v1 release
-      });
-      
       // For v1 release, transfers are not handled (credit cards hidden)
       // All expenses are cash expenses
       const currentBalance = totalIncome - totalCashExpenses;
-      
-      // Debug logging for money manager calculations (v1 - no credit cards)
-        totalIncome,
-        totalCashExpenses,
-        currentBalance,
-        // Credit card functionality hidden for v1 release
-      });
       
       // Calculate ALL-TIME totals for enhanced Money Manager
       const allTimeIncomeTransactions = (transactions || []).filter(t => t.type === 'income');
@@ -359,13 +342,6 @@ const HomeScreen: React.FC = () => {
       const enhancedIncomeAmount = totalIncome + previousMonthSavingsAmount;
       const enhancedBalanceAmount = enhancedIncomeAmount - totalCashExpenses;
       
-      // Debug logging for enhanced Money Manager
-        currentMonth: { totalIncome, totalCashExpenses, currentBalance },
-        allTime: { allTimeIncomeTotal, allTimeExpenseTotal },
-        previousMonthSavings: previousMonthSavingsAmount,
-        enhancedIncome: enhancedIncomeAmount,
-        enhancedBalance: enhancedBalanceAmount,
-      });
       
       setCurrentBalance(enhancedBalanceAmount);
       setTotalIncome(enhancedIncomeAmount);
@@ -406,11 +382,6 @@ const HomeScreen: React.FC = () => {
       setSpendingCategories(categoriesArray);
       setTotalMonthlySpending(totalSpending);
       
-      // Debug logging for spending categories
-        totalSpending,
-        categories: categoriesArray,
-      });
-      
       // Load active loans data
       try {
         const loans = await LoanService.getLoans();
@@ -433,13 +404,6 @@ const HomeScreen: React.FC = () => {
         setTotalOutstandingBalance(totalBalance);
         setTotalMonthlyPayment(totalPayment);
         setNextPaymentDate(nextPaymentDateStr);
-        
-        // Debug logging for loans
-          totalLoans: activeLoansList.length,
-          totalBalance,
-          totalPayment,
-          nextPaymentDate: nextPaymentDateStr,
-        });
       } catch (error) {
         console.error('❌ HomeScreen: Error loading loans:', error);
         setActiveLoans([]);
