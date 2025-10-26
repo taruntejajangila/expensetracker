@@ -580,6 +580,10 @@ class NotificationService {
    */
   async getUserNotifications(userId: string): Promise<any[]> {
     try {
+      // Calculate the date 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
       const result = await this.pool.query(`
         SELECT 
           n.id,
@@ -596,10 +600,11 @@ class NotificationService {
             ELSE false 
           END as read
         FROM notifications n
-        WHERE n.user_id = $1 OR n.user_id IS NULL
+        WHERE (n.user_id = $1 OR n.user_id IS NULL)
+          AND n.created_at >= $2
         ORDER BY n.created_at DESC
         LIMIT 50
-      `, [userId]);
+      `, [userId, thirtyDaysAgo]);
 
       const notifications = result.rows.map(row => ({
         id: row.id,
