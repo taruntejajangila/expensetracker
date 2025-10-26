@@ -189,19 +189,17 @@ router.post('/',
         RETURNING id, amount, transaction_type, description, transaction_date, to_account_id, from_account_id, tags, created_at
       `;
       
-      // Parse the date string - frontend sends local time
-      // The frontend sends "YYYY-MM-DDTHH:mm:ss" which represents the user's local time
-      // We need to store it exactly as-is, treating it as local time, not UTC
+      // Parse the date string - frontend now sends ISO string with timezone
+      // Example: "2025-10-27T15:21:47.123Z" (in UTC) or "2025-10-27T15:21:47+05:30" (with offset)
+      // The frontend sends the date in the user's local timezone with proper ISO formatting
       let parsedDate: Date;
-      if (typeof date === 'string' && date.includes('T')) {
-        // Parse the date components as local time
-        const [datePart, timePart] = date.split('T');
-        const [year, month, day] = datePart.split('-').map(Number);
-        const [hours, minutes, seconds] = timePart.split(':').map(Number);
-        // Create date as local time on the server (which is UTC)
-        parsedDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+      if (typeof date === 'string') {
+        // Parse the ISO string which includes timezone information
+        // JavaScript's Date constructor handles ISO strings with timezone automatically
+        parsedDate = new Date(date);
         logger.info(`Date received from frontend: ${date}`);
         logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
+        logger.info(`Parsed timestamp in milliseconds: ${parsedDate.getTime()}`);
       } else {
         parsedDate = new Date(date);
       }
@@ -534,17 +532,13 @@ router.put('/:id',
       }
       if (updates.date !== undefined) {
         updateFields.push(`transaction_date = $${++paramCount}`);
-        // Parse the date string - frontend sends local time
+        // Parse the date string - frontend now sends ISO string with timezone
         let parsedDate: Date;
-        if (typeof updates.date === 'string' && updates.date.includes('T')) {
-          // Parse as local time on server (which is UTC)
-          const [datePart, timePart] = updates.date.split('T');
-          const [year, month, day] = datePart.split('-').map(Number);
-          const timeComponents = timePart.split(':').map(Number);
-          const hours = timeComponents[0] || 0;
-          const minutes = timeComponents[1] || 0;
-          const seconds = timeComponents[2] || 0;
-          parsedDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+        if (typeof updates.date === 'string') {
+          // Parse the ISO string which includes timezone information
+          parsedDate = new Date(updates.date);
+          logger.info(`Updating transaction with date: ${updates.date}`);
+          logger.info(`Parsed as UTC date object: ${parsedDate.toISOString()}`);
         } else {
           parsedDate = new Date(updates.date);
         }

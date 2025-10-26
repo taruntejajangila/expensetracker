@@ -530,34 +530,26 @@ const AddTransactionScreen = () => {
 
         // Format date as proper ISO string with timezone information
         const formatDateTimeLocal = (date: Date): string => {
-          // Preserve the current time (hours, minutes, seconds) when creating the timestamp
-          // Don't use toISOString() as it converts to UTC and may change the date/time
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
+          // Send the date with timezone information
+          // This ensures the backend knows exactly what local time the user intended
+          const now = new Date();
+          let dateToFormat = date;
           
           // If time is midnight (00:00:00), use current time instead
           // WheelDatePicker only selects date without time, so it defaults to midnight
-          const now = new Date();
           const isMidnight = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
           
-          let hours, minutes, seconds;
           if (isMidnight) {
             // Use current time when date is midnight (WheelDatePicker doesn't provide time)
-            hours = String(now.getHours()).padStart(2, '0');
-            minutes = String(now.getMinutes()).padStart(2, '0');
-            seconds = String(now.getSeconds()).padStart(2, '0');
-            console.log('🔍 Using current time because midnight:', hours, minutes, seconds);
-          } else {
-            // Use the actual time from the date
-            hours = String(date.getHours()).padStart(2, '0');
-            minutes = String(date.getMinutes()).padStart(2, '0');
-            seconds = String(date.getSeconds()).padStart(2, '0');
+            dateToFormat = new Date(date);
+            dateToFormat.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            console.log('🔍 Using current time because midnight');
           }
           
-          const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-          console.log('🔍 AddTransactionScreen: Formatted date:', formattedDate);
-          console.log('🔍 AddTransactionScreen: Original date:', date.toString());
+          // Format as ISO string with timezone: "2025-10-27T15:21:47+05:30"
+          const formattedDate = dateToFormat.toISOString();
+          console.log('🔍 AddTransactionScreen: Formatted date with timezone:', formattedDate);
+          console.log('🔍 AddTransactionScreen: Original date:', dateToFormat.toString());
           
           return formattedDate;
         };
