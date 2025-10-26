@@ -145,13 +145,10 @@ const HomeScreen: React.FC = () => {
   
   const loadAds = async () => {
     try {
-      console.log('🔍 HomeScreen: Loading banners...');
       // Load banners from the public API endpoint
       const response = await fetch(`${API_BASE_URL}/banners/public`);
-      console.log('🔍 HomeScreen: Banner response status:', response.status);
       if (response.ok) {
         const bannerResponse = await response.json();
-        console.log('🔍 HomeScreen: Banner response data:', bannerResponse);
         if (bannerResponse.success && bannerResponse.data) {
           // Transform banner data to include full image URLs
           const transformedBanners = bannerResponse.data.map((banner: any) => {
@@ -172,16 +169,12 @@ const HomeScreen: React.FC = () => {
               imageUrl
             };
           });
-          console.log('🔍 HomeScreen: Transformed banners:', transformedBanners);
           setBanners(transformedBanners);
           setCurrentBannerIndex(0);
-          console.log('✅ HomeScreen: Banners loaded successfully');
         } else {
-          console.log('❌ HomeScreen: Invalid banner response format');
           throw new Error('Invalid banner response format');
         }
         } else {
-          console.log('❌ HomeScreen: Banner response not ok:', response.status);
           setBanners([]);
         }
     } catch (e) {
@@ -247,7 +240,6 @@ const HomeScreen: React.FC = () => {
   // Handle immediate refresh when coming from AddTransaction
   useEffect(() => {
     if (refresh) {
-      console.log('🔄 HomeScreen: Refresh flag detected, forcing immediate data reload...');
       setIsDataStale(true);
       setAppInitialized(true);
       loadStats(true); // Force refresh stats
@@ -299,7 +291,6 @@ const HomeScreen: React.FC = () => {
         return txnDate.getFullYear() === currentYear && txnDate.getMonth() === currentMonth;
       });
       
-      console.log(`🔍 HomeScreen: Filtering for current month (${currentYear}-${currentMonth + 1}):`, {
         totalTransactions: transactions?.length || 0,
         currentMonthTransactions: currentMonthTransactions.length,
       });
@@ -335,7 +326,6 @@ const HomeScreen: React.FC = () => {
       //   .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
       
       // Debug logging for transactions (v1 - no credit cards)
-      console.log('🔍 HomeScreen: Transaction categorization:', {
         totalExpenseTransactions: expenseTransactions.length,
         totalCashExpenses,
         // Credit card expenses hidden for v1 release
@@ -346,7 +336,6 @@ const HomeScreen: React.FC = () => {
       const currentBalance = totalIncome - totalCashExpenses;
       
       // Debug logging for money manager calculations (v1 - no credit cards)
-      console.log('🔍 HomeScreen: Money Manager Calculations:', {
         totalIncome,
         totalCashExpenses,
         currentBalance,
@@ -371,7 +360,6 @@ const HomeScreen: React.FC = () => {
       const enhancedBalanceAmount = enhancedIncomeAmount - totalCashExpenses;
       
       // Debug logging for enhanced Money Manager
-      console.log('🔍 HomeScreen: Enhanced Money Manager Calculations:', {
         currentMonth: { totalIncome, totalCashExpenses, currentBalance },
         allTime: { allTimeIncomeTotal, allTimeExpenseTotal },
         previousMonthSavings: previousMonthSavingsAmount,
@@ -419,7 +407,6 @@ const HomeScreen: React.FC = () => {
       setTotalMonthlySpending(totalSpending);
       
       // Debug logging for spending categories
-      console.log('🔍 HomeScreen: Spending Categories (Top 3):', {
         totalSpending,
         categories: categoriesArray,
       });
@@ -448,7 +435,6 @@ const HomeScreen: React.FC = () => {
         setNextPaymentDate(nextPaymentDateStr);
         
         // Debug logging for loans
-        console.log('🔍 HomeScreen: Active Loans Summary:', {
           totalLoans: activeLoansList.length,
           totalBalance,
           totalPayment,
@@ -676,7 +662,6 @@ const HomeScreen: React.FC = () => {
   // Reload data when screen comes into focus (after adding a transaction)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 HomeScreen: Screen focused - checking if refresh needed...');
       
       // Clear any existing timeout
       if (loadDataTimeoutRef.current) {
@@ -689,7 +674,6 @@ const HomeScreen: React.FC = () => {
         
         // Always force refresh when screen comes into focus
         // This ensures new transactions are immediately visible
-        console.log('🔄 HomeScreen: Forcing data refresh on focus...');
         setIsDataStale(true);
         setAppInitialized(true);
         loadStats(true); // Force refresh stats
