@@ -62,11 +62,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
     }
     
     // Use console.error for production visibility
-    console.error('🌐 Network error detected:', error.message);
+    // console.error('🌐 Network error detected:', error.message); // Commented out to reduce console noise
     
     // Don't handle network errors if we're already offline to prevent loops
     if (!isConnected) {
-      console.error('🌐 Already offline, ignoring network error to prevent loop');
+      // console.error('🌐 Already offline, ignoring network error to prevent loop'); // Commented out to reduce console noise
       return;
     }
     
@@ -78,7 +78,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
         error.message?.includes('Network Error') ||
         error.name === 'TypeError') {
       
-      console.error('🌐 Network error confirmed - going offline');
+      // console.error('🌐 Network error confirmed - going offline'); // Commented out to reduce console noise
       setIsConnected(false);
       setIsInternetReachable(false);
       setIsReconnecting(false);
@@ -86,7 +86,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       // Start monitoring for recovery
       startNetworkMonitoring();
     } else {
-      console.error('🌐 Not a network error, ignoring:', error.message);
+      // console.error('🌐 Not a network error, ignoring:', error.message); // Commented out to reduce console noise
     }
   };
 
