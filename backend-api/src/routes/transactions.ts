@@ -88,29 +88,42 @@ router.get('/',
       const total = parseInt(countResult.rows[0].total);
 
       // Map transactions with bank account information
-      const mappedTransactions = result.rows.map((row: any) => ({
-        ...row,
-        type: row.transaction_type,
-        date: row.transaction_date,
-        bankAccount: row.bank_account_id ? {
-          id: row.bank_account_id,
-          name: row.account_name,
-          bankName: row.bank_name,
-          accountNumber: row.account_number
-        } : null,
-        fromAccount: row.from_account_id ? {
-          id: row.from_account_id,
-          name: row.from_account_name,
-          bankName: row.from_bank_name,
-          accountNumber: row.from_account_number
-        } : null,
-        toAccount: row.to_account_id ? {
-          id: row.to_account_id,
-          name: row.to_account_name,
-          bankName: row.to_bank_name,
-          accountNumber: row.to_account_number
-        } : null
-      }));
+      const mappedTransactions = result.rows.map((row: any) => {
+        // Debug: log first transaction date
+        if (result.rows.indexOf(row) === 0) {
+          console.log('📅 First transaction date from DB:', row.transaction_date);
+          console.log('📅 Type:', typeof row.transaction_date);
+          console.log('📅 Instance:', row.transaction_date instanceof Date);
+          if (row.transaction_date instanceof Date) {
+            console.log('📅 ISO:', row.transaction_date.toISOString());
+            console.log('📅 Local:', row.transaction_date.toString());
+          }
+        }
+        
+        return {
+          ...row,
+          type: row.transaction_type,
+          date: row.transaction_date,
+          bankAccount: row.bank_account_id ? {
+            id: row.bank_account_id,
+            name: row.account_name,
+            bankName: row.bank_name,
+            accountNumber: row.account_number
+          } : null,
+          fromAccount: row.from_account_id ? {
+            id: row.from_account_id,
+            name: row.from_account_name,
+            bankName: row.from_bank_name,
+            accountNumber: row.from_account_number
+          } : null,
+          toAccount: row.to_account_id ? {
+            id: row.to_account_id,
+            name: row.to_account_name,
+            bankName: row.to_bank_name,
+            accountNumber: row.to_account_number
+          } : null
+        };
+      });
 
       return res.json({
         success: true,
