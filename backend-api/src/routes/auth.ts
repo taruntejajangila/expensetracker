@@ -359,8 +359,10 @@ router.patch('/profile',
 router.post('/change-password',
   authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
+    let authUser: any = null;
+    
     try {
-      const authUser = req.user;
+      authUser = req.user;
       if (!authUser) {
         res.status(401).json({
           success: false,
@@ -443,17 +445,17 @@ router.post('/change-password',
         success: true,
         message: 'Password changed successfully'
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Change password error:', error);
       logger.error('Change password error details:', {
-        message: error.message,
-        stack: error.stack,
+        message: error?.message,
+        stack: error?.stack,
         userId: authUser?.id
       });
       res.status(500).json({
         success: false,
         message: 'Failed to change password',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined
       });
     }
   }
