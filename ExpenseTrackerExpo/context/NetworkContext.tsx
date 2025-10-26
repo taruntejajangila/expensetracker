@@ -94,12 +94,10 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
   const forceOfflineCheck = async () => {
     const now = Date.now();
     if (now - lastNetworkCheck.current < networkCheckDebounce) {
-      console.log('🌐 Network check debounced - too soon since last check');
       return;
     }
     
     lastNetworkCheck.current = now;
-    console.log('🌐 Force checking network status...');
     
     // Set reconnecting state to show user that we're checking
     setIsReconnecting(true);
@@ -117,7 +115,6 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       } else {
         // Increment failure counter
         consecutiveFailures.current += 1;
-        console.log(`🌐 Force check failed (${consecutiveFailures.current}/${requiredFailures})`);
         
         // Only go offline after multiple consecutive failures
         if (consecutiveFailures.current >= requiredFailures) {
@@ -128,7 +125,6 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
         setIsReconnecting(false);
       }
     } catch (error) {
-      console.log('🌐 Force check error:', error);
       setIsReconnecting(false);
       // Don't change connection state on error, just stop reconnecting
     }
@@ -161,11 +157,9 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       ]);
       
       if (connectivityResponse.ok) {
-        console.log('🌐 Internet connectivity confirmed via Google');
         return true;
       }
     } catch (error) {
-      console.log('🌐 Google connectivity check failed:', error.message);
     }
     
     try {
@@ -187,10 +181,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       
       // Any response means the server is reachable
       const isOnline = true;
-      console.log('🌐 Local API check result:', { status: response.status, isOnline });
       return isOnline;
     } catch (error) {
-      console.log('🌐 All network checks failed:', error.message);
       return false;
     }
   };
@@ -206,7 +198,6 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       if (!isConnected) {
         const now = Date.now();
         if (now - lastNetworkCheck.current < networkCheckDebounce) {
-          console.log('🌐 Periodic check debounced - too soon since last check');
           return;
         }
         
@@ -216,18 +207,15 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
         if (isOnline) {
           // Reset failure counter on successful connection
           consecutiveFailures.current = 0;
-          console.log('🌐 Network restored!');
           setIsConnected(isOnline);
           setIsInternetReachable(isOnline);
           setIsReconnecting(false);
         } else {
           // Increment failure counter
           consecutiveFailures.current += 1;
-          console.log(`🌐 Network check failed (${consecutiveFailures.current}/${requiredFailures})`);
           
           // Only go offline after multiple consecutive failures
           if (consecutiveFailures.current >= requiredFailures) {
-            console.log('🌐 Multiple failures detected - staying offline');
             // Already offline, no need to change state
           }
         }
@@ -248,17 +236,14 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
       
       // Only update state if we're actually offline
       if (!isOnline) {
-        console.log('🌐 Initial check: Network is offline');
         setIsConnected(false);
         setIsInternetReachable(false);
         startNetworkMonitoring();
       } else {
-        console.log('🌐 Initial check: Network is online');
         // Keep the optimistic online state
       }
       
       setIsInitialized(true);
-      console.log('🌐 Initial network check completed');
     };
     
     initialCheck();

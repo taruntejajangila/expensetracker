@@ -83,7 +83,6 @@ class ApiClient {
   private async refreshAccessToken(): Promise<string | null> {
     // If already refreshing, return the existing promise
     if (this.isRefreshing && this.refreshPromise) {
-      console.log('🔄 ApiClient: Token refresh already in progress, waiting...');
       return this.refreshPromise;
     }
 
@@ -122,7 +121,6 @@ class ApiClient {
         return null;
       }
 
-      console.log('🔄 ApiClient: Refreshing access token...');
       
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
@@ -144,7 +142,6 @@ class ApiClient {
         
         // Check if refresh token was also renewed
         if (result.data.refreshToken && result.data.refreshToken !== refreshToken) {
-          console.log('🔄 ApiClient: Refresh token was renewed automatically');
           await this.setRefreshToken(result.data.refreshToken);
         }
         
@@ -203,7 +200,6 @@ class ApiClient {
     
     // Check if there's already a request in progress for this endpoint
     if (this.requestQueue.has(requestKey)) {
-      console.log('🔄 ApiClient: Request already in progress, waiting...');
       return this.requestQueue.get(requestKey)!;
     }
 
@@ -212,7 +208,6 @@ class ApiClient {
     const now = Date.now();
     if (lastRequest && (now - lastRequest) < this.minRequestInterval) {
       const delay = this.minRequestInterval - (now - lastRequest);
-      console.log(`⏱️ ApiClient: Throttling request, waiting ${delay}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
@@ -255,7 +250,6 @@ class ApiClient {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🌐 ApiClient: Attempt ${attempt + 1}/${maxRetries + 1} - ${options.method || 'GET'} ${url}`);
         
         // Get current auth token and add to headers if present
         const authToken = await this.getAuthToken();
@@ -279,7 +273,6 @@ class ApiClient {
           const retryAfter = response.headers.get('Retry-After');
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : this._calculateBackoffDelay(attempt, baseDelay, maxDelay, backoffMultiplier);
           
-          console.log(`⏳ ApiClient: Rate limited (429), waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
           
           if (attempt < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -294,11 +287,9 @@ class ApiClient {
         const isAuthEndpoint = url.includes('/auth/');
         const isAuthMe = url.includes('/auth/me');
         if (response.status === 401 && !hasTriedTokenRefresh && authToken && (!isAuthEndpoint || isAuthMe)) {
-          console.log('🔄 ApiClient: 401 error detected, attempting token refresh...');
           
           const newToken = await this.refreshAccessToken();
           if (newToken) {
-            console.log('✅ ApiClient: Token refreshed, retrying request...');
             hasTriedTokenRefresh = true;
             // Retry the same attempt with new token
             attempt--;
@@ -317,7 +308,6 @@ class ApiClient {
         }
 
         const result = await response.json();
-        console.log(`✅ ApiClient: Request successful on attempt ${attempt + 1}`);
         return result;
 
       } catch (error) {
@@ -339,7 +329,6 @@ class ApiClient {
 
         // Calculate delay for next attempt
         const delay = this._calculateBackoffDelay(attempt, baseDelay, maxDelay, backoffMultiplier);
-        console.log(`⏳ ApiClient: Waiting ${delay}ms before retry ${attempt + 2}/${maxRetries + 1}`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -359,7 +348,6 @@ class ApiClient {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🌐 ApiClient: Attempt ${attempt + 1}/${maxRetries + 1} - ${options.method || 'GET'} ${url}`);
         
         const response = await fetch(url, {
           ...options,
@@ -374,7 +362,6 @@ class ApiClient {
           const retryAfter = response.headers.get('Retry-After');
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : this._calculateBackoffDelay(attempt, baseDelay, maxDelay, backoffMultiplier);
           
-          console.log(`⏳ ApiClient: Rate limited (429), waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
           
           if (attempt < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -392,7 +379,6 @@ class ApiClient {
         }
 
         const result = await response.json();
-        console.log(`✅ ApiClient: Request successful on attempt ${attempt + 1}`);
         return result;
 
       } catch (error) {
@@ -414,7 +400,6 @@ class ApiClient {
 
         // Calculate delay for next attempt
         const delay = this._calculateBackoffDelay(attempt, baseDelay, maxDelay, backoffMultiplier);
-        console.log(`⏳ ApiClient: Waiting ${delay}ms before retry ${attempt + 2}/${maxRetries + 1}`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }

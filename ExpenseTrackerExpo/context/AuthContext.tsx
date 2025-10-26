@@ -47,7 +47,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setupNetworkListener = () => {
     // Simplified: Just assume online and let the app handle network errors gracefully
     // Don't do aggressive network checks that can cause false positives
-    console.log('🌐 AuthContext: Network listener initialized - letting app handle network gracefully');
     return () => {};
   };
 
@@ -56,7 +55,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check if there's a stored auth token
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
-        console.log('🔍 AuthContext: Found stored token, validating...');
         const apiClient = ApiClient.getInstance();
 
         try {
@@ -77,9 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             // Cache user data for offline mode
             await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
-            console.log('🔍 AuthContext: User restored from valid token and cached for offline mode');
           } else {
-            console.log('🔍 AuthContext: Invalid token response, attempting refresh...');
             // Try one refresh before clearing
             const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
             if (storedRefreshToken) {
@@ -100,7 +96,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       createdAt: retryData.data.createdAt,
                     };
                     setUser(retryUser);
-                    console.log('🔍 AuthContext: User restored after refresh');
                     return;
                   }
                 }
@@ -111,7 +106,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(null);
           }
         } catch (error) {
-          console.log('🔍 AuthContext: Token validation error, checking if it\'s network issue...', error);
           
           // Check if it's a network error (no internet)
           const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
@@ -123,7 +117,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           );
           
           if (isNetworkError || isTimeoutError || isConnectionError || !isOnline) {
-            console.log('🔍 AuthContext: Network error detected - keeping user logged in with stored data');
             setIsOfflineMode(true);
             
             // Try to get cached user data from AsyncStorage
@@ -132,15 +125,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               if (cachedUserData) {
                 const user: User = JSON.parse(cachedUserData);
                 setUser(user);
-                console.log('🔍 AuthContext: User restored from cache (offline mode)');
                 return;
               }
             } catch (cacheError) {
-              console.log('🔍 AuthContext: No cached user data available');
             }
             
             // If no cached data, but we have a token, assume user is valid (offline mode)
-            console.log('🔍 AuthContext: No internet - user stays logged in (offline mode)');
             setUser({ 
               id: 'offline-user', 
               email: 'offline@user.com', 
@@ -151,7 +141,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           
           // If it's not a network error, proceed with normal token refresh
-          console.log('🔍 AuthContext: Non-network error, attempting token refresh...');
           const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
           if (storedRefreshToken) {
             const refreshOk = await refreshToken();
@@ -172,7 +161,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       createdAt: retryData.data.createdAt,
                     };
                     setUser(retryUser);
-                    console.log('🔍 AuthContext: User restored after refresh');
                     return;
                   }
                 } catch {}
@@ -183,7 +171,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       } else {
-        console.log('🔍 AuthContext: No stored token - user must login');
         setUser(null);
       }
     } catch (error) {
@@ -197,7 +184,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      console.log('🔍 AuthContext: Starting login process...');
       
       // Check if we're offline
       if (!isOnline) {
@@ -212,7 +198,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password: password,
       });
 
-      console.log('🔍 AuthContext: Login API success:', result);
 
       if (result.success && result.data) {
         const { user: userData, accessToken, refreshToken } = result.data;
@@ -230,22 +215,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           createdAt: userData.createdAt,
         };
         
-        console.log('🔍 AuthContext: Creating user (no local storage):', user);
         
         // Store auth tokens temporarily in memory only
         // These will be cleared on logout
-        console.log('🔍 AuthContext: Storing auth token:', accessToken ? 'Token stored' : 'No token');
         await AsyncStorage.setItem('authToken', accessToken);
         if (refreshToken) {
           await AsyncStorage.setItem('refreshToken', refreshToken);
         }
-        console.log('🔍 AuthContext: Auth tokens stored successfully');
         
         setUser(user);
         
         // Cache user data for offline mode
         await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
-        console.log('✅ AuthContext: Login successful - cloud data only, cached for offline mode');
         
         // Auto-register for push notifications after login
         await registerForPushNotifications();
@@ -343,12 +324,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store auth tokens temporarily in memory only
         // These will be cleared on logout
-        console.log('🔍 AuthContext: Storing auth token:', accessToken ? 'Token stored' : 'No token');
         await AsyncStorage.setItem('authToken', accessToken);
         if (refreshToken) {
           await AsyncStorage.setItem('refreshToken', refreshToken);
         }
-        console.log('🔍 AuthContext: Auth tokens stored successfully');
         
         setUser(newUser);
         console.log('✅ AuthContext: Registration successful - cloud data only');
