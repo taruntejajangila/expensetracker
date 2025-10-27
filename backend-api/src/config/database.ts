@@ -555,7 +555,8 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       (uuid_generate_v4(), NULL, 'Salary', 'cash', '#82E0AA', 'income', true),
       (uuid_generate_v4(), NULL, 'Freelance', 'briefcase', '#85C1E9', 'income', true),
       (uuid_generate_v4(), NULL, 'Investment', 'trending-up', '#F8C471', 'income', true),
-      (uuid_generate_v4(), NULL, 'Other Income', 'add-circle', '#BB8FCE', 'income', true)
+      (uuid_generate_v4(), NULL, 'Other Income', 'add-circle', '#BB8FCE', 'income', true),
+      (uuid_generate_v4(), NULL, 'Balance Transfer', 'swap-horizontal', '#9C88FF', 'transfer', true)
     ON CONFLICT DO NOTHING
   `);
 
