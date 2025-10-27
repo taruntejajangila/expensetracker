@@ -5,8 +5,8 @@ const config = getDefaultConfig(__dirname);
 // Fix for Hermes _toString issue
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
-// Ensure proper module resolution
-config.resolver.sourceExts = ['js', 'jsx', 'json', 'ts', 'tsx'];
+// Note: sourceExts and assetExts are inherited from getDefaultConfig
+// No need to override them unless adding custom extensions
 
 // Comprehensive Hermes fixes
 config.transformer.minifierConfig = {
@@ -22,9 +22,9 @@ config.transformer.minifierConfig = {
 // Disable Hermes optimizations that cause _toString issues
 config.transformer.hermesParser = false;
 
-// Ensure proper asset resolution
+// Ensure proper asset resolution (these are already in defaults, but keeping for clarity)
 config.resolver.assetExts = [
-  ...config.resolver.assetExts,
+  ...(config.resolver.assetExts || []),
   'png',
   'jpg',
   'jpeg',
