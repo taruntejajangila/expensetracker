@@ -11,7 +11,8 @@
     "tunnel": "expo start --tunnel",
     "build:android": "expo build:android",
     "build:ios": "expo build:ios",
-    "eject": "expo eject"
+    "eject": "expo eject",
+    "postinstall": "npm dedupe || true"
   },
   "resolutions": {
     "use-latest-callback": "0.2.4",
