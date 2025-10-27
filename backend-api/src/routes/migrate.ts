@@ -26,22 +26,22 @@ router.post('/add-account-holder-name', async (req: express.Request, res: expres
         alreadyExists: true
       });
     }
-
-    // Add column
+        
+        // Add column
     await pool.query(`
-      ALTER TABLE bank_accounts 
+            ALTER TABLE bank_accounts 
       ADD COLUMN account_holder_name VARCHAR(100);
-    `);
-    
+        `);
+        
     logger.info('✅ Column added successfully');
-
-    // Update existing records
+        
+        // Update existing records
     const updateResult = await pool.query(`
-      UPDATE bank_accounts 
-      SET account_holder_name = account_name 
-      WHERE account_holder_name IS NULL;
-    `);
-    
+            UPDATE bank_accounts 
+            SET account_holder_name = account_name 
+            WHERE account_holder_name IS NULL;
+        `);
+        
     logger.info(`✅ Updated ${updateResult.rowCount} existing records`);
 
     return res.json({
@@ -105,9 +105,9 @@ router.post('/check-account-holder-name-column', async (req: express.Request, re
     // Check if column exists
     const checkQuery = `
       SELECT column_name, data_type, is_nullable
-      FROM information_schema.columns
-      WHERE table_name = 'bank_accounts' 
-      AND column_name = 'account_holder_name';
+            FROM information_schema.columns 
+            WHERE table_name = 'bank_accounts' 
+            AND column_name = 'account_holder_name';
     `;
     
     const checkResult = await pool.query(checkQuery);
