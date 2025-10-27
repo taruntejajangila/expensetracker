@@ -220,7 +220,7 @@ function LoadingScreen() {
   );
 }
 
-// App Navigator Component
+  // App Navigator Component
 function AppNavigator() {
   const { user, isLoading } = useAuth();
   const [appInitialized, setAppInitialized] = useState(false);
@@ -228,10 +228,23 @@ function AppNavigator() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [forceStopLoading, setForceStopLoading] = useState(false);
   
   // FOR TESTING: Force show onboarding (remove this in production)
   const FORCE_SHOW_ONBOARDING = false; // Set to false for production
   const navigationRef = React.useRef(null);
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isLoading || checkingOnboarding) {
+        console.log('⚠️ Loading timeout - forcing app to continue');
+        setForceStopLoading(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, checkingOnboarding]);
 
   // Check onboarding status on app start
   useEffect(() => {
@@ -301,11 +314,11 @@ function AppNavigator() {
   }, [isLoading, user, adMobInitialized]);
 
   useEffect(() => {
-    // Mark app as initialized when user and adMob are ready
-    if (!isLoading && user && !appInitialized && adMobInitialized) {
+    // Mark app as initialized when user is ready (don't wait for AdMob)
+    if (!isLoading && !appInitialized) {
       setAppInitialized(true);
     }
-  }, [isLoading, user, appInitialized, adMobInitialized]);
+  }, [isLoading, appInitialized]);
 
   // Initialize daily reminders and notification navigation when user is authenticated
   useEffect(() => {
@@ -384,7 +397,10 @@ function AppNavigator() {
   };
 
 
-  if (isLoading || checkingOnboarding) {
+  // Stop loading after timeout or when all checks complete
+  const shouldShowLoading = (isLoading || checkingOnboarding) && !forceStopLoading;
+  
+  if (shouldShowLoading) {
     return <LoadingScreen />;
   }
 
