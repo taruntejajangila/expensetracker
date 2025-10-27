@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,8 +65,6 @@ import RegisterScreen from './screens/auth/RegisterScreen';
 // Import onboarding screen
 import OnboardingScreen from './screens/OnboardingScreen';
 
-// Import custom drawer
-import CustomDrawer from './components/common/CustomDrawer';
 
 // Import contexts
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -87,7 +84,6 @@ import AppOpenAdService from './services/AppOpenAdService';
 // import mobileAds from 'react-native-google-mobile-ads';
 
 const Tab = createBottomTabNavigator();
-const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
 // Tab Navigator
@@ -212,22 +208,7 @@ function AuthStackNavigator() {
   );
 }
 
-// Drawer Navigator
-function DrawerNavigator() {
-  return (
-    <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawer {...props} />}
-      screenOptions={{
-        headerShown: false,
-        drawerStyle: {
-          width: 280,
-        },
-      }}
-    >
-      <Drawer.Screen name="MainApp" component={MainStackNavigator} />
-    </Drawer.Navigator>
-  );
-}
+// Drawer removed - using stack navigation instead
 
 // Loading Screen Component
 function LoadingScreen() {
@@ -421,7 +402,7 @@ function AppNavigator() {
     <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
       <OfflineIndicator />
-      {user ? <DrawerNavigator /> : <AuthStackNavigator />}
+      {user ? <MainStackNavigator /> : <AuthStackNavigator />}
     </NavigationContainer>
   );
 }
