@@ -4,6 +4,61 @@ import { logger } from '../utils/logger';
 
 const router = express.Router();
 
+// Special endpoint to add Balance Transfer category (no auth required for setup)
+router.post('/setup-balance-transfer', async (req: express.Request, res: express.Response) => {
+  try {
+    logger.info('Adding Balance Transfer category...');
+
+    const db = req.app.locals.db;
+    
+    if (!db) {
+      logger.error('Database connection not available in app.locals');
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection not available'
+      });
+    }
+
+    // Check if category already exists
+    const existingCategory = await db.query(
+      'SELECT id FROM categories WHERE name = $1 AND type = $2',
+      ['Balance Transfer', 'transfer']
+    );
+
+    if (existingCategory.rows.length > 0) {
+      return res.json({
+        success: true,
+        message: 'Balance Transfer category already exists',
+        category: existingCategory.rows[0]
+      });
+    }
+
+    // Insert the Balance Transfer category
+    const result = await db.query(
+      `INSERT INTO categories (name, icon, color, type, is_default, is_active, sort_order, created_at, updated_at) 
+       VALUES ($1, $2, $3, $4, true, true, 999, NOW(), NOW()) 
+       RETURNING *`,
+      ['Balance Transfer', 'swap-horizontal', '#9C88FF', 'transfer']
+    );
+
+    logger.info('Balance Transfer category added successfully');
+
+    return res.json({
+      success: true,
+      message: 'Balance Transfer category added successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    logger.error('Error adding Balance Transfer category:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to add Balance Transfer category',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : 'Internal server error'
+    });
+  }
+});
+
 // Apply authentication to all routes
 router.use(authenticateToken);
 
