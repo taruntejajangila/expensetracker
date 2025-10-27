@@ -30,7 +30,6 @@
     "axios": "^1.12.2",
     "date-fns": "^4.1.0",
     "expo": "~54.0.10",
-    "expo-ads-admob": "^13.0.0",
     "expo-dev-client": "~6.0.12",
     "expo-device": "^8.0.8",
     "expo-document-picker": "^14.0.7",
