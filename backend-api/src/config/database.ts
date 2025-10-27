@@ -97,6 +97,29 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       logger.warn('⚠️  Continuing without migrations - please check and fix');
       // Don't throw - allow app to start even if migrations fail
     }
+
+    // Ensure Balance Transfer category exists (runs on every startup)
+    try {
+      logger.info('🔄 Ensuring Balance Transfer category exists...');
+      const existing = await client.query(
+        "SELECT id FROM categories WHERE name = 'Balance Transfer' AND type = 'transfer'"
+      );
+
+      if (existing.rows.length === 0) {
+        logger.info('➕ Adding Balance Transfer category...');
+        await client.query(`
+          INSERT INTO categories (id, user_id, name, icon, color, type, is_default, is_active, sort_order, created_at, updated_at) 
+          VALUES (gen_random_uuid(), NULL, 'Balance Transfer', 'swap-horizontal', '#9C88FF', 'transfer', true, true, 999, NOW(), NOW())
+          ON CONFLICT DO NOTHING
+        `);
+        logger.info('✅ Balance Transfer category added successfully');
+      } else {
+        logger.info('✅ Balance Transfer category already exists');
+      }
+    } catch (categoryError: any) {
+      logger.error('❌ Error ensuring Balance Transfer category (non-fatal):', categoryError.message);
+      // Don't throw - allow app to start
+    }
     
   } catch (error) {
     logger.error('❌ Error initializing database schema:', error);
