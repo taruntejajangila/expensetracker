@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Reminder } from '../types/PaymentTypes';
+import TransactionService from './transactionService';
 
 // Transaction interface (assuming this exists in your app)
 interface Transaction {
@@ -36,9 +37,6 @@ class TransactionAnalysisService {
   async getTransactions(userId?: string): Promise<Transaction[]> {
     try {
       console.log('🔍 TransactionAnalysisService: Fetching transactions from backend API...');
-      
-      // Import the transaction service to get the auth token
-      const { default: TransactionService } = await import('./transactionService');
       
       // Get all transactions from backend
       const backendTransactions = await TransactionService.getTransactions();
