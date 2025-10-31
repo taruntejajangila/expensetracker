@@ -233,7 +233,25 @@ const AddTransactionScreen = () => {
         timeoutPromise
       ]);
       
-      setCategories(fetchedCategories as Category[]);
+      // If we only have 13 categories (old count), try to add missing ones
+      const categoriesArray = fetchedCategories as Category[];
+      if (categoriesArray.length <= 13) {
+        console.log('🔍 Only 13 categories found, attempting to add missing categories...');
+        try {
+          await categoryService.addMissingCategories();
+          // Reload categories after adding missing ones
+          const updatedCategories = await categoryService.getCategories();
+          setCategories(updatedCategories as Category[]);
+          console.log('✅ Categories updated after adding missing ones:', updatedCategories.length);
+        } catch (addError) {
+          console.error('⚠️ Could not add missing categories (non-critical):', addError);
+          // Continue with existing categories
+          setCategories(categoriesArray);
+        }
+      } else {
+        setCategories(categoriesArray);
+      }
+      
       console.log('✅ Categories loaded successfully');
     } catch (error) {
       console.error('❌ Error loading categories:', error);

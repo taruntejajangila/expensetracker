@@ -218,6 +218,38 @@ export const categoryService = {
       console.error('🔍 CategoryService: Error deleting category:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
+  },
+
+  async addMissingCategories(): Promise<{ added: number; skipped: number; total: number }> {
+    try {
+      console.log('🔍 CategoryService: Adding missing categories...');
+      
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/categories/add-missing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ CategoryService: Missing categories added successfully:', result.data);
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to add missing categories');
+      }
+    } catch (error) {
+      console.error('❌ CategoryService: Error adding missing categories:', error);
+      throw error;
+    }
   }
 };
 
