@@ -2,18 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Detect environment
-const isProduction = Constants.executionEnvironment === 'storeClient';
-
-// Import real banner if available
-let BannerAd: any = null;
-try {
-  if (isProduction) {
-    BannerAd = require('react-native-google-mobile-ads').BannerAd;
-  }
-} catch (error) {
-  console.log('BannerAd not available');
-}
+// NOTE: Do not import react-native-google-mobile-ads at module top-level.
+// We'll require it dynamically inside the component when ads are enabled.
 
 interface BannerAdComponentProps {
   bannerSize?: any;
@@ -21,6 +11,7 @@ interface BannerAdComponentProps {
 
 // Google AdMob Banner Component
 export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
+  const disableAds = (process.env.EXPO_PUBLIC_DISABLE_ADS === '1') || (Constants.appOwnership === 'expo');
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -34,49 +25,35 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // If in production and BannerAd is available, use real ads
-  if (isProduction && BannerAd) {
+  if (disableAds) {
     return (
-      <View style={styles.container} key={refreshKey}>
-        <BannerAd
-          unitId={Platform.OS === 'ios' 
-            ? 'ca-app-pub-3940256099942544/2934735716' // Test ID (replace with iOS ID)
-            : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
-          size={'fullBanner'}
-          requestOptions={{
-            requestNonPersonalizedAdsOnly: false,
-          }}
-          onAdLoaded={() => console.log('✅ Real banner ad loaded')}
-          onAdFailedToLoad={(error) => console.error('❌ Banner ad failed to load:', error)}
-        />
+      <View style={styles.container}>
+        <View style={[styles.placeholder, { height: 50 }]}> 
+          <Text style={styles.placeholderText}>Ads disabled in Expo Go</Text>
+        </View>
       </View>
     );
   }
 
-  // Otherwise, show mock banner (Expo Go)
+  // Use real banner ads when enabled
   return (
     <View style={styles.container} key={refreshKey}>
-      <View style={styles.innerContainer}>
-        {/* App Icon */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>📱</Text>
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.contentContainer}>
-          <Text style={styles.title}>Expense Tracker Pro</Text>
-          <Text style={styles.rating}>4.5 ⭐ (2.3K reviews)</Text>
-        </View>
-
-        {/* Install Button */}
-        <View style={styles.buttonContainer}>
-          <View style={styles.button}>
-            <Text style={styles.buttonText}>Install</Text>
-          </View>
-        </View>
-      </View>
+      {(() => {
+        const { BannerAd, BannerAdSize } = require('react-native-google-mobile-ads');
+        return (
+          <BannerAd
+            unitId={Platform.OS === 'ios' 
+              ? 'ca-app-pub-3940256099942544/2934735716' // iOS test ID (update when ready)
+              : 'ca-app-pub-4113490348002307/5694070602'} // Android REAL Banner Ad
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        requestOptions={{
+          requestNonPersonalizedAdsOnly: false,
+        }}
+        onAdLoaded={() => console.log('✅ Banner test ad loaded')}
+        onAdFailedToLoad={(error) => console.error('❌ Banner ad failed to load:', error)}
+          />
+        );
+      })()}
     </View>
   );
 };
@@ -84,11 +61,21 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 80,
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
     overflow: 'hidden',
+  },
+  placeholder: {
+    width: '100%',
+    backgroundColor: '#f2f2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  placeholderText: {
+    color: '#777',
+    fontSize: 12,
   },
   innerContainer: {
     flex: 1,

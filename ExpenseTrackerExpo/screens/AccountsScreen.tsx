@@ -23,7 +23,7 @@ import SpendingAnalytics from '../components/SpendingAnalytics';
 import RecentActivity from '../components/RecentActivity';
 import TransactionService from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 
 
@@ -56,8 +56,7 @@ const AccountsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const buttonScale = useRef(new Animated.Value(1)).current;
   
-  // Add account ad state
-  const [showAddAccountAd, setShowAddAccountAd] = useState(false);
+  // Removed mock interstitial state
 
 
   useEffect(() => {
@@ -353,8 +352,9 @@ const AccountsScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity 
               style={styles.addButton}
-              onPress={() => {
-                setShowAddAccountAd(true);
+              onPress={async () => {
+                try { await AppOpenAdService.showInterstitial(); } catch {}
+                (navigation as any).navigate('AddAccount');
               }}
             >
               <Ionicons name="add" size={24} color={theme.colors.text} />
@@ -480,8 +480,9 @@ const AccountsScreen: React.FC = () => {
                   <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
                     <TouchableOpacity 
                       style={styles.addAccountButton}
-                      onPress={() => {
-                        setShowAddAccountAd(true);
+                      onPress={async () => {
+                        try { await AppOpenAdService.showInterstitial(); } catch {}
+                        (navigation as any).navigate('AddAccount');
                       }}
                       onPressIn={handleButtonPressIn}
                       onPressOut={handleButtonPressOut}
@@ -590,25 +591,7 @@ const AccountsScreen: React.FC = () => {
 
       </ScrollView>
 
-      {/* Add Account Interstitial Ad Modal */}
-      <InterstitialAdModal
-        visible={showAddAccountAd}
-        onClose={() => {
-          console.log('📱 Add Account interstitial ad modal closed');
-          setShowAddAccountAd(false);
-          // Navigate after modal closes
-          setTimeout(() => {
-            navigation.navigate('AddAccount' as never);
-          }, 500);
-        }}
-        onAdClicked={() => {
-          console.log('📱 Add Account interstitial ad clicked');
-          setShowAddAccountAd(false);
-          setTimeout(() => {
-            navigation.navigate('AddAccount' as never);
-          }, 500);
-        }}
-      />
+      {/* Interstitial modal removed; direct interstitial shown before navigation */}
     </View>
   );
 };

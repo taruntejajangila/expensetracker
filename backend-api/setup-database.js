@@ -130,10 +130,18 @@ async function setupDatabase() {
       { name: 'Healthcare', type: 'expense', icon: '🏥', color: '#DDA0DD' },
       { name: 'Education', type: 'expense', icon: '📚', color: '#98D8C8' },
       { name: 'Travel', type: 'expense', icon: '✈️', color: '#F7DC6F' },
+      { name: 'Rent', type: 'expense', icon: '🏠', color: '#FF7675' },
+      { name: 'Subscription', type: 'expense', icon: '💳', color: '#74B9FF' },
+      { name: 'Gifts & Donations', type: 'expense', icon: '🎁', color: '#FD79A8' },
+      { name: 'Gas/Fuel', type: 'expense', icon: '⛽', color: '#FDCB6E' },
+      { name: 'EMI/Loan Payment', type: 'expense', icon: '💸', color: '#E17055' },
       { name: 'Salary', type: 'income', icon: '💰', color: '#2ECC71' },
       { name: 'Freelance', type: 'income', icon: '💼', color: '#3498DB' },
       { name: 'Investment', type: 'income', icon: '📈', color: '#9B59B6' },
-      { name: 'Other Income', type: 'income', icon: '💵', color: '#1ABC9C' }
+      { name: 'Other Income', type: 'income', icon: '💵', color: '#1ABC9C' },
+      { name: 'Bonus', type: 'income', icon: '🏆', color: '#A29BFE' },
+      { name: 'Interest Income', type: 'income', icon: '💹', color: '#6C5CE7' },
+      { name: 'Part Time Income', type: 'income', icon: '⏰', color: '#00B894' }
     ];
 
     for (const category of categories) {

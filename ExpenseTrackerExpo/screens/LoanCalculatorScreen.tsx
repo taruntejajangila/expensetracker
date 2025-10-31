@@ -18,7 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 const { width } = Dimensions.get('window');
 
@@ -54,7 +54,7 @@ const LoanCalculatorScreen: React.FC = () => {
   const [amortization, setAmortization] = useState<AmortizationEntry[]>([]);
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [showCalculateAd, setShowCalculateAd] = useState(false);
+  // Removed mock interstitial state
 
   const calculateLoan = () => {
     const amount = parseFloat(loanAmount);
@@ -652,7 +652,10 @@ const LoanCalculatorScreen: React.FC = () => {
            <View style={styles.buttonContainer}>
              <TouchableOpacity 
                style={styles.primaryButton} 
-               onPress={() => setShowCalculateAd(true)}
+               onPress={async () => {
+                 try { await AppOpenAdService.showInterstitial(); } catch {}
+                 calculateLoan();
+               }}
                disabled={isCalculating}
              >
                <Text style={styles.primaryButtonText}>
@@ -739,24 +742,7 @@ const LoanCalculatorScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Interstitial Ad Modal for Calculate Loan */}
-      <InterstitialAdModal
-        visible={showCalculateAd}
-        onClose={() => {
-          console.log('📱 Calculate Loan interstitial ad modal closed');
-          setShowCalculateAd(false);
-          setTimeout(() => {
-            calculateLoan();
-          }, 500);
-        }}
-        onAdClicked={() => {
-          console.log('📱 Calculate Loan interstitial ad clicked');
-          setShowCalculateAd(false);
-          setTimeout(() => {
-            calculateLoan();
-          }, 500);
-        }}
-      />
+      {/* Interstitial modal removed; direct interstitial shown before calculate */}
     </View>
   );
 };

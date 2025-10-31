@@ -18,7 +18,6 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import TransactionService from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { NativeAdComponent } from '../components/NativeAdComponent';
 
 const { width } = Dimensions.get('window');
 
@@ -823,8 +822,12 @@ const SpentInMonthScreen: React.FC = () => {
           </View>
          </View>
          
-         {/* Native Ad - Above Recent Transactions */}
-         {!loading && <NativeAdComponent />}
+         {/* Banner Ad - Above Recent Transactions */}
+         {!loading && (
+           <View style={styles.adContainer}>
+             <BannerAdComponent />
+           </View>
+         )}
          
          {/* Recent Transactions Card - Always show when not loading */}
          {!loading && (
@@ -1036,8 +1039,12 @@ const SpentInMonthScreen: React.FC = () => {
           </View>
          )}
          
-         {/* Native Ad at the bottom of the screen */}
-         {!loading && <NativeAdComponent />}
+         {/* Banner Ad at the bottom of the screen */}
+         {!loading && (
+           <View style={styles.adContainer}>
+             <BannerAdComponent />
+           </View>
+         )}
          
          {/* Extra spacing to ensure last item is visible */}
          <View style={{ height: 50 }} />

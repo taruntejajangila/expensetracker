@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, CommonActions } from '@react-navigation/native';
 import TransactionService, { Transaction } from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { NativeAdComponent } from '../components/NativeAdComponent';
 
 type TransactionDetailRouteProp = RouteProp<{
   TransactionDetail: { transactionId: string };
@@ -1211,8 +1210,10 @@ const TransactionDetailScreen: React.FC = () => {
             );
           })()}
           
-          {/* Native Ad above Account Card */}
-          <NativeAdComponent />
+          {/* Banner Ad above Account Card */}
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
           
           {/* Card below image */}
           <View style={styles.imageCard}>

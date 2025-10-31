@@ -6,10 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScroll } from '../context/ScrollContext';
 import { LoanService, StoredLoan } from '../services/LoanService';
 import { Ionicons } from '@expo/vector-icons';
-import { interstitialAd } from '../services/AdMobService';
 import LoanCard from '../components/LoanCard';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 const LoanAccountScreen: React.FC = () => {
 	const { theme } = useTheme();
@@ -21,7 +20,7 @@ const LoanAccountScreen: React.FC = () => {
 	
 	const [loan, setLoan] = useState<StoredLoan | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const [showAmortizationAd, setShowAmortizationAd] = useState(false);
+// Removed mock interstitial state
 	
 
 
@@ -177,7 +176,7 @@ const LoanAccountScreen: React.FC = () => {
 			const paymentsMade = onOrAfterStart ? Math.min(loan.tenureMonths || Math.round((loan.term || 0) * 12), monthsElapsed + 1) : 0;
 			
 			let currentBalance = Number(loan.principal || 0);
-			const isInterestOnly = !!loan.isInterestOnly || loan.type === 'Gold Loan' || loan.type === 'Private Money Lending';
+const isInterestOnly = !!(loan as any).isInterestOnly || String((loan as any).type) === 'Gold Loan' || String((loan as any).type) === 'Private Money Lending';
 			
 			if (isInterestOnly) {
 				// Interest-only: principal doesn't reduce automatically
@@ -247,7 +246,7 @@ const LoanAccountScreen: React.FC = () => {
 		);
 	}
 
-	const isInterestOnly = !!loan.isInterestOnly || loan.type === 'Gold Loan' || loan.type === 'Private Money Lending';
+const isInterestOnly = !!(loan as any).isInterestOnly || String((loan as any).type) === 'Gold Loan' || String((loan as any).type) === 'Private Money Lending';
 
 	// Header Component
 	const ScreenHeader: React.FC<{ theme: any; insets: any; loan: StoredLoan }> = ({ theme, insets, loan }) => {
@@ -356,15 +355,11 @@ const LoanAccountScreen: React.FC = () => {
 						currentBalance={calculateCurrentBalance(loan) || 0}
 						monthlyPayment={loan.monthlyPayment || 0}
 						interestRate={loan.interestRate || 0}
-						nextPaymentDate={(() => {
-							const nextDate = calculateNextPaymentDate(loan);
-							if (nextDate && nextDate instanceof Date) {
-								return nextDate.toISOString();
-							} else {
-								return new Date().toISOString();
-							}
-						})()}
-						cardColor={loan.gradientColors?.[0] || undefined}
+                        nextPaymentDate={(() => {
+                            const nextDate = calculateNextPaymentDate(loan);
+                            return nextDate instanceof Date ? nextDate.toISOString() : new Date().toISOString();
+                        })()}
+                        cardColor={(loan as any).gradientColors?.[0] || undefined}
 					/>
 				</View>
 
@@ -390,8 +385,8 @@ const LoanAccountScreen: React.FC = () => {
 					</View>
 					
 											<View style={styles.loanSummaryDates}>
-							<Text style={styles.detailText} allowFontScaling={false}>First EMI: {dateFmt(loan.emiStartDate || loan.nextPaymentDate)}</Text>
-							<Text style={styles.detailText} allowFontScaling={false}>Next EMI: {dateFmt(calculateNextPaymentDate(loan))}</Text>
+                        <Text style={styles.detailText} allowFontScaling={false}>First EMI: {dateFmt((loan as any).emiStartDate || (loan as any).nextPaymentDate)}</Text>
+                        <Text style={styles.detailText} allowFontScaling={false}>Next EMI: {dateFmt(calculateNextPaymentDate(loan)?.toISOString())}</Text>
 						</View>
 					
 					<Text style={styles.remainingTermText} allowFontScaling={false}>Remaining Term: {calculateRemainingTerm(loan)} months</Text>
@@ -416,9 +411,10 @@ const LoanAccountScreen: React.FC = () => {
 					
 					<TouchableOpacity 
 						style={styles.amortizationButton}
-						onPress={() => {
-							setShowAmortizationAd(true);
-						}}
+                        onPress={async () => {
+                            try { await AppOpenAdService.showInterstitial(); } catch {}
+                            (navigation as any).navigate('LoanAmortization', { loanId: loan?.id });
+                        }}
 						activeOpacity={0.7}
 					>
 						<Ionicons name="calculator-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
@@ -451,24 +447,7 @@ const LoanAccountScreen: React.FC = () => {
 
 			</ScrollView>
 
-			{/* Interstitial Ad Modal for Amortization Schedule */}
-			<InterstitialAdModal
-				visible={showAmortizationAd}
-				onClose={() => {
-					console.log('📱 Amortization Schedule interstitial ad modal closed');
-					setShowAmortizationAd(false);
-					setTimeout(() => {
-						(navigation as any).navigate('LoanAmortization', { loanId: loan?.id });
-					}, 500);
-				}}
-				onAdClicked={() => {
-					console.log('📱 Amortization Schedule interstitial ad clicked');
-					setShowAmortizationAd(false);
-					setTimeout(() => {
-						(navigation as any).navigate('LoanAmortization', { loanId: loan?.id });
-					}, 500);
-				}}
-			/>
+            {/* Interstitial modal removed; direct interstitial shown before navigation */}
 		</View>
 	);
 };

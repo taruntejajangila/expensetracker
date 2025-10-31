@@ -1,49 +1,62 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { Alert, Platform } from 'react-native';
 
-// Detect environment
-const isProduction = Constants.executionEnvironment === 'storeClient';
-const isExpoGo = !Constants.executionEnvironment || Constants.executionEnvironment === 'storeClient';
+const disableAds = (process.env.EXPO_PUBLIC_DISABLE_ADS === '1') || (Constants.appOwnership === 'expo');
 
-let AppOpenAd: any = null;
 let appOpenAdLoaded = false;
 let appOpenAdShown = false;
+let appOpenAd: any = null;
+
+// Interstitial ad instance
+let interstitialAd: any = null;
+let interstitialAdLoaded = false;
 
 // Initialize App Open Ad
 export const initializeAppOpenAd = async () => {
-  if (isExpoGo || !isProduction) {
-    console.log('🎭 App Open Ad initialized (mock)');
+  if (disableAds) {
     return;
   }
-
   try {
-    // Import real AppOpenAd only in production
-    const mobileAds = require('react-native-google-mobile-ads');
-    AppOpenAd = mobileAds.AppOpenAd;
+    const { AppOpenAd: RNAppOpenAd, AdEventType } = require('react-native-google-mobile-ads');
+    const adUnitId = Platform.OS === 'android'
+      ? 'ca-app-pub-4113490348002307/8975566416' // MyPaisa App Open Ad
+      : 'ca-app-pub-3940256099942544/3419835294'; // Test ID for iOS
+    
+    appOpenAd = RNAppOpenAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    });
+    
+    appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+      console.log('✅ App Open Ad loaded');
+      appOpenAdLoaded = true;
+    });
+    
+    appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+      console.log('📱 App Open Ad closed');
+      appOpenAdLoaded = false;
+      appOpenAdShown = false;
+      // Load next ad
+      appOpenAd.load();
+    });
     
     await loadAppOpenAd();
-    console.log('✅ App Open Ad initialized (real)');
+    console.log('✅ App Open Ad initialized');
   } catch (error) {
-    console.log('⚠️ Real App Open Ad not available, using mock');
+    console.log('❌ App Open Ad initialization error:', error);
   }
 };
 
 // Load App Open Ad
 export const loadAppOpenAd = async () => {
-  if (!AppOpenAd) {
-    console.log('🎭 Loading mock App Open Ad');
-    appOpenAdLoaded = true;
+  if (disableAds) return;
+  if (!appOpenAd) {
+    console.log('⚠️ App Open Ad not initialized');
     return;
   }
 
   try {
-    // Create App Open Ad with your real Android ID
-    const adUnitId = Platform.OS === 'android'
-      ? 'ca-app-pub-4113490348002307/8975566416' // MyPaisa App Open Ad
-      : 'ca-app-pub-3940256099942544/3419835294'; // Test ID for iOS (replace when you get iOS ID)
-    
-    appOpenAdLoaded = true;
-    console.log('✅ App Open Ad loaded with ID:', adUnitId);
+    await appOpenAd.load();
+    console.log('✅ App Open Ad load requested');
   } catch (error) {
     console.error('❌ App Open Ad load error:', error);
   }
@@ -51,43 +64,18 @@ export const loadAppOpenAd = async () => {
 
 // Show App Open Ad (call this when app opens or comes to foreground)
 export const showAppOpenAd = async () => {
+  if (disableAds) return;
   // Only show once per app session
   if (appOpenAdShown) {
     console.log('⚠️ App Open Ad already shown this session');
     return;
   }
 
-  if (isExpoGo || !isProduction) {
-    // Mock: Show an alert
-    Alert.alert(
-      'Advertisement',
-      'App Open Ad (Mock)\n\nIn production, you will see a real Google AdMob App Open Ad when the app launches.',
-      [
-        {
-          text: 'Got it',
-          style: 'default',
-        },
-      ],
-      { cancelable: true }
-    );
-    appOpenAdShown = true;
-    console.log('📱 Showing mock App Open Ad');
-    return;
-  }
-
   try {
-    if (appOpenAdLoaded && AppOpenAd) {
-      await AppOpenAd.show();
+    if (appOpenAdLoaded && appOpenAd) {
+      await appOpenAd.show();
       appOpenAdShown = true;
-      console.log('📱 Showing real App Open Ad');
-      
-      // Listen for ad closed event and reload for next time
-      AppOpenAd.addEventListener('closed', () => {
-        console.log('📱 App Open Ad closed');
-        appOpenAdLoaded = false;
-        appOpenAdShown = false;
-        loadAppOpenAd(); // Load next ad
-      });
+      console.log('📱 Showing App Open Ad');
     } else {
       console.log('⚠️ App Open Ad not loaded yet');
     }
@@ -96,9 +84,67 @@ export const showAppOpenAd = async () => {
   }
 };
 
+// Initialize Interstitial Ad
+export const initializeInterstitial = async () => {
+  if (disableAds) {
+    return;
+  }
+  try {
+    const { InterstitialAd, AdEventType } = require('react-native-google-mobile-ads');
+    const adUnitId = Platform.OS === 'android'
+      ? 'ca-app-pub-4113490348002307/7222774699' // MyPaisa Interstitial Ad
+      : 'ca-app-pub-3940256099942544/4411468910'; // Test ID for iOS
+    
+    interstitialAd = InterstitialAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    });
+    
+    interstitialAd.addAdEventListener(AdEventType.LOADED, () => {
+      console.log('✅ Interstitial ad loaded');
+      interstitialAdLoaded = true;
+    });
+    
+    interstitialAd.addAdEventListener(AdEventType.CLOSED, () => {
+      console.log('📱 Interstitial ad closed');
+      interstitialAdLoaded = false;
+      // Load next ad
+      interstitialAd.load();
+    });
+    
+    // Load the first ad
+    await interstitialAd.load();
+    console.log('✅ Interstitial ad initialized');
+  } catch (error) {
+    console.log('❌ Interstitial ad initialization error:', error);
+  }
+};
+
+// Show Interstitial Ad
+export const showInterstitial = async () => {
+  if (disableAds) return;
+  try {
+    if (interstitialAdLoaded && interstitialAd) {
+      const isLoaded = await interstitialAd.loaded;
+      if (isLoaded) {
+        await interstitialAd.show();
+        console.log('📱 Showing Interstitial ad');
+      } else {
+        console.log('⚠️ Interstitial ad not loaded yet');
+        await interstitialAd.load();
+      }
+    } else {
+      console.log('⚠️ Interstitial ad not initialized');
+    }
+  } catch (error) {
+    console.error('❌ Interstitial ad show error:', error);
+  }
+};
+
 export default {
   initializeAppOpenAd,
   loadAppOpenAd,
   showAppOpenAd,
+  initializeInterstitial,
+  showInterstitial,
 };
 

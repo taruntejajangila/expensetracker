@@ -18,7 +18,6 @@ import TransactionService from '../services/transactionService';
 import OfflineScreen from '../components/OfflineScreen';
 import { useNetwork } from '../context/NetworkContext';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { NativeAdComponent } from '../components/NativeAdComponent';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -557,8 +556,12 @@ const TransactionsTab: React.FC<{
                   </View>
                 </TouchableOpacity>
                 
-                {/* Show native ad after every 5 transactions */}
-                {showAd && <NativeAdComponent />}
+                {/* Show banner ad after every 5 transactions */}
+                {showAd && (
+                  <View style={styles.adContainer}>
+                    <BannerAdComponent />
+                  </View>
+                )}
               </React.Fragment>
             );
           })}

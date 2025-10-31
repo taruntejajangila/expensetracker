@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useScroll } from '../context/ScrollContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useNetwork } from '../context/NetworkContext';
+import { useDrawer } from '../context/DrawerContext';
 
 import TransactionService from '../services/transactionService';
 import AccountService from '../services/AccountService';
@@ -28,20 +29,20 @@ import NotificationNavigationService from '../services/NotificationNavigationSer
 import OfflineBanner from '../components/OfflineBanner';
 import OfflineScreen from '../components/OfflineScreen';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { NativeAdComponent } from '../components/NativeAdComponent';
 import AdMobService from '../services/AdMobService';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
+// Removed mock InterstitialAdModal
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/api.config';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 const { width } = Dimensions.get('window');
 
 // Helper function to get greeting
 const getGreeting = (userName?: string) => {
-  return userName ? `Hi ${userName}` : 'Hi User';
+  return userName ? `Hi ${userName} 😉` : 'Hi User 😉';
 };
 
 // Helper function to get category icon
@@ -91,6 +92,7 @@ const HomeScreen: React.FC = () => {
   const route = useRoute();
   const { scrollY } = useScroll();
   const { isOfflineMode } = useNetwork();
+  const { openDrawer } = useDrawer();
   
   // Get refresh parameter from route
   const refresh = (route.params as any)?.refresh;
@@ -123,6 +125,7 @@ const HomeScreen: React.FC = () => {
   const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
   const [nextPaymentDate, setNextPaymentDate] = useState<string | null>(null);
   
+  
   // Credit card expenses hidden for v1 release
   // const [totalCreditCardExpenses, setTotalCreditCardExpenses] = useState(0);
 
@@ -148,7 +151,6 @@ const HomeScreen: React.FC = () => {
   
   // Money Manager ad state
   const [moneyManagerClicks, setMoneyManagerClicks] = useState(5); // Start at 5, counts down
-  const [showMoneyManagerAd, setShowMoneyManagerAd] = useState(false);
   
   
   const loadAds = async () => {
@@ -1847,10 +1849,7 @@ const HomeScreen: React.FC = () => {
           <View style={styles.headerLeft}>
             <TouchableOpacity 
               style={styles.menuButton}
-              onPress={() => {
-                // Open drawer menu
-                (navigation as any).openDrawer();
-              }}
+              onPress={openDrawer}
             >
               <Ionicons name="menu" size={24} color={theme.colors.text} />
             </TouchableOpacity>
@@ -1940,11 +1939,24 @@ const HomeScreen: React.FC = () => {
               console.log(`📊 Money Manager clicks remaining: ${newCount}`);
               
               if (newCount <= 0) {
-                // Show ad before navigating
+                // Show real AdMob interstitial directly
                 console.log('📱 Showing Money Manager interstitial ad');
-                setShowMoneyManagerAd(true);
-                // Reset counter to 5 for next round
-                await AsyncStorage.setItem('moneyManagerClicks', '5');
+                try {
+                  await AppOpenAdService.showInterstitial();
+                  console.log('✅ Money Manager interstitial shown');
+                  // Reset counter to 5 for next round
+                  await AsyncStorage.setItem('moneyManagerClicks', '5');
+                  // Navigate after ad closes
+                  setTimeout(() => {
+                    navigation.navigate('SpentInMonth' as never);
+                  }, 1000);
+                } catch (error) {
+                  console.error('❌ Money Manager interstitial failed:', error);
+                  // Reset counter to 5 for next round
+                  await AsyncStorage.setItem('moneyManagerClicks', '5');
+                  // Navigate anyway if ad fails
+                  navigation.navigate('SpentInMonth' as never);
+                }
               } else {
                 // Navigate immediately
                 navigation.navigate('SpentInMonth' as never);
@@ -2118,8 +2130,10 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Native Ad */}
-        {recentTransactions.length > 0 && <NativeAdComponent />}
+        {/* AdMob Banner Ad - Middle */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
 
         {/* Quick Action Buttons */}
         <View style={styles.quickActionContainer}>
@@ -2156,6 +2170,7 @@ const HomeScreen: React.FC = () => {
             <Text style={styles.quickActionText} allowFontScaling={false}>Remind</Text>
           </TouchableOpacity>
         </View>
+
 
         {/* Carousel Banner Section */}
         {banners.length > 0 && (
@@ -2268,12 +2283,10 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
 
-        {/* AdMob Banner Ad - Below Smart Insights */}
-        {!loading && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
-        )}
+        {/* AdMob Banner Ad - Top */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
 
         {/* Top Spending Categories */}
         {!loading && spendingCategories.length > 0 && (
@@ -2402,32 +2415,14 @@ const HomeScreen: React.FC = () => {
       <TouchableOpacity 
         style={[styles.floatingActionButton, { bottom: Math.max(insets.bottom + 70, 90) }]}
         onPress={() => {
-          // Navigate to AddTransaction screen in MainStackNavigator
-          (navigation as any).navigate('MainApp', { screen: 'AddTransaction' });
+          // Navigate directly to AddTransaction screen
+          (navigation as any).navigate('AddTransaction');
         }}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* Money Manager Interstitial Ad Modal */}
-      <InterstitialAdModal
-        visible={showMoneyManagerAd}
-        onClose={() => {
-          console.log('📱 Money Manager interstitial ad modal closed');
-          setShowMoneyManagerAd(false);
-          // Navigate after modal closes
-          setTimeout(() => {
-            navigation.navigate('SpentInMonth' as never);
-          }, 500);
-        }}
-        onAdClicked={() => {
-          console.log('📱 Money Manager interstitial ad clicked');
-          setShowMoneyManagerAd(false);
-          setTimeout(() => {
-            navigation.navigate('SpentInMonth' as never);
-          }, 500);
-        }}
-      />
+      {/* Money Manager Real Interstitial Ad - REMOVED - now shows directly */}
 
     </View>
   );

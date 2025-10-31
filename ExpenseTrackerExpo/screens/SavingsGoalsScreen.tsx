@@ -25,8 +25,7 @@ import { useScroll } from '../context/ScrollContext';
 import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
-import { NativeAdComponent } from '../components/NativeAdComponent';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 interface SavingsGoal {
   id: string;
@@ -52,7 +51,7 @@ const SavingsGoalsScreen: React.FC = () => {
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddGoalAd, setShowAddGoalAd] = useState(false);
+  // Removed mock interstitial state
 
   const formatCurrency = (amount: number) => {
     const isNegative = amount < 0;
@@ -339,7 +338,7 @@ const SavingsGoalsScreen: React.FC = () => {
       <SavingsGoalsHeader 
         theme={theme} 
         insets={insets} 
-        onAddPress={() => setShowAddGoalAd(true)}
+        onAddPress={async () => { try { await AppOpenAdService.showInterstitial(); } catch {} (navigation as any).navigate('AddGoal'); }}
       />
       
       <ScrollView
@@ -532,8 +531,12 @@ const SavingsGoalsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
               
-              {/* Show native ad after every 2 goals */}
-              {showAd && <NativeAdComponent />}
+              {/* Show banner ad after every 2 goals */}
+              {showAd && (
+                <View style={styles.adContainer}>
+                  <BannerAdComponent />
+                </View>
+              )}
               </React.Fragment>
             );
           })}
@@ -556,7 +559,7 @@ const SavingsGoalsScreen: React.FC = () => {
             </Text>
             <TouchableOpacity
               style={styles.createFirstGoalButton}
-              onPress={() => setShowAddGoalAd(true)}
+              onPress={async () => { try { await AppOpenAdService.showInterstitial(); } catch {} (navigation as any).navigate('AddGoal' as never); }}
             >
               <Text style={styles.createFirstGoalButtonText} allowFontScaling={false}>Create Your First Goal</Text>
             </TouchableOpacity>
@@ -767,24 +770,7 @@ const SavingsGoalsScreen: React.FC = () => {
          </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Interstitial Ad Modal for Add Goal */}
-      <InterstitialAdModal
-        visible={showAddGoalAd}
-        onClose={() => {
-          console.log('📱 Add Goal interstitial ad modal closed');
-          setShowAddGoalAd(false);
-          setTimeout(() => {
-            navigation.navigate('AddGoal' as never);
-          }, 500);
-        }}
-        onAdClicked={() => {
-          console.log('📱 Add Goal interstitial ad clicked');
-          setShowAddGoalAd(false);
-          setTimeout(() => {
-            navigation.navigate('AddGoal' as never);
-          }, 500);
-        }}
-      />
+      {/* Interstitial modal removed; direct interstitial shown before navigation */}
     </View>
   );
 };

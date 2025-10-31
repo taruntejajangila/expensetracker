@@ -5,15 +5,18 @@ import './globalFontFix';
 import './utils/NetworkErrorHandler';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TextInput, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { SimpleDrawer } from './components/SimpleDrawer';
+import { DrawerProvider, useDrawer } from './context/DrawerContext';
+import SplashScreen from './components/SplashScreen';
 
 // Import all your existing screens
 import HomeScreen from './screens/HomeScreen';
@@ -194,7 +197,16 @@ function MainStackNavigator() {
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+      {/* Dev-only: Splash preview screen */}
+      <Stack.Screen name="DevSplash" component={DevSplashScreen} />
     </Stack.Navigator>
+  );
+}
+// Dev splash preview wrapper
+function DevSplashScreen() {
+  // Keep splash visible; no auto-close
+  return (
+    <SplashScreen onComplete={() => { /* stay on screen for live edits */ }} />
   );
 }
 
@@ -222,10 +234,12 @@ function LoadingScreen() {
 
   // App Navigator Component
 function AppNavigator() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isOfflineMode } = useAuth();
+  const { drawerOpen, closeDrawer } = useDrawer();
   const [appInitialized, setAppInitialized] = useState(false);
   const [adMobInitialized, setAdMobInitialized] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [forceStopLoading, setForceStopLoading] = useState(false);
@@ -279,39 +293,65 @@ function AppNavigator() {
     checkOnboardingStatus();
   }, [user]); // Add user dependency
 
-  // Initialize AdMob
+  // Initialize AdMob - Wait for app to be ready
   useEffect(() => {
     const initializeAdMob = async () => {
+      // Wait for app to fully load
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       try {
-        // Import AdMob service dynamically
+        console.log('🚀 Starting AdMob initialization...');
+        
+        // Import AdMob service
         const AdMobService = require('./services/AdMobService').default;
         
         // Initialize AdMob
         await AdMobService.initialize();
         console.log('✅ AdMob initialized successfully');
         
-        // Initialize App Open Ad
-        await AppOpenAdService.initializeAppOpenAd();
-        console.log('✅ App Open Ad initialized');
+        setAdMobInitialized(true);
         
-        setAdMobInitialized(true);
+        // Initialize other ad types with delays
+        setTimeout(async () => {
+          try {
+            await AppOpenAdService.initializeAppOpenAd();
+            console.log('✅ App Open Ad ready');
+          } catch (error) {
+            console.error('⚠️ App Open Ad initialization failed:', error);
+          }
+        }, 1000);
+        
+        setTimeout(async () => {
+          try {
+            await AppOpenAdService.initializeInterstitial();
+            console.log('✅ Interstitial Ad ready');
+          } catch (error) {
+            console.error('⚠️ Interstitial Ad initialization failed:', error);
+          }
+        }, 2000);
+        
       } catch (error) {
-        console.error('❌ AdMob initialization failed:', error);
-        // Still set as initialized so app continues to work
-        setAdMobInitialized(true);
+        console.error('❌ AdMob initialization failed completely:', error);
+        setAdMobInitialized(true); // Continue app anyway
       }
     };
 
     initializeAdMob();
   }, []);
 
-  // Show App Open Ad when app becomes active
+  // Don't auto-show App Open Ad - it should only show when returning from background
+  // Show App Open Ad when app returns from background (not on fresh launch)
   useEffect(() => {
-    if (!isLoading && user && adMobInitialized) {
-      // Show app open ad (only once per app session)
-      AppOpenAdService.showAppOpenAd();
-    }
-  }, [isLoading, user, adMobInitialized]);
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active' && user && adMobInitialized && !showSplash) {
+        // Only show if app was in background (not fresh launch or splash)
+        AppOpenAdService.showAppOpenAd();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [user, adMobInitialized, showSplash]);
 
   useEffect(() => {
     // Mark app as initialized when user is ready (don't wait for AdMob)
@@ -400,6 +440,17 @@ function AppNavigator() {
   // Stop loading after timeout or when all checks complete
   const shouldShowLoading = (isLoading || checkingOnboarding) && !forceStopLoading;
   
+  // Show splash screen first
+  if (showSplash) {
+    return (
+      <SplashScreen 
+        onComplete={() => {
+          setShowSplash(false);
+        }} 
+      />
+    );
+  }
+  
   if (shouldShowLoading) {
     return <LoadingScreen />;
   }
@@ -415,11 +466,16 @@ function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <StatusBar style="auto" />
-      <OfflineIndicator />
-      {user ? <MainStackNavigator /> : <AuthStackNavigator />}
-    </NavigationContainer>
+    <>
+      <NavigationContainer ref={navigationRef}>
+        <StatusBar style="auto" />
+        <OfflineIndicator />
+        {(user || isOfflineMode) ? <MainStackNavigator /> : <AuthStackNavigator />}
+        {user && <SimpleDrawer isOpen={drawerOpen} onClose={closeDrawer} />}
+        {/* Left edge swipe opener */}
+        
+      </NavigationContainer>
+    </>
   );
 }
 
@@ -445,13 +501,15 @@ export default function App() {
       <NetworkProvider>
         <AuthProvider>
           <ThemeProvider>
-            <ScrollProvider>
-              <NotificationProvider>
-                <TicketProvider>
-                  <AppNavigator />
-                </TicketProvider>
-              </NotificationProvider>
-            </ScrollProvider>
+            <DrawerProvider>
+              <ScrollProvider>
+                <NotificationProvider>
+                  <TicketProvider>
+                    <AppNavigator />
+                  </TicketProvider>
+                </NotificationProvider>
+              </ScrollProvider>
+            </DrawerProvider>
           </ThemeProvider>
         </AuthProvider>
       </NetworkProvider>

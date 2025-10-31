@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LoanService } from '../services/LoanService';
 import LoanCard from '../components/LoanCard';
 import { BannerAdComponent } from '../components/AdMobComponents';
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 interface Loan {
   id: string;
@@ -43,7 +43,7 @@ const LoansScreen: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalMonthlyPayment, setTotalMonthlyPayment] = useState(0);
-  const [showAddLoanAd, setShowAddLoanAd] = useState(false);
+  // Removed mock interstitial modal
 
   // Removed sample/mock loans; using stored loans only
 
@@ -78,10 +78,10 @@ const LoansScreen: React.FC = () => {
       // Create a mutable copy of the array to avoid read-only issues
       const processedLoans = all.map((loan) => {
         try {
-          const isInterestOnly = !!loan.isInterestOnly || loan.type === 'Gold Loan' || loan.type === 'Private Money Lending';
+          const isInterestOnly = !!(loan as any).isInterestOnly || (loan as any).type === 'Gold Loan' || (loan as any).type === 'Private Money Lending';
           const annualRate = Number(loan.interestRate || 0);
           const r = annualRate / 100 / 12; // annualRate is now percentage, convert to decimal then monthly
-          const tenureMonths = Number(loan.tenureMonths || Math.round((loan.term || 0) * 12));
+          const tenureMonths = Number((loan as any).tenureMonths || Math.round(((loan as any).term || 0) * 12));
           const start = new Date(loan.emiStartDate || loan.nextPaymentDate || new Date());
           // months elapsed from start to now
           let monthsElapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
@@ -256,8 +256,11 @@ const LoansScreen: React.FC = () => {
           <View style={styles.headerRight}>
             <TouchableOpacity 
               style={styles.addButton}
-              onPress={() => {
-                setShowAddLoanAd(true);
+              onPress={async () => {
+                try {
+                  await AppOpenAdService.showInterstitial();
+                } catch {}
+                (navigation as any).navigate('AddLoan');
               }}
               activeOpacity={0.7}
             >
@@ -342,7 +345,12 @@ const LoansScreen: React.FC = () => {
                 <Text style={styles.emptyStateSubtitle} allowFontScaling={false}>Start your financial journey with smart borrowing</Text>
                 <TouchableOpacity 
                   style={styles.addLoanButton}
-                  onPress={() => setShowAddLoanAd(true)}
+                  onPress={async () => {
+                    try {
+                      await AppOpenAdService.showInterstitial();
+                    } catch {}
+                    (navigation as any).navigate('AddLoan');
+                  }}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -544,25 +552,7 @@ const LoansScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Add Loan Interstitial Ad Modal */}
-      <InterstitialAdModal
-        visible={showAddLoanAd}
-        onClose={() => {
-          console.log('📱 Add Loan interstitial ad modal closed');
-          setShowAddLoanAd(false);
-          // Navigate after modal closes
-          setTimeout(() => {
-            (navigation as any).navigate('AddLoan');
-          }, 500);
-        }}
-        onAdClicked={() => {
-          console.log('📱 Add Loan interstitial ad clicked');
-          setShowAddLoanAd(false);
-          setTimeout(() => {
-            (navigation as any).navigate('AddLoan');
-          }, 500);
-        }}
-      />
+      {/* Interstitial modal removed; direct interstitial shown on action */}
     </View>
   );
 };

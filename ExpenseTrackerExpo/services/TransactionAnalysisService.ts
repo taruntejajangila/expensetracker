@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Reminder } from '../types/PaymentTypes';
 import TransactionService from './transactionService';
+import { LoanService } from './LoanService';
+import ReminderService from './ReminderService';
 
 // Transaction interface (assuming this exists in your app)
 interface Transaction {
@@ -369,9 +371,6 @@ class TransactionAnalysisService {
     try {
       console.log('🏦 Generating loan EMI reminders...');
       
-      // Import LoanService dynamically to avoid circular dependencies
-      const { LoanService } = await import('./LoanService');
-      
       // Get all active loans
       const loans = await LoanService.getLoans();
       console.log('🏦 Found loans:', loans.length);
@@ -615,9 +614,8 @@ class TransactionAnalysisService {
   // Get existing reminders to check for duplicates
   private async getExistingReminders(userId?: string): Promise<Reminder[]> {
     try {
-      // Import ReminderService dynamically to avoid circular dependencies
-      const ReminderService = await import('./ReminderService');
-      return await ReminderService.default.getReminders();
+      // Get reminders using ReminderService
+      return await ReminderService.getReminders();
     } catch (error) {
       console.error('Error getting existing reminders:', error);
       return [];

@@ -21,7 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "jsEngine": "jsc",
+      "jsEngine": "hermes",
       "package": "com.taruntejajangila.mobileapp",
       "versionCode": 2,
       "permissions": [

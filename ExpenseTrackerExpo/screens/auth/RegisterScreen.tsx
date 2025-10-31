@@ -58,6 +58,27 @@ const RegisterScreen: React.FC = () => {
     return 'Strong';
   };
 
+  // Filter name input to only allow alphabets and spaces
+  const handleNameChange = (text: string) => {
+    // Remove all characters that are not letters or spaces
+    const filteredText = text.replace(/[^a-zA-Z\s]/g, '');
+    setName(filteredText);
+  };
+
+  // Filter email input to only allow valid email characters
+  const handleEmailChange = (text: string) => {
+    // Allow letters, numbers, dots, hyphens, underscores, and @ symbol
+    // Email format: user@domain.com
+    const filteredText = text.replace(/[^a-zA-Z0-9.@_-]/g, '');
+    setEmail(filteredText);
+  };
+
+  // Check if email format is valid
+  const isEmailValid = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
   const handleRegister = async () => {
     // Validation
     if (!name.trim() || !email.trim() || !phone.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -65,11 +86,36 @@ const RegisterScreen: React.FC = () => {
       return;
     }
 
+    // Full Name Validation
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      Alert.alert('Error', 'Full name must be at least 2 characters long');
+      return;
+    }
+    if (trimmedName.length > 50) {
+      Alert.alert('Error', 'Full name must not exceed 50 characters');
+      return;
+    }
+    // Allow only alphabets (letters) and spaces - no numbers or symbols
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      Alert.alert('Error', 'Full name can only contain alphabets and spaces. No numbers or symbols allowed');
+      return;
+    }
+
+    // Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Phone Validation
     if (phone.trim().length !== 10 || !/^[0-9]{10}$/.test(phone.trim())) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
 
+    // Password Validation
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
@@ -302,7 +348,7 @@ const RegisterScreen: React.FC = () => {
                     placeholder="Enter your full name"
                     placeholderTextColor="#999999"
                     value={name}
-                    onChangeText={setName}
+                    onChangeText={handleNameChange}
                     onFocus={() => setFocusedInput('name')}
                     onBlur={() => setFocusedInput(null)}
                     autoCapitalize="words"
@@ -328,7 +374,7 @@ const RegisterScreen: React.FC = () => {
                     placeholder="Enter your email"
                     placeholderTextColor="#999999"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={handleEmailChange}
                     onFocus={() => setFocusedInput('email')}
                     onBlur={() => setFocusedInput(null)}
                     keyboardType="email-address"
@@ -343,6 +389,16 @@ const RegisterScreen: React.FC = () => {
                     style={styles.inputIcon}
                   />
                 </View>
+                {email.length > 0 && (
+                  <View style={styles.passwordStrength}>
+                    <Text style={[
+                      styles.strengthText, 
+                      { color: isEmailValid(email) ? '#6BCF7F' : '#FF6B6B' }
+                    ]} allowFontScaling={false}>
+                      {isEmailValid(email) ? 'Valid email ✓' : 'Please enter a valid email format'}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.inputContainer}>

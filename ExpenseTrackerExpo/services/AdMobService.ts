@@ -1,30 +1,21 @@
 import Constants from 'expo-constants';
 
-// Detect if running in Expo Go or production build
-const isExpoGo = !Constants.executionEnvironment || Constants.executionEnvironment === 'storeClient';
-const isProduction = Constants.executionEnvironment === 'storeClient';
+const disableAds = (process.env.EXPO_PUBLIC_DISABLE_ADS === '1') || (Constants.appOwnership === 'expo');
 
-console.log('🔍 AdMob Environment Check:');
-console.log(`Execution Environment: ${Constants.executionEnvironment}`);
-console.log(`Is Expo Go: ${isExpoGo}`);
-console.log(`Is Production: ${isProduction}`);
-
-// Conditionally import based on environment
 let AdMobService: any;
 
-if (isProduction || !isExpoGo) {
-  // Production build: Use real AdMob
-  try {
-    AdMobService = require('./AdMobServiceReal').default;
-    console.log('📱 Using REAL AdMob implementation');
-  } catch (error) {
-    console.log('⚠️ Real AdMob not available, falling back to mock');
-    AdMobService = require('./AdMobServiceMock').default;
-  }
+if (disableAds) {
+  // Minimal no-op implementation for Expo Go / disabled ads
+  console.log('🚫 Ads disabled (Expo Go mode or env flag)');
+  AdMobService = {
+    initialize: async () => {},
+    getBannerUnitId: () => '',
+    getInterstitialUnitId: () => '',
+  };
 } else {
-  // Expo Go: Use mock ads
-  AdMobService = require('./AdMobServiceMock').default;
-  console.log('🎭 Using MOCK AdMob implementation (Expo Go)');
+  // Real AdMob for dev client / APK
+  AdMobService = require('./AdMobServiceReal').default;
+  console.log('📱 Using REAL AdMob implementation');
 }
 
 export default AdMobService;

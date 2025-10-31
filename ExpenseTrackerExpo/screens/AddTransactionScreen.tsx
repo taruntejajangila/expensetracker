@@ -18,9 +18,9 @@ import AccountService from '../services/AccountService';
 // Credit card functionality hidden for v1 release
 // import CreditCardService from '../services/CreditCardService';
 
-import { InterstitialAdModal } from '../components/InterstitialAdModal';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import WheelDatePicker from '../components/WheelDatePicker';
+import AppOpenAdService from '../services/AppOpenAdService';
 
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,7 +58,6 @@ const AddTransactionScreen = () => {
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [showToAccountDropdown, setShowToAccountDropdown] = useState(false);
   const [transactionsUntilAd, setTransactionsUntilAd] = useState<number>(5);
-  const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
@@ -216,11 +215,6 @@ const AddTransactionScreen = () => {
     loadCategories();
   }, []);
 
-  // Debug: Log when showInterstitialAd changes
-  useEffect(() => {
-    console.log('🔍 showInterstitialAd state changed to:', showInterstitialAd);
-  }, [showInterstitialAd]);
-
   // Categories are loaded once when component mounts - no need to refresh on every focus
 
   // Removed forceRefreshCategories - no longer needed with simplified category loading
@@ -252,16 +246,6 @@ const AddTransactionScreen = () => {
     }
   };
 
-  // Set up interstitial ad callback
-  useEffect(() => {
-    const { interstitialAd } = require('../services/AdMobService');
-    if (interstitialAd && interstitialAd.setShowAdCallback) {
-      interstitialAd.setShowAdCallback(() => {
-        setShowInterstitialAd(true);
-      });
-    }
-  }, []);
-
   // Function to update ad counter
   const updateAdCounter = async () => {
     try {
@@ -280,19 +264,17 @@ const AddTransactionScreen = () => {
       
       console.log(`📊 Transactions until ad: ${newCount}`);
       
-      // Show interstitial ad when counter reaches 0
+      // Return true if we should show ad (counter reached 0)
       if (newCount <= 0) {
-        console.log('📱 Showing interstitial ad after transaction limit');
-        console.log('📱 showInterstitialAd will be set to true');
-        setShowInterstitialAd(true);
-        console.log('📱 showInterstitialAd state updated');
-        
         // Reset counter to 5 for next round
         setTransactionsUntilAd(5);
         await AsyncStorage.setItem('transactionsUntilAd', '5');
+        return true; // Indicate ad should be shown
       }
+      return false;
     } catch (error) {
       console.error('❌ Error updating ad counter:', error);
+      return false;
     }
   };
 
@@ -578,7 +560,7 @@ const AddTransactionScreen = () => {
           console.log('🔍 AddTransactionScreen: Transaction updated successfully');
           
           // Navigate back to transaction detail screen to show updated transaction
-          navigation.navigate('TransactionDetail', { 
+          (navigation as any).navigate('TransactionDetail', { 
             transactionId: editTransaction.id 
           });
         } else {
@@ -587,18 +569,18 @@ const AddTransactionScreen = () => {
           // Note: Account balance adjustments are now handled by the backend
           
           // Check current count from AsyncStorage BEFORE decrementing
-          const savedCount = await AsyncStorage.getItem('transactionsUntilAd');
-          const currentCount = savedCount !== null ? parseInt(savedCount, 10) : 5;
-          const shouldShowAd = currentCount === 1; // Check BEFORE decrementing
-          
           // Update ad counter after saving new transaction
-          await updateAdCounter();
+          const shouldShowAd = await updateAdCounter();
           
-          // Check if we need to show interstitial ad - if yes, wait for user to close it
-          if (shouldShowAd || showInterstitialAd) {
-            // Don't navigate yet, let the modal show first
-            console.log('📱 Ad will show, waiting for user to close modal...');
-            return; // Exit early to let modal show
+          // Show interstitial ad directly if counter reached 0
+          if (shouldShowAd) {
+            console.log('📱 Showing interstitial ad after 5 transactions');
+            try {
+              await AppOpenAdService.showInterstitial();
+              console.log('✅ Interstitial ad shown successfully');
+            } catch (error) {
+              console.error('❌ Failed to show interstitial ad:', error);
+            }
           }
         }
 
@@ -612,12 +594,9 @@ const AddTransactionScreen = () => {
           setErrors({}); // Clear errors
         } else {
           // Navigate back with refresh flag to trigger data reload
-          navigation.navigate('MainApp', { 
-            screen: 'MainTabs', 
-            params: { 
-              screen: 'Home',
-              params: { refresh: true }
-            }
+          (navigation as any).navigate('MainTabs', { 
+            screen: 'Home',
+            params: { refresh: true }
           });
         }
       } catch (error) {
@@ -1269,38 +1248,6 @@ const AddTransactionScreen = () => {
           {/* Bottom Spacer */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
-
-        {/* Interstitial Ad Modal */}
-        <InterstitialAdModal
-          visible={showInterstitialAd}
-          onClose={() => {
-            console.log('📱 Interstitial ad modal closed');
-            setShowInterstitialAd(false);
-            // Navigate to home screen after modal closes
-            setTimeout(() => {
-              navigation.navigate('MainApp', { 
-                screen: 'MainTabs', 
-                params: { 
-                  screen: 'Home',
-                  params: { refresh: true }
-                }
-              });
-            }, 500);
-          }}
-          onAdClicked={() => {
-            console.log('📱 Interstitial ad clicked');
-            setShowInterstitialAd(false);
-            setTimeout(() => {
-              navigation.navigate('MainApp', { 
-                screen: 'MainTabs', 
-                params: { 
-                  screen: 'Home',
-                  params: { refresh: true }
-                }
-              });
-            }, 500);
-          }}
-        />
 
         {/* Bottom Banner Ad */}
         <View style={[styles.bannerAdContainer, { paddingBottom: insets.bottom }]}>

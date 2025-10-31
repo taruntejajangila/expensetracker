@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import LogoutVerificationModal from '../components/LogoutVerificationModal';
+import { BannerAdComponent } from '../components/AdMobComponents';
 
 const { width } = Dimensions.get('window');
 
@@ -282,6 +283,12 @@ const ProfileScreen: React.FC = () => {
       fontSize: 14,
       fontWeight: '600',
     },
+    adContainer: {
+      marginVertical: 15,
+      marginHorizontal: 20,
+      borderRadius: 8,
+      overflow: 'hidden',
+    },
     appNameContainer: {
       alignItems: 'center',
       marginTop: 20,
@@ -510,6 +517,11 @@ const ProfileScreen: React.FC = () => {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
+        </View>
+
+        {/* Banner Ad */}
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
         </View>
 
         {/* Danger Zone Card */}

@@ -575,10 +575,18 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       (uuid_generate_v4(), NULL, 'Healthcare', 'heart', '#DDA0DD', 'expense', true),
       (uuid_generate_v4(), NULL, 'Education', 'book', '#98D8C8', 'expense', true),
       (uuid_generate_v4(), NULL, 'Travel', 'airplane', '#F7DC6F', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Rent', 'home', '#FF7675', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Subscription', 'card', '#74B9FF', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Gifts & Donations', 'gift', '#FD79A8', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Gas/Fuel', 'car-sport', '#FDCB6E', 'expense', true),
+      (uuid_generate_v4(), NULL, 'EMI/Loan Payment', 'wallet', '#E17055', 'expense', true),
       (uuid_generate_v4(), NULL, 'Salary', 'cash', '#82E0AA', 'income', true),
       (uuid_generate_v4(), NULL, 'Freelance', 'briefcase', '#85C1E9', 'income', true),
       (uuid_generate_v4(), NULL, 'Investment', 'trending-up', '#F8C471', 'income', true),
       (uuid_generate_v4(), NULL, 'Other Income', 'add-circle', '#BB8FCE', 'income', true),
+      (uuid_generate_v4(), NULL, 'Bonus', 'trophy', '#A29BFE', 'income', true),
+      (uuid_generate_v4(), NULL, 'Interest Income', 'cash', '#6C5CE7', 'income', true),
+      (uuid_generate_v4(), NULL, 'Part Time Income', 'time', '#00B894', 'income', true),
       (uuid_generate_v4(), NULL, 'Balance Transfer', 'swap-horizontal', '#9C88FF', 'transfer', true)
     ON CONFLICT DO NOTHING
   `);
