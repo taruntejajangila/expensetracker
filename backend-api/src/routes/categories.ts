@@ -272,4 +272,79 @@ router.delete('/:id', async (req: express.Request, res: express.Response) => {
   }
 });
 
+// POST /api/categories/add-missing - Add missing default categories (one-time setup)
+router.post('/add-missing', async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = req.user?.id;
+    logger.info(`Adding missing categories (triggered by user: ${userId})`);
+
+    const db = req.app.locals.db;
+    
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection not available'
+      });
+    }
+
+    const newCategories = [
+      // Expense categories
+      { name: 'Rent', icon: 'home', color: '#FF7675', type: 'expense' },
+      { name: 'Subscription', icon: 'card', color: '#74B9FF', type: 'expense' },
+      { name: 'Gifts & Donations', icon: 'gift', color: '#FD79A8', type: 'expense' },
+      { name: 'Gas/Fuel', icon: 'car-sport', color: '#FDCB6E', type: 'expense' },
+      { name: 'EMI/Loan Payment', icon: 'wallet', color: '#E17055', type: 'expense' },
+      // Income categories
+      { name: 'Bonus', icon: 'trophy', color: '#A29BFE', type: 'income' },
+      { name: 'Interest Income', icon: 'cash', color: '#6C5CE7', type: 'income' },
+      { name: 'Part Time Income', icon: 'time', color: '#00B894', type: 'income' }
+    ];
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    for (const category of newCategories) {
+      // Check if category already exists
+      const existing = await db.query(
+        "SELECT id FROM categories WHERE name = $1 AND type = $2",
+        [category.name, category.type]
+      );
+
+      if (existing.rows.length > 0) {
+        logger.info(`Category "${category.name}" already exists, skipping...`);
+        skippedCount++;
+        continue;
+      }
+
+      // Insert the category
+      await db.query(`
+        INSERT INTO categories (id, user_id, name, icon, color, type, is_default, is_active, sort_order, created_at, updated_at) 
+        VALUES (gen_random_uuid(), NULL, $1, $2, $3, $4, true, true, 999, NOW(), NOW())
+        ON CONFLICT DO NOTHING
+      `, [category.name, category.icon, category.color, category.type]);
+
+      logger.info(`✅ Category "${category.name}" added successfully`);
+      addedCount++;
+    }
+
+    return res.json({
+      success: true,
+      message: `Categories processed: ${addedCount} added, ${skippedCount} already existed`,
+      data: {
+        added: addedCount,
+        skipped: skippedCount,
+        total: addedCount + skippedCount
+      }
+    });
+  } catch (error) {
+    logger.error('Error adding missing categories:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to add missing categories',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : 'Internal server error'
+    });
+  }
+});
+
 export default router;
