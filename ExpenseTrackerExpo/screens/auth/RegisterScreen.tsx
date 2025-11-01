@@ -73,10 +73,17 @@ const RegisterScreen: React.FC = () => {
     setEmail(filteredText);
   };
 
-  // Check if email format is valid
+  // Check if email format is valid and domain is allowed
   const isEmailValid = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
+    if (!emailRegex.test(email.trim())) {
+      return false;
+    }
+    
+    // Only allow specific email domains
+    const allowedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+    const emailDomain = email.trim().split('@')[1]?.toLowerCase();
+    return allowedDomains.includes(emailDomain);
   };
 
   const handleRegister = async () => {
@@ -106,6 +113,14 @@ const RegisterScreen: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    
+    // Check if email domain is allowed
+    const allowedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+    const emailDomain = email.trim().split('@')[1]?.toLowerCase();
+    if (!allowedDomains.includes(emailDomain)) {
+      Alert.alert('Error', 'Please use Gmail, Outlook, Hotmail, or Yahoo email address');
       return;
     }
 
@@ -323,6 +338,7 @@ const RegisterScreen: React.FC = () => {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <ScrollView
             contentContainerStyle={styles.content}
@@ -371,7 +387,7 @@ const RegisterScreen: React.FC = () => {
                       styles.input,
                       focusedInput === 'email' && styles.inputFocused,
                     ]}
-                    placeholder="Enter your email"
+                    placeholder="Enter Gmail, Outlook, Hotmail, or Yahoo email"
                     placeholderTextColor="#999999"
                     value={email}
                     onChangeText={handleEmailChange}
@@ -395,7 +411,11 @@ const RegisterScreen: React.FC = () => {
                       styles.strengthText, 
                       { color: isEmailValid(email) ? '#6BCF7F' : '#FF6B6B' }
                     ]} allowFontScaling={false}>
-                      {isEmailValid(email) ? 'Valid email ✓' : 'Please enter a valid email format'}
+                      {isEmailValid(email) 
+                        ? 'Valid email ✓' 
+                        : email.includes('@') 
+                          ? 'Only Gmail, Outlook, Hotmail, or Yahoo allowed'
+                          : 'Please enter a valid email format'}
                     </Text>
                   </View>
                 )}

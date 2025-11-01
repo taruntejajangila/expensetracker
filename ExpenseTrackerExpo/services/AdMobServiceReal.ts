@@ -29,6 +29,8 @@ const getBannerId = () => {
 let interstitialAd: InterstitialAd | null = null;
 let showAdCallback: (() => void) | null = null;
 let isInitialized = false;
+let interstitialRetryCount = 0;
+let interstitialEventListenersAdded = false;
 
 // Initialize AdMob
 export const initialize = async () => {
@@ -40,6 +42,7 @@ export const initialize = async () => {
     
     // Create interstitial ad
     interstitialAd = InterstitialAd.createForAdRequest(getInterstitialId());
+    interstitialEventListenersAdded = false; // Reset flag when creating new ad
     
     // Load the first ad
     await loadInterstitial();
@@ -105,14 +108,29 @@ export const interstitialAdObject = {
   setShowAdCallback: (callback: () => void) => {
     showAdCallback = callback;
     
-    if (interstitialAd) {
-      // Listen for ad events
+    if (interstitialAd && !interstitialEventListenersAdded) {
+      // Listen for ad events (only add once)
       interstitialAd.addAdEventListener(AdEventType.LOADED, () => {
         console.log('✅ Interstitial ad loaded');
+        interstitialRetryCount = 0; // Reset retry count on successful load
       });
       
       interstitialAd.addAdEventListener(AdEventType.ERROR, (error) => {
         console.error('❌ Interstitial ad error:', error);
+        // Retry with exponential backoff
+        if (interstitialRetryCount < 3) {
+          interstitialRetryCount++;
+          const retryDelay = Math.min(1000 * Math.pow(2, interstitialRetryCount), 5000);
+          setTimeout(() => {
+            console.log(`🔄 Retrying interstitial ad load (attempt ${interstitialRetryCount})`);
+            loadInterstitial().catch((err) => {
+              console.error(`❌ Interstitial ad retry ${interstitialRetryCount} failed:`, err);
+            });
+          }, retryDelay);
+        } else {
+          console.log('❌ Interstitial ad failed after 3 retries');
+          interstitialRetryCount = 0; // Reset for next cycle
+        }
       });
       
       // When ad is closed, trigger callback
@@ -121,9 +139,15 @@ export const interstitialAdObject = {
         if (showAdCallback) {
           showAdCallback();
         }
-        // Reload for next time
-        loadInterstitial();
+        // Reload for next time with delay
+        setTimeout(() => {
+          loadInterstitial().catch((error) => {
+            console.error('❌ Failed to load next interstitial after close:', error);
+          });
+        }, 1000);
       });
+      
+      interstitialEventListenersAdded = true;
     }
   },
   show: async () => {

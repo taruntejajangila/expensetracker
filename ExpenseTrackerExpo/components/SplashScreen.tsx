@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppOpenAdService from '../services/AppOpenAdService';
 
 const { width, height } = Dimensions.get('window');
@@ -12,7 +13,6 @@ interface SplashScreenProps {
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
-  const [showAd, setShowAd] = useState(false);
   const fadeOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleTranslate = useRef(new Animated.Value(8)).current;
@@ -21,6 +21,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
     useRef(new Animated.Value(0.6)).current,
     useRef(new Animated.Value(0.6)).current,
   ];
+  const isCompleted = useRef(false);
 
   useEffect(() => {
     // Fade in on mount
@@ -64,23 +65,66 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
     makeBounce(dotScales[2], 200);
 
 
-    const timer = setTimeout(() => {
-      setShowAd(true);
-      // Show app open ad after splash screen
-      AppOpenAdService.showAppOpenAd()
-        .then(() => {
-          console.log('✅ App Open Ad shown from splash');
-        })
-        .catch((error) => {
-          console.error('❌ App Open Ad failed from splash:', error);
-        })
-        .finally(() => {
-          // Complete without fade-out
+    // Safety timeout - always complete after max 4 seconds even if ad fails
+    const safetyTimeout = setTimeout(() => {
+      if (!isCompleted.current) {
+        console.log('⚠️ Splash screen safety timeout - completing');
+        isCompleted.current = true;
+        onComplete();
+      }
+    }, 4000); // Maximum 4 seconds
+
+    // Check if this is a first-time user to skip ad on first launch
+    const checkAndComplete = async () => {
+      if (!isCompleted.current) {
+        try {
+          // Check if user has launched app before
+          const hasLaunchedBefore = await AsyncStorage.getItem('app_launched_before');
+          
+          isCompleted.current = true;
           onComplete();
-        });
+          
+          // Mark that app has been launched
+          if (!hasLaunchedBefore) {
+            await AsyncStorage.setItem('app_launched_before', 'true');
+            console.log('📱 First launch detected - skipping ad to prevent initialization issues');
+            return; // Skip ad for first-time users
+          }
+          
+          // For returning users, try to show ad after longer delay
+          // This ensures AdMob is initialized
+          setTimeout(() => {
+            try {
+              AppOpenAdService.showAppOpenAd()
+                .then(() => {
+                  console.log('✅ App Open Ad shown from splash');
+                })
+                .catch((error) => {
+                  console.error('❌ App Open Ad failed from splash:', error);
+                  // Silently fail - don't crash the app
+                });
+            } catch (error) {
+              console.error('❌ Error calling App Open Ad:', error);
+              // Silently fail - don't crash the app
+            }
+          }, 2000); // Longer delay to ensure AdMob is fully initialized
+        } catch (error) {
+          console.error('❌ Error checking launch status:', error);
+          // If check fails, just complete without ad
+          isCompleted.current = true;
+          onComplete();
+        }
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkAndComplete();
     }, 2000); // Show splash for 2 seconds
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(safetyTimeout);
+    };
   }, [onComplete, fadeOpacity]);
 
   return (
@@ -136,6 +180,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             styles.simpleTitle,
             { opacity: titleOpacity, transform: [{ translateY: titleTranslate }] },
           ]}
+          allowFontScaling={false}
         >
           MyPaisa
         </Animated.Text>
@@ -145,7 +190,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             { opacity: titleOpacity, transform: [{ translateY: titleTranslate }] },
           ]}
         >
-          <Text style={styles.subtitleBadgeText}>Finance Manager</Text>
+          <Text style={styles.subtitleBadgeText} allowFontScaling={false}>Finance Manager</Text>
         </Animated.View>
       </View>
 
@@ -160,7 +205,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
       {/* Made in India */}
       <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>Made with ❤️ in INDIA</Text>
+        <Text style={styles.footerText} allowFontScaling={false}>Made with ❤️ in INDIA</Text>
       </View>
     </Animated.View>
   );

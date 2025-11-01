@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "717098289208",
+    "project_id": "mypaisa-9eeb5",
+    "storage_bucket": "mypaisa-9eeb5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717098289208:android:a6203ac9b11766151f3ecd",
+        "android_client_info": {
+          "package_name": "com.taruntejajangila.mobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmGV2b3LhAUiy3G1az--yNg12lXpXhyc0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

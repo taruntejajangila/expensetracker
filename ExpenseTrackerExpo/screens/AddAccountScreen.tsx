@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -45,6 +46,7 @@ const AddAccountScreen: React.FC = () => {
   const [showAccountTypeDropdown, setShowAccountTypeDropdown] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [bankSuggestion, setBankSuggestion] = useState<string | null>(null);
 
   const accountTypes = [
     { id: 'wallet', name: 'Wallet', icon: 'wallet-outline', color: '#FF6B6B' },
@@ -52,6 +54,75 @@ const AddAccountScreen: React.FC = () => {
     { id: 'salary', name: 'Salary', icon: 'card-outline', color: '#45B7D1' },
     { id: 'current', name: 'Current', icon: 'business-outline', color: '#96CEB4' },
   ];
+
+  // List of banks in alphabetical order (for autocomplete suggestion)
+  const bankList = [
+    'AU Small Finance Bank',
+    'Airtel Payments Bank',
+    'Axis Bank',
+    'Bandhan Bank',
+    'Bank of Baroda',
+    'Bank of India',
+    'Canara Bank',
+    'Central Bank of India',
+    'City Union Bank',
+    'CSB Bank',
+    'DCB Bank',
+    'Dhanalakshmi Bank',
+    'Federal Bank',
+    'HDFC Bank',
+    'ICICI Bank',
+    'IDBI Bank',
+    'IDFC First Bank',
+    'Indian Bank',
+    'Indian Overseas Bank',
+    'Indusind Bank',
+    'Jammu and Kashmir Bank',
+    'Jio Payments Bank',
+    'Karnataka Bank',
+    'Karur Vysya Bank',
+    'Kotak Mahindra Bank',
+    'Paytm Payments Bank',
+    'Punjab National Bank',
+    'Punjab and Sind Bank',
+    'RBL Bank',
+    'South Indian Bank',
+    'Standard Chartered',
+    'State Bank of India',
+    'Tamilnad Mercantile Bank',
+    'UCO Bank',
+    'Ujjivan Small Finance Bank',
+    'Union Bank of India',
+    'Yes Bank',
+  ];
+
+  // Function to find bank suggestion based on input
+  const getBankSuggestion = (input: string): string | null => {
+    if (!input || input.trim().length === 0) {
+      return null;
+    }
+    
+    const normalizedInput = input.toLowerCase().trim();
+    
+    // Priority mapping for common prefixes (user preference)
+    const priorityMap: { [key: string]: string } = {
+      'id': 'IDFC First Bank',  // ID should prioritize IDFC over IDBI
+      'idf': 'IDFC First Bank',
+      'idfc': 'IDFC First Bank',
+    };
+    
+    // Check priority map first
+    if (priorityMap[normalizedInput]) {
+      return priorityMap[normalizedInput];
+    }
+    
+    // Find the first bank that starts with the input (case-insensitive)
+    const match = bankList.find(bank => 
+      bank.toLowerCase().startsWith(normalizedInput)
+    );
+    
+    return match || null;
+  };
 
   // Prefill when editing
   useEffect(() => {
@@ -67,13 +138,20 @@ const AddAccountScreen: React.FC = () => {
         if (type === 'cash') return 'wallet';
         return '';
       };
+      // Apply filters to existing data when editing
+      const filteredNickname = (editingAccount.name || '').replace(/[^a-zA-Z0-9]/g, '');
+      const filteredAccountHolderName = (editingAccount.accountHolderName || '').replace(/[^a-zA-Z\s]/g, '');
+      const filteredAccountNumber = (editingAccount.accountNumber || '').replace(/[^0-9]/g, '').slice(0, 4);
+      
       setFormData({
-        nickname: editingAccount.name || '',
+        nickname: filteredNickname,
         bankName: editingAccount.bankName || editingAccount.name || '',
-        accountHolderName: editingAccount.accountHolderName || '',
-        accountNumber: editingAccount.accountNumber || '',
+        accountHolderName: filteredAccountHolderName,
+        accountNumber: filteredAccountNumber,
         accountType: mapAccountType(editingAccount.accountType, editingAccount.type),
       });
+      // Clear any existing suggestion when entering edit mode
+      setBankSuggestion(null);
     }
   }, [isEdit, editingAccount, route.params]);
 
@@ -83,11 +161,44 @@ const AddAccountScreen: React.FC = () => {
     }
   }, [isEdit, navigation]);
 
+  // Filter input based on field type
+  const filterInput = (field: keyof AccountFormData, value: string): string => {
+    switch (field) {
+      case 'nickname':
+        // Only allow alphabets and numbers
+        return value.replace(/[^a-zA-Z0-9]/g, '');
+      case 'accountHolderName':
+        // Only allow alphabets and spaces
+        return value.replace(/[^a-zA-Z\s]/g, '');
+      case 'accountNumber':
+        // Only allow numbers
+        return value.replace(/[^0-9]/g, '');
+      default:
+        return value;
+    }
+  };
+
   const handleInputChange = (field: keyof AccountFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Apply real-time filtering
+    const filteredValue = filterInput(field, value);
+    
+    setFormData(prev => ({ ...prev, [field]: filteredValue }));
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    
+    // Update bank suggestion for bank name field
+    if (field === 'bankName') {
+      const suggestion = getBankSuggestion(filteredValue);
+      setBankSuggestion(suggestion && suggestion.toLowerCase() !== filteredValue.toLowerCase() ? suggestion : null);
+    }
+  };
+
+  const handleBankSuggestionPress = () => {
+    if (bankSuggestion) {
+      setFormData(prev => ({ ...prev, bankName: bankSuggestion }));
+      setBankSuggestion(null);
     }
   };
 
@@ -104,12 +215,21 @@ const AddAccountScreen: React.FC = () => {
 
     if (!formData.accountHolderName.trim()) {
       newErrors.accountHolderName = 'Account holder name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.accountHolderName.trim())) {
+      newErrors.accountHolderName = 'Account holder name can only contain alphabets and spaces';
     }
 
     if (!formData.accountNumber.trim()) {
       newErrors.accountNumber = 'Account number is required';
     } else if (formData.accountNumber.length !== 4 || !/^\d+$/.test(formData.accountNumber)) {
       newErrors.accountNumber = 'Please enter last 4 digits only';
+    }
+    
+    // Validate nickname format (alphabets and numbers only)
+    if (!formData.nickname.trim()) {
+      newErrors.nickname = 'Account nickname is required';
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.nickname.trim())) {
+      newErrors.nickname = 'Nickname can only contain alphabets and numbers';
     }
 
     if (!formData.accountType) {
@@ -219,7 +339,11 @@ const AddAccountScreen: React.FC = () => {
   const styles = createStyles(theme);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
 
@@ -228,7 +352,7 @@ const AddAccountScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
-            >
+      >
         {/* Welcome Section removed */}
 
         {/* Form Container */}
@@ -260,7 +384,7 @@ const AddAccountScreen: React.FC = () => {
             </View>
             <View style={[styles.inputWrapper, errors.bankName && styles.inputError]}>
               <TextInput style={styles.textInput}
-                placeholder="e.g., Chase Bank, Bank of America"
+                placeholder="e.g., HDFC Bank, ICICI Bank"
                 placeholderTextColor={theme.colors.textSecondary}
                 value={formData.bankName}
                 onChangeText={(value) => handleInputChange('bankName', value)}
@@ -268,6 +392,20 @@ const AddAccountScreen: React.FC = () => {
                 allowFontScaling={false}
               />
             </View>
+            {/* Bank Name Suggestion */}
+            {bankSuggestion && (
+              <TouchableOpacity 
+                style={styles.suggestionContainer}
+                onPress={handleBankSuggestionPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="search" size={14} color="#667eea" />
+                <Text style={styles.suggestionText} allowFontScaling={false}>
+                  {bankSuggestion}
+                </Text>
+                <Ionicons name="arrow-forward-circle" size={16} color="#667eea" />
+              </TouchableOpacity>
+            )}
             {errors.bankName && <Text style={styles.errorText} allowFontScaling={false}>{errors.bankName}</Text>}
           </View>
 
@@ -399,7 +537,7 @@ const AddAccountScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -511,6 +649,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     marginLeft: 4,
+  },
+  suggestionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#667eea',
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '500',
+    marginLeft: 8,
   },
   dropdownButton: {
     flexDirection: 'row',

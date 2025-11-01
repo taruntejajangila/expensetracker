@@ -345,7 +345,11 @@ function AppNavigator() {
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active' && user && adMobInitialized && !showSplash) {
         // Only show if app was in background (not fresh launch or splash)
-        AppOpenAdService.showAppOpenAd();
+        AppOpenAdService.showAppOpenAd()
+          .catch((error) => {
+            console.error('❌ App Open Ad failed on app state change:', error);
+            // Silently fail - don't crash the app
+          });
       }
     };
 

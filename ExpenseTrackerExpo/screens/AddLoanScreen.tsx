@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions, Alert, KeyboardAvoidingView } from 'react-native';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -29,8 +29,88 @@ const AddLoanScreen: React.FC = () => {
 	const [typeOpen, setTypeOpen] = useState(false);
     const [emiStartDate, setEmiStartDate] = useState('');
     const [emiDate, setEmiDate] = useState<Date | null>(null);
+    const [lenderSuggestion, setLenderSuggestion] = useState<string | null>(null);
 
 	const styles = createStyles(theme);
+
+    // List of banks and NBFCs in alphabetical order (for autocomplete suggestion)
+    const lenderList = [
+        'Aditya Birla Capital',
+        'AU Small Finance Bank',
+        'Airtel Payments Bank',
+        'Axis Bank',
+        'Bajaj Finserv',
+        'Bandhan Bank',
+        'Bank of Baroda',
+        'Bank of India',
+        'Canara Bank',
+        'Central Bank of India',
+        'City Union Bank',
+        'CSB Bank',
+        'DCB Bank',
+        'Dhanalakshmi Bank',
+        'Edelweiss Financial Services',
+        'Federal Bank',
+        'HDFC Bank',
+        'ICICI Bank',
+        'IDBI Bank',
+        'IDFC First Bank',
+        'Indian Bank',
+        'Indian Overseas Bank',
+        'Indusind Bank',
+        'Jammu and Kashmir Bank',
+        'Jio Payments Bank',
+        'Karnataka Bank',
+        'Karur Vysya Bank',
+        'Kotak Mahindra Bank',
+        'Manappuram Finance',
+        'Muthoot Finance',
+        'Paytm Payments Bank',
+        'Piramal Finance',
+        'Punjab National Bank',
+        'Punjab and Sind Bank',
+        'RBL Bank',
+        'South Indian Bank',
+        'Standard Chartered',
+        'State Bank of India',
+        'Tata Capital',
+        'Tamilnad Mercantile Bank',
+        'UCO Bank',
+        'Ujjivan Small Finance Bank',
+        'Union Bank of India',
+        'Yes Bank',
+    ];
+
+    // Function to find lender suggestion based on input
+    const getLenderSuggestion = (input: string): string | null => {
+        if (!input || input.trim().length === 0) {
+            return null;
+        }
+        
+        const normalizedInput = input.toLowerCase().trim();
+        
+        // Priority mapping for common prefixes (user preference)
+        const priorityMap: { [key: string]: string } = {
+            'id': 'IDFC First Bank',  // ID should prioritize IDFC over IDBI
+            'idf': 'IDFC First Bank',
+            'idfc': 'IDFC First Bank',
+            'baj': 'Bajaj Finserv',  // BA should prioritize Bajaj
+            'baja': 'Bajaj Finserv',
+            'bajaj': 'Bajaj Finserv',
+        };
+        
+        // Check priority map first
+        if (priorityMap[normalizedInput]) {
+            return priorityMap[normalizedInput];
+        }
+        
+        // Find the first lender that starts with the input (case-insensitive)
+        const match = lenderList.find(lender => 
+            lender.toLowerCase().startsWith(normalizedInput)
+        );
+        
+        return match || null;
+    };
 
     // Function to capitalize first letter of each word
     const toTitleCase = (text: string): string => {
@@ -39,6 +119,45 @@ const AddLoanScreen: React.FC = () => {
             .split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
+    };
+
+    // Filter input based on field type
+    const filterLoanName = (text: string): string => {
+        // Only allow alphabets and spaces
+        return text.replace(/[^a-zA-Z\s]/g, '');
+    };
+
+    const filterLenderName = (text: string): string => {
+        // Only allow alphabets and spaces
+        return text.replace(/[^a-zA-Z\s]/g, '');
+    };
+
+    const filterAmount = (text: string): string => {
+        // Only allow numbers
+        return text.replace(/[^0-9]/g, '');
+    };
+
+    const filterTenure = (text: string): string => {
+        // Only allow numbers
+        return text.replace(/[^0-9]/g, '');
+    };
+
+    const handleLenderChange = (text: string) => {
+        // Filter to only alphabets and spaces
+        const filteredText = filterLenderName(text);
+        const titleCaseText = toTitleCase(filteredText);
+        setLender(titleCaseText);
+        
+        // Update lender suggestion
+        const suggestion = getLenderSuggestion(filteredText);
+        setLenderSuggestion(suggestion && suggestion.toLowerCase() !== titleCaseText.toLowerCase() ? suggestion : null);
+    };
+
+    const handleLenderSuggestionPress = () => {
+        if (lenderSuggestion) {
+            setLender(toTitleCase(lenderSuggestion));
+            setLenderSuggestion(null);
+        }
     };
 
     const isValid = useMemo(() => {
@@ -266,7 +385,11 @@ const AddLoanScreen: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView 
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
             {/* Header with Safe Area */}
             <ScreenHeader theme={theme} insets={insets} />
 
@@ -281,7 +404,10 @@ const AddLoanScreen: React.FC = () => {
                         placeholder="Enter loan title"
                         placeholderTextColor="#9CA3AF"
                         value={name}
-                        onChangeText={(text) => setName(toTitleCase(text))}
+                        onChangeText={(text) => {
+                            const filtered = filterLoanName(text);
+                            setName(toTitleCase(filtered));
+                        }}
                         returnKeyType="next" allowFontScaling={false} />
                 </View>
 
@@ -304,8 +430,22 @@ const AddLoanScreen: React.FC = () => {
                         placeholder="Enter bank/financial institution name"
                         placeholderTextColor="#9CA3AF"
                         value={lender}
-                        onChangeText={(text) => setLender(toTitleCase(text))}
+                        onChangeText={handleLenderChange}
                         returnKeyType="next" allowFontScaling={false} />
+                    {/* Lender Name Suggestion */}
+                    {lenderSuggestion && (
+                        <TouchableOpacity 
+                            style={styles.suggestionContainer}
+                            onPress={handleLenderSuggestionPress}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="search" size={14} color="#667eea" />
+                            <Text style={styles.suggestionText} allowFontScaling={false}>
+                                {lenderSuggestion}
+                            </Text>
+                            <Ionicons name="arrow-forward-circle" size={16} color="#667eea" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Loan Amount and Interest Rate */}
@@ -319,7 +459,7 @@ const AddLoanScreen: React.FC = () => {
                                 keyboardType="numeric"
                                 placeholderTextColor="#9CA3AF"
                                 value={principal}
-                                onChangeText={setPrincipal}
+                                onChangeText={(text) => setPrincipal(filterAmount(text))}
                                 returnKeyType="next" allowFontScaling={false} />
                         </View>
                         <Text style={styles.helperText} allowFontScaling={false}>Enter total sanctioned amount</Text>
@@ -367,7 +507,7 @@ const AddLoanScreen: React.FC = () => {
                         keyboardType="numeric"
                         placeholderTextColor="#9CA3AF"
                         value={termYears}
-                        onChangeText={setTermYears}
+                        onChangeText={(text) => setTermYears(filterTenure(text))}
                         returnKeyType="done" allowFontScaling={false} />
                 </View>
 
@@ -476,7 +616,7 @@ const AddLoanScreen: React.FC = () => {
 				</TouchableOpacity>
 			</View>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -849,6 +989,24 @@ const createStyles = (theme: any) => StyleSheet.create({
 		borderRadius: 16,
 		height: 56,
 		overflow: 'hidden',
+	},
+	suggestionContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#F0F4FF',
+		borderRadius: 12,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
+		marginTop: 8,
+		borderWidth: 1,
+		borderColor: '#667eea',
+	},
+	suggestionText: {
+		flex: 1,
+		fontSize: 14,
+		color: '#667eea',
+		fontWeight: '500',
+		marginLeft: 8,
 	},
 });
 

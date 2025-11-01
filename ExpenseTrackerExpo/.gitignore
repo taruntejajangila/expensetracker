@@ -40,7 +40,11 @@ yarn-error.*
 *.tsbuildinfo
 
 # Firebase
-google-services.json
+# google-services.json - Commented out temporarily for local builds (needed for push notifications)
+# Note: This file should be added to EAS file environment variables for cloud builds
 GoogleService-Info.plist
 firebase-debug.log
 .firebase/
+
+# Firebase Service Account Key (sensitive - do not commit)
+mypaisa-*-firebase-adminsdk-*.json
