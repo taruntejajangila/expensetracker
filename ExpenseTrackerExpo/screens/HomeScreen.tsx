@@ -45,6 +45,25 @@ const getGreeting = (userName?: string) => {
   return userName ? `Hi ${userName} 😉` : 'Hi User 😉';
 };
 
+// Helper function to get time-based subtitle message
+const getTimeBasedSubtitle = (): string => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    // Morning (5 AM - 12 PM)
+    return "Start your day with smart financial planning ☀️";
+  } else if (hour >= 12 && hour < 17) {
+    // Afternoon (12 PM - 5 PM)
+    return "Keep tracking your expenses 📊";
+  } else if (hour >= 17 && hour < 21) {
+    // Evening (5 PM - 9 PM)
+    return "Review your spending today 🌙";
+  } else {
+    // Night (9 PM - 5 AM)
+    return "Plan for tomorrow 💤";
+  }
+};
+
 // Helper function to get category icon
 const getCategoryIcon = (category: string) => {
   const iconMap: { [key: string]: string } = {
@@ -136,6 +155,10 @@ const HomeScreen: React.FC = () => {
   
   // Smart Insights auto-slide state
   const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
+  
+  // Viewability tracking for second banner ad (lazy loading)
+  const [showSecondBannerAd, setShowSecondBannerAd] = useState(false);
+  const secondBannerAdRef = useRef<View>(null);
   const insightsScrollViewRef = useRef<ScrollView>(null);
   
   // Cache and debouncing state
@@ -151,7 +174,6 @@ const HomeScreen: React.FC = () => {
   
   // Money Manager ad state
   const [moneyManagerClicks, setMoneyManagerClicks] = useState(5); // Start at 5, counts down
-  
   
   const loadAds = async () => {
     try {
@@ -299,7 +321,7 @@ const HomeScreen: React.FC = () => {
       // Load financial summary with force refresh if needed
       const transactions = await TransactionService.getTransactions(forceRefresh);
       
-      // Filter transactions for CURRENT MONTH only (Money Manager shows current month data)
+      // Filter transactions for CURRENT MONTH (Money Manager shows current month data)
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth();
@@ -353,7 +375,7 @@ const HomeScreen: React.FC = () => {
       const allTimeExpenseTotal = allTimeExpenseTransactions
         .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
       
-      // Calculate previous month savings (all-time - current month)
+      // Calculate previous months savings (all-time - selected month)
       const previousMonthSavingsAmount = (allTimeIncomeTotal - allTimeExpenseTotal) - (totalIncome - totalCashExpenses);
       
       // Enhanced calculations
@@ -859,10 +881,10 @@ const HomeScreen: React.FC = () => {
         (navigation as any).navigate('AllTransaction');
         break;
       case 'view_goals':
-        (navigation as any).navigate('MainApp', { screen: 'SavingsGoals' });
+        (navigation as any).navigate('SavingsGoals');
         break;
       case 'view_budget':
-        (navigation as any).navigate('MainApp', { screen: 'BudgetPlanning' });
+        (navigation as any).navigate('BudgetPlanning');
         break;
       case 'add_transaction':
         (navigation as any).navigate('AddTransaction');
@@ -1038,21 +1060,21 @@ const HomeScreen: React.FC = () => {
       width: '100%',
     },
     cardSubtitle: {
-      fontSize: theme.fontSize.sm - 1,
+      fontSize: theme.fontSize.sm - 2,
       color: '#007AFF',
       marginTop: 4,
       textAlign: 'center',
       fontWeight: 'bold',
     },
     cardAmount: {
-      fontSize: theme.fontSize.lg - 2,
+      fontSize: theme.fontSize.lg - 3,
       color: theme.colors.text,
       textAlign: 'center',
       fontWeight: 'bold',
       marginTop: 4,
     },
     cardDescription: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '500',
       color: theme.colors.textSecondary,
       textAlign: 'center',
@@ -1083,29 +1105,29 @@ const HomeScreen: React.FC = () => {
       alignItems: 'flex-end',
     },
     cardLeftText: {
-      fontSize: theme.fontSize.sm - 1,
+      fontSize: theme.fontSize.sm - 2,
       color: theme.colors.text,
       fontWeight: 'bold',
     },
     cardRightText: {
-      fontSize: theme.fontSize.sm - 1,
+      fontSize: theme.fontSize.sm - 2,
       color: theme.colors.text,
       fontWeight: 'bold',
     },
     cardLeftAmount: {
-      fontSize: theme.fontSize.md - 2,
+      fontSize: theme.fontSize.md - 3,
       color: theme.colors.text,
       fontWeight: 'bold',
       marginTop: -2,
     },
     cardRightAmount: {
-      fontSize: theme.fontSize.md - 2,
+      fontSize: theme.fontSize.md - 3,
       color: theme.colors.text,
       fontWeight: 'bold',
       marginTop: -2,
     },
     cardRightSubtext: {
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: '400',
       color: theme.colors.textSecondary,
       textAlign: 'right',
@@ -1119,7 +1141,7 @@ const HomeScreen: React.FC = () => {
       marginRight: theme.spacing.sm,
     },
     cardTitle: {
-      fontSize: theme.fontSize.sm - 1,
+      fontSize: theme.fontSize.sm - 2,
       fontWeight: 'bold',
       color: '#666666',
     },
@@ -1127,7 +1149,7 @@ const HomeScreen: React.FC = () => {
       marginLeft: 4,
     },
     cardDate: {
-      fontSize: theme.fontSize.sm - 1,
+      fontSize: theme.fontSize.sm - 2,
       color: theme.colors.textSecondary,
       fontWeight: 'bold',
       marginLeft: 4,
@@ -1161,7 +1183,7 @@ const HomeScreen: React.FC = () => {
       elevation: 3,
     },
     quickActionText: {
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: '600',
       color: '#FFFFFF',
       marginLeft: theme.spacing.xs,
@@ -1273,7 +1295,7 @@ const HomeScreen: React.FC = () => {
     madeWithLoveContainer: {
       alignItems: 'center',
       marginTop: theme.spacing.lg,
-      marginBottom: theme.spacing.lg,
+      marginBottom: 0,
       paddingVertical: theme.spacing.md,
     },
     madeWithLoveText: {
@@ -1581,13 +1603,13 @@ const HomeScreen: React.FC = () => {
       flex: 1,
     },
     insightsTitleText: {
-      fontSize: theme.fontSize.lg - 2,
+      fontSize: theme.fontSize.lg - 3,
       fontWeight: '600',
       color: theme.colors.text,
       marginBottom: 0,
     },
     insightsSubtitleText: {
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.sm - 1,
       color: theme.colors.textSecondary,
       fontWeight: '400',
       marginTop: 0,
@@ -1616,7 +1638,7 @@ const HomeScreen: React.FC = () => {
       marginRight: theme.spacing.sm,
     },
     insightItemType: {
-      fontSize: theme.fontSize.xs - 2,
+      fontSize: theme.fontSize.xs - 3,
       fontWeight: '700',
       color: theme.colors.text,
       textTransform: 'uppercase',
@@ -1624,9 +1646,9 @@ const HomeScreen: React.FC = () => {
       marginBottom: 2,
     },
     insightItemMessage: {
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.sm - 1,
       color: theme.colors.text,
-      lineHeight: 18,
+      lineHeight: 17,
       fontWeight: '400',
     },
     insightItemAction: {
@@ -1680,13 +1702,13 @@ const HomeScreen: React.FC = () => {
       flex: 1,
     },
     spendingCategoriesTitleText: {
-      fontSize: theme.fontSize.lg - 2,
+      fontSize: theme.fontSize.lg - 3,
       fontWeight: '600',
       color: theme.colors.text,
       marginBottom: 0,
     },
     spendingCategoriesSubtitleText: {
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.sm - 1,
       color: theme.colors.textSecondary,
       fontWeight: '400',
       marginTop: 0,
@@ -1712,20 +1734,20 @@ const HomeScreen: React.FC = () => {
       backgroundColor: '#F8F9FA',
     },
     spendingCategoryEmoji: {
-      fontSize: 18,
+      fontSize: 17,
     },
     spendingCategoryTextContainer: {
       flex: 1,
       marginRight: theme.spacing.sm,
     },
     spendingCategoryName: {
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.sm - 1,
       fontWeight: '500',
       color: theme.colors.text,
       marginBottom: 2,
     },
     spendingCategoryAmount: {
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.sm - 1,
       fontWeight: '600',
       color: theme.colors.text,
     },
@@ -1736,7 +1758,7 @@ const HomeScreen: React.FC = () => {
       borderRadius: 12,
     },
     spendingCategoryPercentage: {
-      fontSize: theme.fontSize.xs - 2,
+      fontSize: theme.fontSize.xs - 3,
       fontWeight: '600',
       color: '#1976D2',
     },
@@ -1858,7 +1880,7 @@ const HomeScreen: React.FC = () => {
                 {getGreeting(user?.name || user?.email)}
               </Text>
               <Text style={[styles.subtitleText, { color: theme.colors.textSecondary }]} allowFontScaling={false}>
-                Let's manage your finances together
+                {getTimeBasedSubtitle()}
               </Text>
             </View>
           </View>
@@ -1866,7 +1888,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.notificationButton}
               onPress={() => {
-                (navigation as any).navigate('MainApp', { screen: 'Notifications' });
+                (navigation as any).navigate('Notifications');
               }}
             >
               <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
@@ -1923,7 +1945,6 @@ const HomeScreen: React.FC = () => {
         {/* Header with Safe Area - Now Scrollable */}
         <HomeHeader user={user} theme={theme} insets={insets} />
         
-        
         <TouchableOpacity 
           style={styles.featuredCard}
           onPress={async () => {
@@ -1969,13 +1990,13 @@ const HomeScreen: React.FC = () => {
         >
           <View style={styles.cardHeader}>
             <View style={styles.leftSection}>
-                          <Ionicons name="stats-chart" size={13} color="#666666" style={styles.cardIcon} />
+                          <Ionicons name="stats-chart" size={12} color="#666666" style={styles.cardIcon} />
             <Text style={styles.cardTitle} allowFontScaling={false}>Money Manager</Text>
-            <Ionicons name="chevron-forward" size={13} color="#007AFF" style={styles.cardChevron} />
-            <Text style={[styles.cardDate, { color: '#007AFF' }]} allowFontScaling={false}>{new Date().toLocaleDateString('en-US', { month: 'long', year: '2-digit' })}</Text>
+            <Ionicons name="chevron-forward" size={12} color="#007AFF" style={styles.cardChevron} />
+            <Text style={[styles.cardDate, { color: '#007AFF' }]} allowFontScaling={false}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
             </View>
             <View style={styles.rightChevronContainer}>
-              <Ionicons name="chevron-forward" size={13} color="#007AFF" />
+              <Ionicons name="chevron-forward" size={12} color="#007AFF" />
             </View>
           </View>
           <View style={styles.cardContent}>
@@ -1989,11 +2010,11 @@ const HomeScreen: React.FC = () => {
             </Text>
             <View style={styles.cardRow}>
               <View style={styles.cardLeftSection}>
-                <Ionicons name="arrow-up" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
+                <Ionicons name="arrow-up" size={12} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
                 <Text style={styles.cardLeftText} allowFontScaling={false}>Expense</Text>
               </View>
               <View style={styles.cardRightSection}>
-                <Ionicons name="arrow-down" size={13} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
+                <Ionicons name="arrow-down" size={12} color={theme.colors.text} style={[styles.cardIcon, { transform: [{ rotate: '45deg' }] }]} />
                 <Text style={styles.cardRightText} allowFontScaling={false}>Income</Text>
               </View>
             </View>
@@ -2141,10 +2162,10 @@ const HomeScreen: React.FC = () => {
             style={[styles.quickActionButton, { backgroundColor: '#4CAF50' }]}
             onPress={() => {
               // Navigate to Savings Goals screen
-              (navigation as any).navigate('MainApp', { screen: 'SavingsGoals' });
+              (navigation as any).navigate('SavingsGoals');
             }}
           >
-            <Ionicons name="wallet-outline" size={20} color="#FFFFFF" />
+            <Ionicons name="wallet-outline" size={18} color="#FFFFFF" />
             <Text style={styles.quickActionText} allowFontScaling={false}>Savings</Text>
           </TouchableOpacity>
 
@@ -2152,10 +2173,10 @@ const HomeScreen: React.FC = () => {
             style={[styles.quickActionButton, { backgroundColor: '#2196F3' }]}
             onPress={() => {
               // Navigate to Budget Planning screen
-              (navigation as any).navigate('MainApp', { screen: 'BudgetPlanning' });
+              (navigation as any).navigate('BudgetPlanning');
             }}
           >
-            <Ionicons name="pie-chart-outline" size={20} color="#FFFFFF" />
+            <Ionicons name="pie-chart-outline" size={18} color="#FFFFFF" />
             <Text style={styles.quickActionText} allowFontScaling={false}>Budget</Text>
           </TouchableOpacity>
 
@@ -2163,10 +2184,10 @@ const HomeScreen: React.FC = () => {
             style={[styles.quickActionButton, { backgroundColor: '#FF9800' }]}
             onPress={() => {
               // Navigate to Reminders screen
-              (navigation as any).navigate('MainApp', { screen: 'Reminders' });
+              (navigation as any).navigate('Reminders');
             }}
           >
-            <Ionicons name="alarm-outline" size={20} color="#FFFFFF" />
+            <Ionicons name="alarm-outline" size={18} color="#FFFFFF" />
             <Text style={styles.quickActionText} allowFontScaling={false}>Remind</Text>
           </TouchableOpacity>
         </View>
@@ -2241,7 +2262,7 @@ const HomeScreen: React.FC = () => {
               {/* Header with icon and title */}
               <View style={styles.insightsHeader}>
                 <View style={styles.insightsIconContainer}>
-                  <Ionicons name="bulb" size={20} color="#FF9500" />
+                  <Ionicons name="bulb" size={19} color="#FF9500" />
                 </View>
                 <View style={styles.insightsTitleContainer}>
                   <Text style={styles.insightsTitleText} allowFontScaling={false}>Smart Insights</Text>
@@ -2250,7 +2271,7 @@ const HomeScreen: React.FC = () => {
                   </Text>
                 </View>
                 <View style={styles.insightsChevron}>
-                  <Ionicons name="chevron-forward" size={16} color="#FF9500" />
+                  <Ionicons name="chevron-forward" size={15} color="#FF9500" />
                 </View>
               </View>
                
@@ -2263,7 +2284,7 @@ const HomeScreen: React.FC = () => {
                  >
                    <View style={styles.insightItemContent}>
                      <View style={[styles.insightItemIcon, { backgroundColor: insight.color }]}>
-                       <Ionicons name={insight.icon} size={18} color="#FFFFFF" />
+                       <Ionicons name={insight.icon} size={17} color="#FFFFFF" />
                      </View>
                      <View style={styles.insightItemTextContainer}>
                        <Text style={styles.insightItemType} allowFontScaling={false}>{insight.type}</Text>
@@ -2273,7 +2294,7 @@ const HomeScreen: React.FC = () => {
                      </View>
                      {insight.action && (
                        <View style={styles.insightItemAction}>
-                         <Ionicons name="chevron-forward" size={16} color={insight.color} />
+                         <Ionicons name="chevron-forward" size={15} color={insight.color} />
                        </View>
                      )}
                    </View>
@@ -2295,7 +2316,7 @@ const HomeScreen: React.FC = () => {
               {/* Header with icon and title */}
               <View style={styles.spendingCategoriesHeader}>
                 <View style={styles.spendingCategoriesIconContainer}>
-                  <Ionicons name="pie-chart" size={20} color="#34C759" />
+                  <Ionicons name="pie-chart" size={19} color="#34C759" />
                 </View>
                 <View style={styles.spendingCategoriesTitleContainer}>
                   <Text style={styles.spendingCategoriesTitleText} allowFontScaling={false}>Top Spending Categories</Text>
@@ -2304,7 +2325,7 @@ const HomeScreen: React.FC = () => {
                   </Text>
                 </View>
                 <View style={styles.spendingCategoriesChevron}>
-                  <Ionicons name="chevron-forward" size={16} color="#34C759" />
+                  <Ionicons name="chevron-forward" size={15} color="#34C759" />
                 </View>
               </View>
               
@@ -2406,7 +2427,6 @@ const HomeScreen: React.FC = () => {
             MyPaisa Finance Manager
           </Text>
         </View>
-
 
       </ScrollView>
 

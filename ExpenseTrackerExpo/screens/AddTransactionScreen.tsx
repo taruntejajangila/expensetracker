@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TransactionService, { Transaction } from '../services/transactionService';
@@ -729,6 +730,11 @@ const AddTransactionScreen = () => {
         backgroundColor={Platform.OS === 'android' ? theme.colors.background : 'auto'}
         translucent={Platform.OS === 'android' ? false : true}
       />
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       {/* Custom Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 0 }]}>
         <TouchableOpacity 
@@ -1267,10 +1273,11 @@ const AddTransactionScreen = () => {
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
-        {/* Bottom Banner Ad */}
+          {/* Bottom Banner Ad */}
         <View style={[styles.bannerAdContainer, { paddingBottom: insets.bottom }]}>
           <BannerAdComponent />
         </View>
+      </KeyboardAvoidingView>
       </SafeAreaView>
   );
 };

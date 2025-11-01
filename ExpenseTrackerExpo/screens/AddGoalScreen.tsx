@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -281,7 +282,11 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
 
@@ -572,8 +577,8 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
           <Text style={styles.saveButtonText} allowFontScaling={false}>Create Savings Goal</Text>
         </TouchableOpacity>
              </ScrollView>
-     </View>
-   );
+     </KeyboardAvoidingView>
+  );
 };
 
 const createStyles = (theme: any) => StyleSheet.create({

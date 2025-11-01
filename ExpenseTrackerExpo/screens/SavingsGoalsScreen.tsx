@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -333,7 +334,11 @@ const SavingsGoalsScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header */}
       <SavingsGoalsHeader 
         theme={theme} 
@@ -771,7 +776,7 @@ const SavingsGoalsScreen: React.FC = () => {
       </Modal>
 
       {/* Interstitial modal removed; direct interstitial shown before navigation */}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

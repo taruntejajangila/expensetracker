@@ -199,7 +199,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       left: 12,
       backgroundColor: theme.colors.background,
       paddingHorizontal: 4,
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: theme.colors.text,
       zIndex: 1,
@@ -217,12 +217,12 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       minHeight: 48,
     },
     dateText: {
-      fontSize: 14,
+      fontSize: 12,
       color: theme.colors.text,
       fontWeight: '600',
     },
     placeholderText: {
-      fontSize: 14,
+      fontSize: 12,
       color: theme.colors.textSecondary,
       fontWeight: '600',
     },
@@ -243,7 +243,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       borderBottomRightRadius: 20,
       width: Dimensions.get('window').width * 0.85,
       maxWidth: 360,
-      maxHeight: '60%',
+      maxHeight: '70%',
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
@@ -286,7 +286,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       elevation: 2,
     },
     modalTitle: {
-      fontSize: 16,
+      fontSize: 13,
       fontWeight: '700',
       color: '#1A1A1A',
       letterSpacing: 0.5,
@@ -302,7 +302,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       borderBottomColor: '#E5E5E5',
     },
     selectedDateText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: '#007AFF',
       textAlign: 'center',
@@ -313,7 +313,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
     },
     wheelContainer: {
       flexDirection: 'row',
-      height: 160,
+      height: 240,
       backgroundColor: '#FFFFFF',
       position: 'relative',
     },
@@ -333,18 +333,18 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       backgroundColor: 'transparent',
     },
     wheelItemText: {
-      fontSize: 12,
+      fontSize: 11,
       color: '#999999',
       fontWeight: '400',
     },
     wheelItemTextSelected: {
-      fontSize: 14,
+      fontSize: 13,
       color: '#000000',
       fontWeight: '700',
     },
     selectionIndicator: {
       position: 'absolute',
-      top: 60,
+      top: 98,
       left: 0,
       right: 0,
       height: 44,
@@ -366,14 +366,14 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       borderBottomRightRadius: 20,
     },
     button: {
-      paddingHorizontal: 24,
-      paddingVertical: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
       borderRadius: 12,
       borderTopLeftRadius: 12,
       borderTopRightRadius: 12,
       borderBottomLeftRadius: 12,
       borderBottomRightRadius: 12,
-      minWidth: 90,
+      minWidth: 85,
       alignItems: 'center',
       shadowColor: '#000',
       shadowOffset: {
@@ -401,13 +401,13 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       elevation: 6,
     },
     todayButtonText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '700',
       color: '#007AFF',
       letterSpacing: 0.3,
     },
     doneButtonText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '800',
       color: '#FFFFFF',
       letterSpacing: 0.5,
@@ -458,7 +458,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
         </Text>
         <Ionicons
           name="calendar-outline"
-          size={20}
+          size={18}
           color={theme.colors.textSecondary}
           style={styles.icon}
         />
@@ -488,7 +488,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
                 onPress={handleCancel}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close" size={20} color="#666666" />
+                <Ionicons name="close" size={18} color="#666666" />
               </TouchableOpacity>
               <Text style={styles.modalTitle} allowFontScaling={false}>
                 Select Date
@@ -511,7 +511,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
                 <ScrollView
                   ref={monthScrollRef}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: 60 }}
+                  contentContainerStyle={{ paddingVertical: 98 }}
                   snapToInterval={44}
                   decelerationRate="fast"
                   onMomentumScrollEnd={handleMonthScroll}
@@ -534,7 +534,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
                 <ScrollView
                   ref={dayScrollRef}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: 60 }}
+                  contentContainerStyle={{ paddingVertical: 98 }}
                   snapToInterval={44}
                   decelerationRate="fast"
                   onMomentumScrollEnd={handleDayScroll}
@@ -557,7 +557,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
                 <ScrollView
                   ref={yearScrollRef}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: 60 }}
+                  contentContainerStyle={{ paddingVertical: 98 }}
                   snapToInterval={44}
                   decelerationRate="fast"
                   onMomentumScrollEnd={handleYearScroll}

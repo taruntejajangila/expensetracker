@@ -63,14 +63,6 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
 
   // Quick stats removed
 
-  const getInitials = (nameOrEmail?: string | null) => {
-    if (!nameOrEmail) return 'U';
-    const base = nameOrEmail.split('@')[0];
-    const parts = base.split(/[\s._-]+/).filter(Boolean);
-    if (parts.length === 0) return base.substring(0, 2).toUpperCase();
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  };
 
   // Grouped menu sections
   const navItems = [
@@ -160,11 +152,11 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           </View>
           <View style={styles.userRow}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{getInitials(user?.name || user?.email)}</Text>
+              <Ionicons name="person" size={20} color="#FFFFFF" />
             </View>
             <View style={{ marginLeft: 12 }}>
-              <Text style={styles.userNameBright} numberOfLines={1}>{user?.name || 'User'}</Text>
-              <Text style={styles.userEmail} numberOfLines={1}>{user?.email || ''}</Text>
+              <Text style={styles.userNameBright} numberOfLines={1} allowFontScaling={false}>{user?.name || 'User'}</Text>
+              <Text style={styles.userEmail} numberOfLines={1} allowFontScaling={false}>{user?.email || ''}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -179,7 +171,7 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           {navItems.map((item, index) => (
             <TouchableOpacity key={`nav-${index}`} activeOpacity={0.85} style={[styles.menuItem, index === 0 && styles.firstMenuItem]} onPress={() => handleNavigation(item.screen)}>
               <Ionicons name={item.icon as any} size={18} color={theme.colors.text} />
-              <Text style={[styles.menuItemText, { color: theme.colors.text }]}>{item.label}</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text }]} allowFontScaling={false}>{item.label}</Text>
             </TouchableOpacity>
           ))}
 
@@ -189,7 +181,7 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           {moneyItems.map((item, index) => (
             <TouchableOpacity key={`money-${index}`} activeOpacity={0.85} style={styles.menuItem} onPress={() => handleNavigation(item.screen)}>
               <Ionicons name={item.icon as any} size={18} color={theme.colors.text} />
-              <Text style={[styles.menuItemText, { color: theme.colors.text }]}>{item.label}</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text }]} allowFontScaling={false}>{item.label}</Text>
             </TouchableOpacity>
           ))}
 
@@ -199,7 +191,7 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           {toolsItems.map((item, index) => (
             <TouchableOpacity key={`tools-${index}`} activeOpacity={0.85} style={styles.menuItem} onPress={() => handleNavigation(item.screen)}>
               <Ionicons name={item.icon as any} size={18} color={theme.colors.text} />
-              <Text style={[styles.menuItemText, { color: theme.colors.text }]}>{item.label}</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text }]} allowFontScaling={false}>{item.label}</Text>
             </TouchableOpacity>
           ))}
 
@@ -209,14 +201,14 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           {supportItems.map((item, index) => (
             <TouchableOpacity key={`support-${index}`} activeOpacity={0.85} style={styles.menuItem} onPress={() => handleNavigation(item.screen)}>
               <Ionicons name={item.icon as any} size={18} color={theme.colors.text} />
-              <Text style={[styles.menuItemText, { color: theme.colors.text }]}>{item.label}</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text }]} allowFontScaling={false}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.versionText}>
+          <Text style={styles.versionText} allowFontScaling={false}>
             Version {
               (Constants?.expoConfig as any)?.version ||
               (Constants as any)?.manifest?.version ||
@@ -225,7 +217,7 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           </Text>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#FF4444" />
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText} allowFontScaling={false}>Logout</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -317,13 +309,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
   userNameBright: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
   },
   userEmail: {
@@ -350,7 +338,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
-    fontSize: 12,
+    fontSize: 11,
     color: '#777777',
   },
   menuItem: {
@@ -364,7 +352,8 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     marginLeft: 12,
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '500',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -375,7 +364,8 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     marginLeft: 15,
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
     color: '#FF4444',
   },
 });

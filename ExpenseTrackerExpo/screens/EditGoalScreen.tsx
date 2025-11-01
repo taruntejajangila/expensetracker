@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -211,7 +212,11 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
       
@@ -462,7 +467,7 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

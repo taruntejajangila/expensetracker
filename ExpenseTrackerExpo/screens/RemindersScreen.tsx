@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Modal,
   Switch,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -1387,7 +1388,11 @@ const RemindersScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header with Safe Area - Matching AccountsScreen */}
       <ScreenHeader theme={theme} insets={insets} />
 
@@ -2085,7 +2090,7 @@ const RemindersScreen: React.FC = () => {
         </View>
       </Modal>
 
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

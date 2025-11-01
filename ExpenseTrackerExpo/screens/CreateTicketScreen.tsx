@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -551,7 +552,11 @@ const CreateTicketScreen: React.FC = () => {
   const headerPaddingTop = Platform.OS === 'android' ? insets.top + 5 : insets.top + 10;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header */}
       <View style={[styles.headerContainer, { paddingTop: headerPaddingTop }]}>
         <View style={styles.headerContent}>
@@ -746,7 +751,7 @@ const CreateTicketScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

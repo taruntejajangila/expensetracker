@@ -10,6 +10,7 @@ import {
   Alert,
   Animated,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -534,11 +535,15 @@ const LoanCalculatorScreen: React.FC = () => {
   const styles = createStyles(theme);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
 
           {/* Loan Details Section */}
@@ -743,7 +748,7 @@ const LoanCalculatorScreen: React.FC = () => {
       </ScrollView>
 
       {/* Interstitial modal removed; direct interstitial shown before calculate */}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

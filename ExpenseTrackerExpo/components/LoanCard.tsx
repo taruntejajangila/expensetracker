@@ -111,87 +111,124 @@ const LoanCard: React.FC<LoanCardProps> = ({
   };
 
   // Get bank logo source based on lender/bank name
-  const getBankLogo = (lenderName: string) => {
-    // Since logo files are empty, return null to use fallback icon
-    return null;
+  const getBankLogo = (lenderName: string): any => {
+    const normalizedLenderName = (lenderName || '').toLowerCase().trim();
     
-    // Commented out the logo mapping since files are empty
-    /*
-    const normalizedLender = lenderName.toLowerCase().trim();
-    
-    // Bank logo mapping to asset paths - only using existing directories
-    const bankLogos: { [key: string]: any } = {
-      // Major Indian Banks - Updated to use existing directory names and symbol.png
-      'sbi': require('../assets/bank-logos/sbi/symbol.png'),
-      'state bank of india': require('../assets/bank-logos/sbi/symbol.png'),
-      'hdfc': require('../assets/bank-logos/hdfc/symbol.png'),
-      'hdfc bank': require('../assets/bank-logos/hdfc/symbol.png'),
-      'icici': require('../assets/bank-logos/icici/symbol.png'),
-      'icici bank': require('../assets/bank-logos/icici/symbol.png'),
-      'axis': require('../assets/bank-logos/axis/symbol.png'),
-      'axis bank': require('../assets/bank-logos/axis/symbol.png'),
-      'kotak': require('../assets/bank-logos/kotak/symbol.png'),
-      'kotak mahindra': require('../assets/bank-logos/kotak/symbol.png'),
-      'kotak mahindra bank': require('../assets/bank-logos/kotak/symbol.png'),
-      'yes': require('../assets/bank-logos/yes/symbol.png'),
-      'yes bank': require('../assets/bank-logos/yes/symbol.png'),
-      'idfc': require('../assets/bank-logos/coop/symbol.png'), // Using coop as fallback
-      'idfc bank': require('../assets/bank-logos/coop/symbol.png'),
-      'idfc first': require('../assets/bank-logos/coop/symbol.png'),
-      'idfc first bank': require('../assets/bank-logos/coop/symbol.png'),
-      'au': require('../assets/bank-logos/aubl/symbol.png'),
-      'au bank': require('../assets/bank-logos/aubl/symbol.png'),
-      'karnataka': require('../assets/bank-logos/coop/symbol.png'), // Using coop as fallback
-      'karnataka bank': require('../assets/bank-logos/coop/symbol.png'),
-      'canara': require('../assets/bank-logos/canara/symbol.png'),
-      'canara bank': require('../assets/bank-logos/canara/symbol.png'),
-      'punjab': require('../assets/bank-logos/punjab/symbol.png'),
-      'punjab national bank': require('../assets/bank-logos/punjab/symbol.png'),
-      'pnb': require('../assets/bank-logos/punjab/symbol.png'),
-      'union': require('../assets/bank-logos/union/symbol.png'),
-      'union bank': require('../assets/bank-logos/union/symbol.png'),
-      'bank of baroda': require('../assets/bank-logos/barb/symbol.png'),
-      'bob': require('../assets/bank-logos/barb/symbol.png'),
-      'indian bank': require('../assets/bank-logos/indian/symbol.png'),
-      'central bank': require('../assets/bank-logos/cbin/symbol.png'),
-      'central bank of india': require('../assets/bank-logos/cbin/symbol.png'),
-      'uco': require('../assets/bank-logos/coop/symbol.png'), // Using coop as fallback
-      'uco bank': require('../assets/bank-logos/coop/symbol.png'),
-      'indian overseas bank': require('../assets/bank-logos/oriental/symbol.png'), // Using oriental as fallback
-      'iob': require('../assets/bank-logos/oriental/symbol.png'),
-      
-      // Private/NBFC
-      'bajaj': require('../assets/bank-logos/barb/symbol.png'),
-      'bajaj finserv': require('../assets/bank-logos/barb/symbol.png'),
-      'tata': require('../assets/bank-logos/tamilnad/symbol.png'),
-      'tata capital': require('../assets/bank-logos/tamilnad/symbol.png'),
-      'muthoot': require('../assets/bank-logos/coop/symbol.png'), // Using coop as fallback
-      'muthoot finance': require('../assets/bank-logos/coop/symbol.png'),
-      'manappuram': require('../assets/bank-logos/coop/symbol.png'), // Using coop as fallback
-      'manappuram finance': require('../assets/bank-logos/coop/symbol.png'),
-      'aditya birla': require('../assets/bank-logos/barb/symbol.png'),
-      'aditya birla capital': require('../assets/bank-logos/barb/symbol.png'),
-      'edelweiss': require('../assets/bank-logos/federal/symbol.png'),
-      'edelweiss financial': require('../assets/bank-logos/federal/symbol.png'),
-      'piramal': require('../assets/bank-logos/punjab/symbol.png'),
-      'piramal finance': require('../assets/bank-logos/punjab/symbol.png'),
+    // Bank slug mapping based on directory structure
+    const bankSlugMap: { [key: string]: string } = {
+      'hdfc': 'hdfc',
+      'icici': 'icic', 
+      'sbi': 'sbin',
+      'axis': 'utib',
+      'kotak': 'kkbk',
+      'pnb': 'punb',
+      'bank of baroda': 'barb',
+      'canara': 'cnrb',
+      'union bank': 'ubin',
+      'indian bank': 'idib',
+      'central bank': 'cbin',
+      'bank of india': 'bkid',
+      'maharashtra': 'mahb',
+      'punjab and sind': 'psib',
+      'indian overseas': 'ioba',
+      'jammu and kashmir': 'jaka',
+      'karnataka': 'karb',
+      'karur vysya': 'kvbl',
+      'south indian': 'sibl',
+      'tamilnad mercantile': 'tmbl',
+      'uco': 'ucba',
+      'yes bank': 'yesb',
+      'rbl': 'ratn',
+      'indusind': 'indb',
+      'idfc': 'idfb',
+      'idbi': 'ibkl',
+      'federal': 'fdrl',
+      'dcb': 'dcbl',
+      'csb': 'csbk',
+      'dhanalakshmi': 'dlxb',
+      'city union': 'ciub',
+      'bandhan': 'bdbl',
+      'au small finance': 'aubl',
+      'ujjivan': 'ujvn',
+      'nainital': 'ntbl',
+      'airtel payments': 'airp',
+      'jio payments': 'jiop',
+      'paytm payments': 'pytm',
+      'standard chartered': 'scbl',
+      // NBFC variations
+      'bajaj': 'barb',
+      'bajaj finserv': 'barb',
+      'tata': 'tmbl',
+      'tata capital': 'tmbl',
+      'muthoot': 'fdrl',
+      'muthoot finance': 'fdrl',
+      'manappuram': 'fdrl',
+      'manappuram finance': 'fdrl',
+      'aditya birla': 'barb',
+      'aditya birla capital': 'barb',
+      'edelweiss': 'fdrl',
+      'edelweiss financial': 'fdrl',
+      'piramal': 'punb',
+      'piramal finance': 'punb'
     };
-    
-    // Try to find exact match first
-    if (bankLogos[normalizedLender]) {
-      return bankLogos[normalizedLender];
-    }
-    
-    // Try partial matches
-    for (const [key, logo] of Object.entries(bankLogos)) {
-      if (normalizedLender.includes(key) || key.includes(normalizedLender)) {
-        return logo;
+
+    // Find matching bank slug
+    let bankSlug = null;
+    for (const [key, slug] of Object.entries(bankSlugMap)) {
+      if (normalizedLenderName.includes(key) || key.includes(normalizedLenderName)) {
+        bankSlug = slug;
+        break;
       }
     }
-    
-    // Return null for unknown banks - we'll handle this in the render
-    return null;
-    */
+
+    if (!bankSlug) {
+      return null; // Fallback to emoji icon
+    }
+
+    // Return the corresponding logo
+    const bankLogoMap: { [key: string]: any } = {
+      'hdfc': require('../assets/bank-logos/hdfc/symbol.png'),
+      'icic': require('../assets/bank-logos/icic/symbol.png'),
+      'sbin': require('../assets/bank-logos/sbin/symbol.png'),
+      'utib': require('../assets/bank-logos/utib/symbol.png'),
+      'kkbk': require('../assets/bank-logos/kkbk/symbol.png'),
+      'punb': require('../assets/bank-logos/punb/symbol.png'),
+      'barb': require('../assets/bank-logos/barb/symbol.png'),
+      'cnrb': require('../assets/bank-logos/cnrb/symbol.png'),
+      'ubin': require('../assets/bank-logos/ubin/symbol.png'),
+      'idib': require('../assets/bank-logos/idib/symbol.png'),
+      'cbin': require('../assets/bank-logos/cbin/symbol.png'),
+      'bkid': require('../assets/bank-logos/bkid/symbol.png'),
+      'mahb': require('../assets/bank-logos/mahb/symbol.png'),
+      'psib': require('../assets/bank-logos/psib/symbol.png'),
+      'ioba': require('../assets/bank-logos/ioba/symbol.png'),
+      'jaka': require('../assets/bank-logos/jaka/symbol.png'),
+      'karb': require('../assets/bank-logos/karb/symbol.png'),
+      'kvbl': require('../assets/bank-logos/kvbl/symbol.png'),
+      'sibl': require('../assets/bank-logos/sibl/symbol.png'),
+      'tmbl': require('../assets/bank-logos/tmbl/symbol.png'),
+      'ucba': require('../assets/bank-logos/ucba/symbol.png'),
+      'yesb': require('../assets/bank-logos/yesb/symbol.png'),
+      'ratn': require('../assets/bank-logos/ratn/symbol.png'),
+      'indb': require('../assets/bank-logos/indb/symbol.png'),
+      'idfb': require('../assets/bank-logos/idfb/symbol.png'),
+      'ibkl': require('../assets/bank-logos/ibkl/symbol.png'),
+      'fdrl': require('../assets/bank-logos/fdrl/symbol.png'),
+      'dcbl': require('../assets/bank-logos/dcbl/symbol.png'),
+      'csbk': require('../assets/bank-logos/csbk/symbol.png'),
+      'dlxb': require('../assets/bank-logos/dlxb/symbol.png'),
+      'ciub': require('../assets/bank-logos/ciub/symbol.png'),
+      'bdbl': require('../assets/bank-logos/bdbl/symbol.png'),
+      'aubl': require('../assets/bank-logos/aubl/symbol.png'),
+      'ujvn': require('../assets/bank-logos/ujvn/symbol.png'),
+      'ntbl': require('../assets/bank-logos/ntbl/symbol.png'),
+      'airp': require('../assets/bank-logos/airp/symbol.png'),
+      'jiop': require('../assets/bank-logos/jiop/symbol.png'),
+      'pytm': require('../assets/bank-logos/pytm/symbol.png'),
+      'scbl': require('../assets/bank-logos/scbl/symbol.png')
+    };
+
+    return bankLogoMap[bankSlug] || null;
   };
 
   // Format next payment date
