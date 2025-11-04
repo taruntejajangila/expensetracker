@@ -80,6 +80,132 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
   }
 });
 
+// GET /api/bank-accounts/check-duplicate - Check for duplicate accounts (for real-time validation)
+router.get('/check-duplicate', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+    const { nickname, accountNumber, bankName, excludeId } = req.query;
+    
+    if (!nickname && !accountNumber && !bankName) {
+      return res.json({
+        success: true,
+        isDuplicate: false,
+        message: null
+      });
+    }
+    
+    // Build duplicate check query
+    // Use a simpler approach: check each condition separately and combine results
+    const duplicateResults: any[] = [];
+    
+    // Check for duplicate account number (if provided and not empty)
+    if (accountNumber && accountNumber.trim() !== '') {
+      let accountNumberQuery = `
+        SELECT id, account_name, bank_name, account_number 
+        FROM bank_accounts 
+        WHERE user_id = $1 AND account_number = $2 AND account_number != ''
+      `;
+      const accountNumberParams: any[] = [userId, accountNumber.trim()];
+      
+      if (excludeId) {
+        accountNumberQuery += ` AND id != $3`;
+        accountNumberParams.push(excludeId);
+      }
+      
+      const accountNumberResult = await req.app.locals.db.query(accountNumberQuery, accountNumberParams);
+      if (accountNumberResult.rows.length > 0) {
+        duplicateResults.push(...accountNumberResult.rows);
+      }
+    }
+    
+    // Check for duplicate nickname (if provided)
+    if (nickname && nickname.trim() !== '') {
+      let nicknameQuery = `
+        SELECT id, account_name, bank_name, account_number 
+        FROM bank_accounts 
+        WHERE user_id = $1 AND account_name = $2
+      `;
+      const nicknameParams: any[] = [userId, nickname.trim()];
+      
+      if (excludeId) {
+        nicknameQuery += ` AND id != $3`;
+        nicknameParams.push(excludeId);
+      }
+      
+      const nicknameResult = await req.app.locals.db.query(nicknameQuery, nicknameParams);
+      if (nicknameResult.rows.length > 0) {
+        // Only add if not already in duplicateResults (by ID)
+        nicknameResult.rows.forEach(row => {
+          if (!duplicateResults.some(d => d.id === row.id)) {
+            duplicateResults.push(row);
+          }
+        });
+      }
+    }
+    
+    // Check for duplicate bank + account number combination (if both provided)
+    if (bankName && bankName.trim() !== '' && accountNumber && accountNumber.trim() !== '') {
+      let bankAccountQuery = `
+        SELECT id, account_name, bank_name, account_number 
+        FROM bank_accounts 
+        WHERE user_id = $1 AND bank_name = $2 AND account_number = $3 AND account_number != ''
+      `;
+      const bankAccountParams: any[] = [userId, bankName.trim(), accountNumber.trim()];
+      
+      if (excludeId) {
+        bankAccountQuery += ` AND id != $4`;
+        bankAccountParams.push(excludeId);
+      }
+      
+      const bankAccountResult = await req.app.locals.db.query(bankAccountQuery, bankAccountParams);
+      if (bankAccountResult.rows.length > 0) {
+        // Only add if not already in duplicateResults (by ID)
+        bankAccountResult.rows.forEach(row => {
+          if (!duplicateResults.some(d => d.id === row.id)) {
+            duplicateResults.push(row);
+          }
+        });
+      }
+    }
+    
+    const duplicateResult = { rows: duplicateResults };
+    
+    if (duplicateResult.rows.length > 0) {
+      const duplicates = duplicateResult.rows;
+      let errorMessage = 'Account already exists: ';
+      
+      if (accountNumber && duplicates.some((d: any) => d.account_number === accountNumber && d.account_number !== '')) {
+        errorMessage += `Account number ${accountNumber} is already in use`;
+      } else if (nickname && duplicates.some((d: any) => d.account_name === nickname)) {
+        errorMessage += `Account nickname "${nickname}" is already in use`;
+      } else if (bankName && accountNumber && duplicates.some((d: any) => d.bank_name === bankName && d.account_number === accountNumber)) {
+        errorMessage += `Account with bank ${bankName} and number ${accountNumber} already exists`;
+      }
+      
+      return res.json({
+        success: true,
+        isDuplicate: true,
+        message: errorMessage,
+        duplicates: duplicates
+      });
+    }
+    
+    res.json({
+      success: true,
+      isDuplicate: false,
+      message: null
+    });
+  } catch (error: any) {
+    logger.error('Error checking duplicate account:', error);
+    res.status(500).json({
+      success: false,
+      isDuplicate: false,
+      message: null,
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 // GET /api/bank-accounts/:id - Get specific bank account
 router.get('/:id', authenticateToken, async (req: any, res: any) => {
   try {
