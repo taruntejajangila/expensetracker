@@ -18,6 +18,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import TransactionService from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const { width } = Dimensions.get('window');
 
@@ -61,8 +62,14 @@ const SpentInMonthScreen: React.FC = () => {
   
   // Calculate progress based on income vs spent
   const progress = monthlyIncome > 0 ? (spentAmount / monthlyIncome) * 100 : 0;
-  const radius = 80;
-  const strokeWidth = 12;
+  // Fixed density to prevent scaling with display size changes
+  // Match the native density lock (2.5f) - don't use PixelRatio.get() as it can change
+  const LOCKED_DENSITY = 2.5; // Match native density lock
+  const baseRadius = 33; // Base radius in dp
+  const baseStrokeWidth = 5.5; // Base stroke width in dp
+  const radius = baseRadius * LOCKED_DENSITY; // 82.5px (fixed)
+  const strokeWidth = baseStrokeWidth * LOCKED_DENSITY; // 13.75px (fixed)
+  const svgSize = Math.round((baseRadius * 2 + baseStrokeWidth) * LOCKED_DENSITY); // 179px (rounded for precision)
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -360,10 +367,17 @@ const SpentInMonthScreen: React.FC = () => {
     progressContainer: {
       alignItems: 'center',
       marginBottom: theme.spacing.xl,
+      overflow: 'visible', // Allow circle to extend beyond container if needed
+      backgroundColor: 'transparent', // Ensure no white background
     },
     progressCircle: {
+      width: 179, // Fixed width (matches svgSize calculation)
+      height: 179, // Fixed height (matches svgSize calculation)
       alignItems: 'center',
       justifyContent: 'center',
+      alignSelf: 'center', // Ensure horizontal centering
+      overflow: 'visible', // Allow stroke to extend beyond bounds
+      backgroundColor: 'transparent', // Ensure no white background
     },
     progressText: {
       fontSize: theme.fontSize.lg,
@@ -750,11 +764,20 @@ const SpentInMonthScreen: React.FC = () => {
         {/* Circular Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressCircle}>
-            <Svg width={radius * 2 + strokeWidth} height={radius * 2 + strokeWidth}>
+            <Svg 
+              width={svgSize} 
+              height={svgSize}
+              viewBox={`0 0 ${svgSize} ${svgSize}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={{ 
+                backgroundColor: 'transparent',
+                alignSelf: 'center', // Ensure SVG is centered
+              }}
+            >
               {/* Background circle (blue for remaining) */}
               <Circle
-                cx={radius + strokeWidth / 2}
-                cy={radius + strokeWidth / 2}
+                cx={svgSize / 2}
+                cy={svgSize / 2}
                 r={radius}
                 stroke="#007AFF"
                 strokeWidth={strokeWidth}
@@ -762,8 +785,8 @@ const SpentInMonthScreen: React.FC = () => {
               />
               {/* Progress circle (red for spent) */}
               <Circle
-                cx={radius + strokeWidth / 2}
-                cy={radius + strokeWidth / 2}
+                cx={svgSize / 2}
+                cy={svgSize / 2}
                 r={radius}
                 stroke="#FF3B30"
                 strokeWidth={strokeWidth}
@@ -771,7 +794,7 @@ const SpentInMonthScreen: React.FC = () => {
                 strokeDasharray={strokeDasharray}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
-                transform={`rotate(-90 ${radius + strokeWidth / 2} ${radius + strokeWidth / 2})`}
+                transform={`rotate(-90 ${svgSize / 2} ${svgSize / 2})`}
               />
             </Svg>
                          <View style={{ 
@@ -779,7 +802,8 @@ const SpentInMonthScreen: React.FC = () => {
                alignItems: 'center',
                justifyContent: 'center',
                width: '100%',
-               height: '100%'
+               height: '100%',
+               backgroundColor: 'transparent', // Ensure no white background
              }}>
                <View style={{ alignItems: 'center' }}>
                  <Ionicons 
@@ -793,7 +817,7 @@ const SpentInMonthScreen: React.FC = () => {
                    }} 
                  />
                  <Text style={styles.progressText} allowFontScaling={false}>
-                   {loading ? '--' : `₹${spentAmount.toLocaleString()}`}
+                   {loading ? '--' : formatCurrency(spentAmount)}
                  </Text>
                  <Text style={styles.progressSubtext} allowFontScaling={false}>Spent</Text>
                </View>
@@ -804,19 +828,19 @@ const SpentInMonthScreen: React.FC = () => {
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel} allowFontScaling={false}>Income</Text>
               <Text style={[styles.detailValue, { color: '#34C759' }]} allowFontScaling={false}>
-                {loading ? '--' : `₹${monthlyIncome.toLocaleString()}`}
+                {loading ? '--' : formatCurrency(monthlyIncome)}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel} allowFontScaling={false}>Remaining</Text>
               <Text style={[styles.detailValue, { color: '#007AFF' }]} allowFontScaling={false}>
-                {loading ? '--' : `₹${remainingBalance.toLocaleString()}`}
+                {loading ? '--' : formatCurrency(remainingBalance)}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel} allowFontScaling={false}>Safe to Spend</Text>
               <Text style={[styles.detailValue, { color: '#FF9500' }]} allowFontScaling={false}>
-                {loading ? '--' : `₹${Math.floor(safeToSpendPerDay).toLocaleString()}/day`}
+                {loading ? '--' : `${formatCurrency(Math.floor(safeToSpendPerDay))}/day`}
               </Text>
             </View>
           </View>
@@ -948,7 +972,7 @@ const SpentInMonthScreen: React.FC = () => {
                </View>
                <View style={styles.averageContainer}>
                  <Text style={styles.averageAmount} allowFontScaling={false}>
-                   ₹{averageDailySpending.toLocaleString()}
+                   {formatCurrency(averageDailySpending)}
                  </Text>
                  <Text style={styles.averageLabel} allowFontScaling={false}>
                    per day this month
@@ -971,7 +995,7 @@ const SpentInMonthScreen: React.FC = () => {
                        <View style={[styles.dailyTrendBar, { height: Math.max(height, 2) }]} />
                        <Text style={styles.dailyTrendLabel} allowFontScaling={false}>{day.dayName}</Text>
                        <Text style={styles.dailyTrendAmount} allowFontScaling={false}>
-                         ₹{day.amount.toLocaleString()}
+                         {formatCurrency(day.amount)}
                        </Text>
                      </View>
                    );
@@ -994,7 +1018,7 @@ const SpentInMonthScreen: React.FC = () => {
                            {category.category}
                          </Text>
                          <Text style={styles.categoryTrendAmount} allowFontScaling={false}>
-                           ₹{category.amount.toLocaleString()}
+                           {formatCurrency(category.amount)}
                          </Text>
                        </View>
                        <View style={styles.categoryTrendBarContainer}>
@@ -1028,7 +1052,7 @@ const SpentInMonthScreen: React.FC = () => {
                          {week.label}
                        </Text>
                        <Text style={styles.weeklyTrendAmount} allowFontScaling={false}>
-                         ₹{week.amount.toLocaleString()}
+                         {formatCurrency(week.amount)}
                        </Text>
                      </View>
                    ))}

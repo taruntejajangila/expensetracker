@@ -10,6 +10,10 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useDrawer } from '../context/DrawerContext';
 
+// Fixed density to prevent scaling with display size changes
+// Match the native density lock (2.5f) - don't use PixelRatio.get() as it can change
+const LOCKED_DENSITY = 2.5; // Match native density lock
+
 interface SimpleDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -84,7 +88,6 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
   const supportItems = [
     { icon: 'help-circle-outline', label: 'Help & Support', screen: 'HelpSupport' },
     { icon: 'person-outline', label: 'Profile', screen: 'Profile' },
-    { icon: 'color-wand-outline', label: 'Splash Preview', screen: 'DevSplash' },
   ];
 
   const handleNavigation = (screen: string) => {
@@ -143,11 +146,23 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
                 fill="rgba(255,255,255,0.10)"
               />
             </Svg>
-            <Svg width={80} height={80} style={styles.headerCircleA}>
-              <Circle cx={40} cy={40} r={38} fill="rgba(255,255,255,0.06)" />
+            <Svg 
+              width={80 / LOCKED_DENSITY} 
+              height={80 / LOCKED_DENSITY} 
+              viewBox={`0 0 ${80 / LOCKED_DENSITY} ${80 / LOCKED_DENSITY}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={styles.headerCircleA}
+            >
+              <Circle cx={40 / LOCKED_DENSITY} cy={40 / LOCKED_DENSITY} r={38 / LOCKED_DENSITY} fill="rgba(255,255,255,0.06)" />
             </Svg>
-            <Svg width={48} height={48} style={styles.headerCircleB}>
-              <Circle cx={24} cy={24} r={22} fill="rgba(255,255,255,0.10)" />
+            <Svg 
+              width={48 / LOCKED_DENSITY} 
+              height={48 / LOCKED_DENSITY} 
+              viewBox={`0 0 ${48 / LOCKED_DENSITY} ${48 / LOCKED_DENSITY}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={styles.headerCircleB}
+            >
+              <Circle cx={24 / LOCKED_DENSITY} cy={24 / LOCKED_DENSITY} r={22 / LOCKED_DENSITY} fill="rgba(255,255,255,0.10)" />
             </Svg>
           </View>
           <View style={styles.userRow}>

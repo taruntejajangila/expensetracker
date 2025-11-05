@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppOpenAdService from '../services/AppOpenAdService';
 
 const { width, height } = Dimensions.get('window');
+// Fixed density to prevent scaling with display size changes
+// Match the native density lock (2.5f) - don't use PixelRatio.get() as it can change
+const LOCKED_DENSITY = 2.5; // Match native density lock
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -139,11 +142,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
       {/* Decorative background accents */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Svg width={width} height={height}>
-          {/* Soft bubbles */}
-          <Circle cx={width * 0.15} cy={height * 0.2} r={66} fill="rgba(10,102,255,0.06)" />
-          <Circle cx={width * 0.86} cy={height * 0.24} r={46} fill="rgba(10,102,255,0.05)" />
-          <Circle cx={width * 0.22} cy={height * 0.76} r={56} fill="rgba(10,102,255,0.04)" />
+        <Svg 
+          width={width} 
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+        >
+          {/* Soft bubbles - normalized for density */}
+          <Circle cx={width * 0.15} cy={height * 0.2} r={66 / LOCKED_DENSITY} fill="rgba(10,102,255,0.06)" />
+          <Circle cx={width * 0.86} cy={height * 0.24} r={46 / LOCKED_DENSITY} fill="rgba(10,102,255,0.05)" />
+          <Circle cx={width * 0.22} cy={height * 0.76} r={56 / LOCKED_DENSITY} fill="rgba(10,102,255,0.04)" />
 
           {/* Diagonal accent at top-right */}
           <Path
@@ -156,14 +164,14 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             fill="rgba(10,102,255,0.05)"
           />
 
-          {/* Subtle dotted grid */}
+          {/* Subtle dotted grid - normalized for density */}
           {Array.from({ length: 5 }).map((_, r) => (
             Array.from({ length: 10 }).map((__, c) => (
               <Circle
                 key={`g-${r}-${c}`}
                 cx={width * 0.1 + c * 18}
                 cy={height * 0.1 + r * 16}
-                r={1.1}
+                r={1.1 / LOCKED_DENSITY}
                 fill="rgba(17,24,39,0.08)"
               />
             ))
