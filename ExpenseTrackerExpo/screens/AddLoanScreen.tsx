@@ -378,6 +378,8 @@ const AddLoanScreen: React.FC = () => {
             setEmiStartDate('');
             setEmiDate(null);
             
+            // Navigate back immediately after successful save
+            // The form will be cleared when screen comes into focus again (via useFocusEffect)
             navigation.goBack();
         } catch (error) {
             console.error('Error adding loan:', error);

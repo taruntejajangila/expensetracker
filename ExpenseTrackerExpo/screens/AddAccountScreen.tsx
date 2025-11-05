@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -162,6 +162,30 @@ const AddAccountScreen: React.FC = () => {
       isInitialMount.current = true;
     }
   }, [isEdit, editingAccount, route.params]);
+
+  // Clear form when screen comes into focus (unless in edit mode)
+  // This ensures a clean state when navigating back after saving
+  useFocusEffect(
+    React.useCallback(() => {
+      // Only clear if not in edit mode and no editing account is present
+      if (!isEdit && !editingAccount) {
+        // Small delay to avoid clearing form while navigation is happening
+        const timer = setTimeout(() => {
+          setFormData({
+            nickname: '',
+            bankName: '',
+            accountHolderName: '',
+            accountNumber: '',
+            accountType: '',
+          });
+          setErrors({});
+          setBankSuggestion(null);
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      }
+    }, [isEdit, editingAccount])
+  );
 
   useLayoutEffect(() => {
     if (isEdit) {
@@ -415,9 +439,20 @@ const AddAccountScreen: React.FC = () => {
         });
         
         if (result.success) {
-        Alert.alert('Success', 'Account added successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+          // Clear form data after successful save
+          setFormData({
+            nickname: '',
+            bankName: '',
+            accountHolderName: '',
+            accountNumber: '',
+            accountType: '',
+          });
+          setErrors({});
+          setBankSuggestion(null);
+          
+          Alert.alert('Success', 'Account added successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
         } else {
           // Show specific error message from backend
           Alert.alert('Error', result.message || 'Failed to add account. Please try again.');

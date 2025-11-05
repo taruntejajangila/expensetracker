@@ -647,6 +647,11 @@ const HomeScreen: React.FC = () => {
     loadClickCounter();
   }, []);
 
+  // Load banners when component mounts
+  useEffect(() => {
+    loadAds();
+  }, []);
+
   // Banner auto-scroll functionality
   useEffect(() => {
     // Only set up interval if we have banners
@@ -715,6 +720,7 @@ const HomeScreen: React.FC = () => {
         setAppInitialized(true);
         loadStats(true); // Force refresh stats
         loadTransactionData(true); // Force refresh transactions
+        loadAds(); // Reload banners when screen comes into focus
       }, DEBOUNCE_DELAY);
       
       // Cleanup function
@@ -2270,9 +2276,6 @@ const HomeScreen: React.FC = () => {
                     Personalized financial tips
                   </Text>
                 </View>
-                <View style={styles.insightsChevron}>
-                  <Ionicons name="chevron-forward" size={15} color="#FF9500" />
-                </View>
               </View>
                
                {generateSmartInsights().map((insight, index) => (
@@ -2364,7 +2367,11 @@ const HomeScreen: React.FC = () => {
 
         {/* Active Loans Summary */}
         {!loading && activeLoans.length > 0 && (
-          <View style={styles.activeLoansCard}>
+          <TouchableOpacity 
+            style={styles.activeLoansCard}
+            onPress={() => navigation.navigate('Loans' as never)}
+            activeOpacity={0.7}
+          >
             <View style={styles.activeLoansContent}>
               {/* Header with icon and title */}
               <View style={styles.activeLoansHeader}>
@@ -2377,12 +2384,9 @@ const HomeScreen: React.FC = () => {
                     {activeLoans.length} loan{activeLoans.length > 1 ? 's' : ''} • Next payment: {nextPaymentDate}
                   </Text>
                 </View>
-                <TouchableOpacity 
-                  onPress={() => navigation.navigate('Loans' as never)}
-                  style={styles.activeLoansChevron}
-                >
+                <View style={styles.activeLoansChevron}>
                   <Ionicons name="chevron-forward" size={16} color="#007AFF" />
-                </TouchableOpacity>
+                </View>
               </View>
               
               {/* Loan Stats in a more compact layout */}
@@ -2412,7 +2416,7 @@ const HomeScreen: React.FC = () => {
                 </View>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* App Quote and Name */}

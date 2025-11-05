@@ -12,83 +12,100 @@ interface BannerAdComponentProps {
 // Google AdMob Banner Component
 export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   const disableAds = (process.env.EXPO_PUBLIC_DISABLE_ADS === '1') || (Constants.appOwnership === 'expo');
-  const [refreshKey, setRefreshKey] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
+  const [adLibraryLoaded, setAdLibraryLoaded] = useState(false);
 
+  // Note: Removed auto-refresh interval and retry remounting to prevent layout shifts/shaking
+  // BannerAd from react-native-google-mobile-ads handles refresh internally
+  // Remounting causes visual "shake" as layout recalculates
+
+  // Load ad library asynchronously to prevent blocking
   useEffect(() => {
-    // Auto-refresh every 60 seconds (increased from 45 to reduce request frequency)
-    const interval = setInterval(() => {
-      setRefreshKey(prev => prev + 1);
-      setRetryCount(0); // Reset retry count on refresh
-      console.log('🔄 Banner ad auto-refreshed');
-    }, 60000); // 60 seconds
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
-  }, []);
-
-  // Retry logic for failed ad loads
-  useEffect(() => {
-    if (!disableAds && retryCount > 0 && retryCount < 3) {
-      const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
-      const retryTimer = setTimeout(() => {
-        console.log(`🔄 Retrying banner ad load (attempt ${retryCount + 1})`);
-        setRefreshKey(prev => prev + 1);
-      }, retryDelay);
-      
-      return () => clearTimeout(retryTimer);
+    if (!disableAds) {
+      try {
+        require('react-native-google-mobile-ads');
+        setAdLibraryLoaded(true);
+      } catch (error) {
+        console.warn('⚠️ BannerAd library failed to load:', error);
+        setAdLibraryLoaded(false);
+      }
     }
-  }, [retryCount, disableAds]);
+  }, [disableAds]);
 
-  if (disableAds) {
+  if (disableAds || !adLibraryLoaded) {
     return (
       <View style={styles.container}>
         <View style={[styles.placeholder, { height: 50 }]}> 
-          <Text style={styles.placeholderText}>Ads disabled in Expo Go</Text>
+          <Text style={styles.placeholderText}>
+            {disableAds ? 'Ads disabled in Expo Go' : 'Loading ad...'}
+          </Text>
         </View>
       </View>
     );
   }
 
   // Use real banner ads when enabled
+  // Note: Removed auto-refresh and key prop to prevent layout shifts/shaking
+  // BannerAd handles its own refresh cycle internally without remounting
+  const { BannerAd, BannerAdSize, AdEventType } = require('react-native-google-mobile-ads');
+  
   return (
-    <View style={styles.container} key={refreshKey}>
-      {(() => {
-        const { BannerAd, BannerAdSize, AdEventType } = require('react-native-google-mobile-ads');
-        return (
-          <BannerAd
-            unitId={Platform.OS === 'ios' 
-              ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
-              : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-            requestOptions={{
-              requestNonPersonalizedAdsOnly: false,
-            }}
-            onAdLoaded={() => {
-              console.log('✅ Banner ad loaded');
-              setRetryCount(0); // Reset retry count on successful load
-            }}
-            onAdFailedToLoad={(error) => {
-              console.error('❌ Banner ad failed to load:', error);
-              if (retryCount < 3) {
-                // Retry with exponential backoff
-                const newRetryCount = retryCount + 1;
-                setRetryCount(newRetryCount);
-                console.log(`⚠️ Banner ad retry scheduled (attempt ${newRetryCount})`);
-              } else {
-                console.log('❌ Banner ad failed after 3 retries, will retry on next refresh');
-                setRetryCount(0); // Reset for next refresh cycle
-              }
-            }}
-            onAdOpened={() => {
-              console.log('📱 Banner ad opened');
-            }}
-            onAdClosed={() => {
-              console.log('📱 Banner ad closed');
-            }}
-          />
-        );
-      })()}
+    <View style={styles.container}>
+      <BannerAd
+        unitId={Platform.OS === 'ios' 
+          ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
+          : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        requestOptions={{
+          requestNonPersonalizedAdsOnly: false,
+        }}
+        onAdLoaded={() => {
+          console.log('✅ Banner ad loaded');
+          setRetryCount(0); // Reset retry count on successful load
+        }}
+        onAdFailedToLoad={(error) => {
+          const errorCode = error?.code || '';
+          const errorMessage = error?.message || '';
+          
+          // Check if it's an invalid request error (non-recoverable)
+          if (errorCode === 'error-code-invalid-request' || errorMessage.includes('invalid')) {
+            // Only log once per refresh cycle to reduce noise
+            if (retryCount === 0) {
+              console.warn('⚠️ Banner ad unit ID may be invalid or not configured in AdMob. Check ad unit ID: ca-app-pub-4113490348002307/5694070602');
+            }
+            // Don't retry for invalid requests - they won't succeed
+            setRetryCount(0);
+            return;
+          }
+          
+          // For other errors (like no-fill), retry with exponential backoff
+          if (errorCode === 'error-code-no-fill') {
+            // No-fill is normal in dev/test - just log silently
+            if (retryCount === 0) {
+              console.log('ℹ️ No ad inventory available (normal in development)');
+            }
+            setRetryCount(0);
+            return;
+          }
+          
+          // For other recoverable errors, retry
+          console.error('❌ Banner ad failed to load:', error);
+          if (retryCount < 3) {
+            const newRetryCount = retryCount + 1;
+            setRetryCount(newRetryCount);
+            console.log(`⚠️ Banner ad retry scheduled (attempt ${newRetryCount})`);
+          } else {
+            console.log('❌ Banner ad failed after 3 retries, will retry on next refresh');
+            setRetryCount(0);
+          }
+        }}
+        onAdOpened={() => {
+          console.log('📱 Banner ad opened');
+        }}
+        onAdClosed={() => {
+          console.log('📱 Banner ad closed');
+        }}
+      />
     </View>
   );
 };
@@ -100,6 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 0,
     overflow: 'hidden',
+    minHeight: 50, // Prevent layout shift when ad loads/unloads
   },
   placeholder: {
     width: '100%',

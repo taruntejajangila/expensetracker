@@ -314,7 +314,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
           </View>
 
           {/* Navigation Buttons */}
-          <View style={styles.buttonContainer}>
+          <View style={[styles.buttonContainer, index === 0 && styles.buttonContainerFirstSlide]}>
             {index > 0 && (
               <TouchableOpacity
                 style={styles.previousButton}
@@ -324,6 +324,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                 <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             )}
+            
+            {index === 0 && <View style={{ flex: 1 }} />}
 
             {index === slides.length - 1 ? (
               <TouchableOpacity
@@ -500,6 +502,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  buttonContainerFirstSlide: {
+    justifyContent: 'flex-end',
   },
   nextButton: {
     flexDirection: 'row',

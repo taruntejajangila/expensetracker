@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelDatePicker from '../components/WheelDatePicker';
@@ -127,12 +127,27 @@ const RemindersScreen: React.FC = () => {
     // Clean up expired paid items on component load
     cleanupExpiredPaidItems();
     
-    // Set up periodic cleanup every 30 minutes
+  }, []);
+
+  // Reload reminders when screen comes into focus (e.g., after deleting a reminder and returning)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadReminders();
+      cleanupExpiredPaidItems();
+    }, [])
+  );
+
+  // Set up periodic cleanup every 30 minutes
+  useEffect(() => {
     const cleanupInterval = setInterval(() => {
       cleanupExpiredPaidItems();
     }, 30 * 60 * 1000); // 30 minutes
     
-    // Set up notification listeners
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
+  // Set up notification listeners
+  useEffect(() => {
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       // Handle notification received
     });
@@ -142,9 +157,6 @@ const RemindersScreen: React.FC = () => {
     });
 
     return () => {
-      // Clear the cleanup interval
-      clearInterval(cleanupInterval);
-      
       // Note: removeNotificationSubscription is deprecated in newer versions
       // The subscription objects will be automatically cleaned up when component unmounts
       if (notificationListener && typeof notificationListener.remove === 'function') {
@@ -546,7 +558,7 @@ const RemindersScreen: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const handleDeleteReminder = (reminderId: string) => {
+  const handleDeleteReminder = async (reminderId: string) => {
     Alert.alert(
       'Delete Reminder',
       'Are you sure you want to delete this reminder?',
@@ -556,11 +568,27 @@ const RemindersScreen: React.FC = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await cancelNotification(reminderId);
-            setReminders(prev => prev.filter(r => r.id !== reminderId));
-            const updatedManualReminders = manualReminders.filter(r => r.id !== reminderId);
-            setManualReminders(updatedManualReminders);
-            await saveManualReminders(updatedManualReminders);
+            try {
+              // Cancel notification
+              await cancelNotification(reminderId);
+              
+              // Delete from backend service
+              await ReminderService.deleteReminder(reminderId);
+              
+              // Update local state immediately
+              setReminders(prev => prev.filter(r => r.id !== reminderId));
+              const updatedManualReminders = manualReminders.filter(r => r.id !== reminderId);
+              setManualReminders(updatedManualReminders);
+              
+              // Also update local storage
+              await saveManualReminders(updatedManualReminders);
+              
+              // Reload reminders to ensure sync with backend
+              await loadReminders();
+            } catch (error) {
+              console.error('❌ Error deleting reminder:', error);
+              Alert.alert('Error', 'Failed to delete reminder. Please try again.');
+            }
           },
         },
       ]

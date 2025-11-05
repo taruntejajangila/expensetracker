@@ -209,10 +209,26 @@ const SavingsGoalsScreen: React.FC = () => {
   );
 
   const handleUpdateProgress = (goal: SavingsGoal) => {
-    setCurrentGoal(goal);
-    setNewAmount(''); // Clear the input field
-    setTransactionType('add'); // Reset transaction type to default
-    setIsModalVisible(true);
+    try {
+      // Use requestAnimationFrame to ensure state updates happen asynchronously
+      // This prevents blocking the UI thread
+      requestAnimationFrame(() => {
+        setCurrentGoal(goal);
+        setNewAmount(''); // Clear the input field
+        setTransactionType('add'); // Reset transaction type to default
+        // Use a small delay to ensure modal opens smoothly
+        setTimeout(() => {
+          setIsModalVisible(true);
+        }, 50);
+      });
+    } catch (error) {
+      console.error('Error opening update progress modal:', error);
+      // Fallback: try to open modal directly
+      setCurrentGoal(goal);
+      setNewAmount('');
+      setTransactionType('add');
+      setIsModalVisible(true);
+    }
   };
 
   const handleEditGoal = (goal: SavingsGoal) => {
@@ -651,7 +667,13 @@ const SavingsGoalsScreen: React.FC = () => {
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={() => {
+          setIsModalVisible(false);
+          setCurrentGoal(null);
+          setNewAmount('');
+          setTransactionType('add');
+        }}
+        statusBarTranslucent={true}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'position'}
@@ -672,7 +694,13 @@ const SavingsGoalsScreen: React.FC = () => {
                   <Text style={styles.modalTitle} allowFontScaling={false}>Update Progress</Text>
                   <TouchableOpacity 
                     style={styles.modalCloseButton}
-                    onPress={() => setIsModalVisible(false)}
+                    onPress={() => {
+                      setIsModalVisible(false);
+                      setCurrentGoal(null);
+                      setNewAmount('');
+                      setTransactionType('add');
+                    }}
+                    activeOpacity={0.7}
                   >
                     <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
@@ -767,15 +795,18 @@ const SavingsGoalsScreen: React.FC = () => {
                   />
                 </View>
                 
-                {/* Banner Ad above Cancel and Update buttons */}
-                <View style={styles.modalAdContainer}>
-                  <BannerAdComponent />
-                </View>
+                {/* Banner Ad removed from modal to prevent freezing issues */}
+                {/* Ads in modals can cause UI blocking - keeping modal lightweight */}
                 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity 
                     style={styles.modalCancelButton} 
-                    onPress={() => setIsModalVisible(false)}
+                    onPress={() => {
+                      setIsModalVisible(false);
+                      setCurrentGoal(null);
+                      setNewAmount('');
+                      setTransactionType('add');
+                    }}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.modalCancelButtonText} allowFontScaling={false}>Cancel</Text>

@@ -347,15 +347,41 @@ function AppNavigator() {
   // Don't auto-show App Open Ad - it should only show when returning from background
   // Show App Open Ad when app returns from background (not on fresh launch)
   useEffect(() => {
+    let appState = AppState.currentState;
+    let lastBackgroundTime = null;
+    
     const handleAppStateChange = (nextAppState) => {
-      if (nextAppState === 'active' && user && adMobInitialized && !showSplash) {
-        // Only show if app was in background (not fresh launch or splash)
-        AppOpenAdService.showAppOpenAd()
-          .catch((error) => {
-            console.error('❌ App Open Ad failed on app state change:', error);
-            // Silently fail - don't crash the app
-          });
+      // Track previous state to detect true background->foreground transitions
+      if (appState.match(/inactive|background/) && nextAppState === 'active') {
+        // App is returning from background
+        const timeSinceBackground = lastBackgroundTime ? Date.now() - lastBackgroundTime : Infinity;
+        
+        // Check if an interstitial ad was just closed (within last 5 seconds)
+        const lastInterstitialCloseTime = global.__lastInterstitialCloseTime || 0;
+        const timeSinceInterstitialClose = Date.now() - lastInterstitialCloseTime;
+        const wasInterstitialJustClosed = timeSinceInterstitialClose < 5000; // 5 seconds threshold
+        
+        // Only show app open ad if:
+        // 1. User is logged in
+        // 2. AdMob is initialized
+        // 3. Not on splash screen
+        // 4. App was in background for at least 1 second (to avoid false positives from ad closes)
+        // 5. No interstitial ad was just closed (wait at least 5 seconds)
+        if (user && adMobInitialized && !showSplash && timeSinceBackground > 1000 && !wasInterstitialJustClosed) {
+          AppOpenAdService.showAppOpenAd()
+            .catch((error) => {
+              console.error('❌ App Open Ad failed on app state change:', error);
+              // Silently fail - don't crash the app
+            });
+        } else if (wasInterstitialJustClosed) {
+          console.log('⚠️ Skipping app open ad - interstitial ad was just closed');
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App is going to background - record the time
+        lastBackgroundTime = Date.now();
       }
+      
+      appState = nextAppState;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);

@@ -212,6 +212,15 @@ export const initializeInterstitial = async () => {
       console.log('📱 Interstitial ad closed');
       interstitialAdLoaded = false;
       interstitialRetryCount = 0; // Reset retry count
+      
+      // Set a flag to prevent app open ad from showing immediately after interstitial closes
+      // This prevents the app from treating interstitial close as app open
+      const interstitialCloseTime = Date.now();
+      if (typeof global !== 'undefined') {
+        (global as any).__lastInterstitialCloseTime = interstitialCloseTime;
+      }
+      console.log('⚠️ Interstitial ad closed - preventing app open ad for 5 seconds');
+      
       // Load next ad with retry logic
       setTimeout(() => {
         if (interstitialAd) {

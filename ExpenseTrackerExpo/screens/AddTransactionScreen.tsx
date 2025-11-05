@@ -304,19 +304,82 @@ const AddTransactionScreen = () => {
 
 
   // Refresh accounts, credit cards, and categories when screen gains focus (e.g., after adding a new account)
+  // Save form data to AsyncStorage before navigating away
+  const saveFormData = async () => {
+    try {
+      const formData = {
+        type,
+        amount,
+        title,
+        category,
+        note,
+        date: date.toISOString(),
+        selectedAccountId,
+        selectedToAccountId,
+      };
+      await AsyncStorage.setItem('addTransactionFormData', JSON.stringify(formData));
+      console.log('💾 Saved form data before navigation');
+    } catch (error) {
+      console.error('❌ Error saving form data:', error);
+    }
+  };
+
+  // Restore form data from AsyncStorage
+  const restoreFormData = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem('addTransactionFormData');
+      if (savedData) {
+        const formData = JSON.parse(savedData);
+        setType(formData.type || 'expense');
+        setAmount(formData.amount || '');
+        setTitle(formData.title || '');
+        setCategory(formData.category || '');
+        setNote(formData.note || '');
+        setDate(formData.date ? new Date(formData.date) : new Date());
+        setSelectedAccountId(formData.selectedAccountId || null);
+        setSelectedToAccountId(formData.selectedToAccountId || null);
+        setErrors({});
+        console.log('✅ Restored form data from storage');
+      }
+    } catch (error) {
+      console.error('❌ Error restoring form data:', error);
+    }
+  };
+
+  // Clear saved form data
+  const clearSavedFormData = async () => {
+    try {
+      await AsyncStorage.removeItem('addTransactionFormData');
+      console.log('🗑️ Cleared saved form data');
+    } catch (error) {
+      console.error('❌ Error clearing form data:', error);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
-      // Reset form when opening in add mode
+      // Restore form data if available, otherwise reset form when opening in add mode
       if (!isEditMode) {
-        setAmount('');
-        setTitle('');
-        setCategory('');
-        setNote('');
-        setErrors({});
-        setDate(new Date());
-        setShowCategoryDropdown(false);
-        setShowAccountDropdown(false);
+        // Try to restore saved form data first
+        (async () => {
+          const savedData = await AsyncStorage.getItem('addTransactionFormData');
+          if (savedData && isActive) {
+            await restoreFormData();
+          } else if (isActive && !savedData) {
+            // Only reset if no saved data exists
+            setAmount('');
+            setTitle('');
+            setCategory('');
+            setNote('');
+            setErrors({});
+            setDate(new Date());
+          }
+          if (isActive) {
+            setShowCategoryDropdown(false);
+            setShowAccountDropdown(false);
+          }
+        })();
       }
       (async () => {
         try {
@@ -601,6 +664,9 @@ const AddTransactionScreen = () => {
           }
         }
 
+        // Clear saved form data after successful save
+        await clearSavedFormData();
+        
         if (saveAndAddAnother && !isEditMode) {
           // Clear form for new transaction (only available when adding)
           setAmount('');
@@ -1088,8 +1154,10 @@ const AddTransactionScreen = () => {
                     <TouchableOpacity
                       key="add-bank-account-option"
                       style={styles.dropdownItem}
-                      onPress={() => {
+                      onPress={async () => {
                         setShowAccountDropdown(false);
+                        // Save form data before navigating
+                        await saveFormData();
                         (navigation as any).navigate('AddAccount');
                       }}
                     >
