@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,9 @@ const AddAccountScreen: React.FC = () => {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
   const [bankSuggestion, setBankSuggestion] = useState<string | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const duplicateCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
   const accountTypes = [
     { id: 'wallet', name: 'Wallet', icon: 'wallet-outline', color: '#FF6B6B' },
@@ -139,7 +142,7 @@ const AddAccountScreen: React.FC = () => {
         return '';
       };
       // Apply filters to existing data when editing
-      const filteredNickname = (editingAccount.name || '').replace(/[^a-zA-Z0-9]/g, '');
+      const filteredNickname = (editingAccount.name || '').replace(/[^a-zA-Z0-9\s]/g, '');
       const filteredAccountHolderName = (editingAccount.accountHolderName || '').replace(/[^a-zA-Z\s]/g, '');
       const filteredAccountNumber = (editingAccount.accountNumber || '').replace(/[^0-9]/g, '').slice(0, 4);
       
@@ -152,6 +155,11 @@ const AddAccountScreen: React.FC = () => {
       });
       // Clear any existing suggestion when entering edit mode
       setBankSuggestion(null);
+      // Reset initial mount flag so validation can run when user changes values
+      isInitialMount.current = false;
+    } else {
+      // Reset initial mount flag for new account creation
+      isInitialMount.current = true;
     }
   }, [isEdit, editingAccount, route.params]);
 
@@ -161,12 +169,30 @@ const AddAccountScreen: React.FC = () => {
     }
   }, [isEdit, navigation]);
 
+  // Real-time duplicate validation when nickname or accountNumber changes
+  useEffect(() => {
+    // Skip on initial mount (including when editing account is loaded)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Skip check if both fields are empty
+    if (!formData.nickname.trim() && !formData.accountNumber.trim()) {
+      return;
+    }
+    
+    // Trigger duplicate check (has built-in 500ms debounce)
+    checkDuplicateAccount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.nickname, formData.accountNumber, formData.bankName]);
+
   // Filter input based on field type
   const filterInput = (field: keyof AccountFormData, value: string): string => {
     switch (field) {
       case 'nickname':
-        // Only allow alphabets and numbers
-        return value.replace(/[^a-zA-Z0-9]/g, '');
+        // Allow alphabets, numbers, and spaces
+        return value.replace(/[^a-zA-Z0-9\s]/g, '');
       case 'accountHolderName':
         // Only allow alphabets and spaces
         return value.replace(/[^a-zA-Z\s]/g, '');
@@ -202,6 +228,82 @@ const AddAccountScreen: React.FC = () => {
     }
   };
 
+  // Check for duplicate accounts
+  const checkDuplicateAccount = async () => {
+    // Clear existing timeout
+    if (duplicateCheckTimeoutRef.current) {
+      clearTimeout(duplicateCheckTimeoutRef.current);
+    }
+
+    // Debounce the duplicate check
+    duplicateCheckTimeoutRef.current = setTimeout(async () => {
+      if (!formData.nickname.trim() && !formData.accountNumber.trim()) {
+        return;
+      }
+
+      setCheckingDuplicate(true);
+      try {
+        const result = await AccountService.checkDuplicate(
+          formData.nickname.trim() || undefined,
+          formData.accountNumber.trim() || undefined,
+          formData.bankName.trim() || undefined,
+          isEdit && editingAccount?.id ? editingAccount.id : undefined
+        );
+
+        if (result.isDuplicate && result.message) {
+          // Parse error message to determine which field(s) to show error on
+          // Backend may return multiple errors joined with ". "
+          const errorMessages = result.message.split('. ').filter(msg => msg.trim());
+          const newErrors: {[key: string]: string} = {};
+          
+          errorMessages.forEach(msg => {
+            const lowerMsg = msg.toLowerCase();
+            
+            // Check for bank + account number duplicate (most specific - check first)
+            if (lowerMsg.includes('bank') && lowerMsg.includes('number') && lowerMsg.includes('already')) {
+              newErrors.accountNumber = msg.trim();
+            }
+            // Check for account number duplicate (without bank)
+            else if (lowerMsg.includes('account number') && lowerMsg.includes('already in use')) {
+              newErrors.accountNumber = msg.trim();
+            }
+            // Check for nickname duplicate
+            else if (lowerMsg.includes('nickname') || (lowerMsg.includes('account name') && lowerMsg.includes('already'))) {
+              newErrors.nickname = msg.trim();
+            }
+          });
+          
+          // If no specific field identified, show on nickname as fallback
+          if (Object.keys(newErrors).length === 0) {
+            newErrors.nickname = result.message;
+          }
+          
+          setErrors(prev => ({
+            ...prev,
+            ...newErrors
+          }));
+        } else {
+          // Clear duplicate errors if not duplicate
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            if (newErrors.nickname && (newErrors.nickname.includes('already') || newErrors.nickname.includes('in use'))) {
+              delete newErrors.nickname;
+            }
+            if (newErrors.accountNumber && (newErrors.accountNumber.includes('already') || newErrors.accountNumber.includes('in use'))) {
+              delete newErrors.accountNumber;
+            }
+            return newErrors;
+          });
+        }
+      } catch (error: any) {
+        console.error('Error checking duplicate:', error);
+        // Don't show error to user, just log it
+      } finally {
+        setCheckingDuplicate(false);
+      }
+    }, 500); // 500ms debounce
+  };
+
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -225,11 +327,11 @@ const AddAccountScreen: React.FC = () => {
       newErrors.accountNumber = 'Please enter last 4 digits only';
     }
     
-    // Validate nickname format (alphabets and numbers only)
+    // Validate nickname format (alphabets, numbers, and spaces allowed)
     if (!formData.nickname.trim()) {
       newErrors.nickname = 'Account nickname is required';
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.nickname.trim())) {
-      newErrors.nickname = 'Nickname can only contain alphabets and numbers';
+    } else if (!/^[a-zA-Z0-9\s]+$/.test(formData.nickname.trim())) {
+      newErrors.nickname = 'Nickname can only contain alphabets, numbers, and spaces';
     }
 
     if (!formData.accountType) {
@@ -243,6 +345,28 @@ const AddAccountScreen: React.FC = () => {
   const handleSaveAccount = async () => {
     if (!validateForm()) {
       return;
+    }
+
+    // Final duplicate check before saving
+    setCheckingDuplicate(true);
+    try {
+      const duplicateResult = await AccountService.checkDuplicate(
+        formData.nickname.trim(),
+        formData.accountNumber.trim(),
+        formData.bankName.trim(),
+        isEdit && editingAccount?.id ? editingAccount.id : undefined
+      );
+
+      if (duplicateResult.isDuplicate && duplicateResult.message) {
+        Alert.alert('Duplicate Account', duplicateResult.message);
+        setCheckingDuplicate(false);
+        return;
+      }
+    } catch (error: any) {
+      console.error('Error in final duplicate check:', error);
+      // Continue anyway, backend will also check
+    } finally {
+      setCheckingDuplicate(false);
     }
 
     setIsLoading(true);
@@ -260,12 +384,13 @@ const AddAccountScreen: React.FC = () => {
         
         const updatedAccount = await AccountService.updateAccount(editingAccount.id, updateData);
         
+        if (updatedAccount.success) {
         Alert.alert('Success', 'Account updated successfully!', [
           { 
             text: 'OK', 
             onPress: () => {
               // Navigate to BankAccountDetail with updated data instead of going back
-              if (updatedAccount) {
+                if (updatedAccount.data) {
                 (navigation as any).navigate('BankAccountDetail', { 
                   account: updatedAccount.data, // Use the actual account data from response
                   refresh: true 
@@ -277,19 +402,31 @@ const AddAccountScreen: React.FC = () => {
           }
         ]);
       } else {
-        await AccountService.addAccount({
+          // Show specific error message from backend
+          Alert.alert('Error', updatedAccount.message || 'Failed to update account. Please try again.');
+        }
+      } else {
+        const result = await AccountService.addAccount({
           name: formData.nickname, // Backend expects 'name', not 'nickname'
           bankName: formData.bankName,
           accountHolderName: formData.accountHolderName,
           accountNumber: formData.accountNumber,
           accountType: formData.accountType,
         });
+        
+        if (result.success) {
         Alert.alert('Success', 'Account added successfully!', [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
+        } else {
+          // Show specific error message from backend
+          Alert.alert('Error', result.message || 'Failed to add account. Please try again.');
+        }
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save account. Please try again.');
+    } catch (error: any) {
+      // Fallback error handling
+      const errorMessage = error?.message || 'Failed to save account. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -341,8 +478,8 @@ const AddAccountScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
@@ -352,7 +489,7 @@ const AddAccountScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
-      >
+            >
         {/* Welcome Section removed */}
 
         {/* Form Container */}
@@ -369,9 +506,17 @@ const AddAccountScreen: React.FC = () => {
                 placeholderTextColor={theme.colors.textSecondary}
                 value={formData.nickname}
                 onChangeText={(value) => handleInputChange('nickname', value)}
+                onBlur={() => {
+                  if (formData.nickname.trim()) {
+                    checkDuplicateAccount();
+                  }
+                }}
                 autoCapitalize="words"
                 allowFontScaling={false}
               />
+              {checkingDuplicate && (
+                <ActivityIndicator size="small" color="#667eea" style={{ marginLeft: 8 }} />
+              )}
             </View>
             {errors.nickname && <Text style={styles.errorText} allowFontScaling={false}>{errors.nickname}</Text>}
           </View>
@@ -440,6 +585,11 @@ const AddAccountScreen: React.FC = () => {
                 placeholderTextColor={theme.colors.textSecondary}
                 value={formData.accountNumber}
                 onChangeText={(value) => handleInputChange('accountNumber', value)}
+                onBlur={() => {
+                  if (formData.accountNumber.trim() || formData.nickname.trim()) {
+                    checkDuplicateAccount();
+                  }
+                }}
                 keyboardType="numeric"
                 maxLength={4}
                 allowFontScaling={false}

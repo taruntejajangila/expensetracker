@@ -4,6 +4,7 @@ import {  View, Text, StyleSheet  } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface SpendingAnalyticsProps {
   spendingData: {
@@ -51,7 +52,7 @@ const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({ spendingData }) =
                       <Text style={styles.modernCategoryName} allowFontScaling={false}>
                         {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
                       </Text>
-                      <Text style={styles.categoryAmount} allowFontScaling={false}>₹{category.amount.toLocaleString()}</Text>
+                      <Text style={styles.categoryAmount} allowFontScaling={false}>{formatCurrency(category.amount)}</Text>
                     </View>
                     <View style={styles.percentageContainer}>
                       <Text style={styles.modernPercentage} allowFontScaling={false}>{category.percentage && !isNaN(category.percentage) ? category.percentage.toFixed(1) : '0.0'}%</Text>
@@ -70,7 +71,7 @@ const SpendingAnalytics: React.FC<SpendingAnalyticsProps> = ({ spendingData }) =
             <View style={styles.totalSpendingContainer}>
               <Text style={styles.totalSpendingLabel} allowFontScaling={false}>Total Spending</Text>
               <Text style={styles.totalSpendingAmount} allowFontScaling={false}>
-                ₹{spendingData.totalSpent.toLocaleString()}
+                {formatCurrency(spendingData.totalSpent)}
               </Text>
             </View>
           </>

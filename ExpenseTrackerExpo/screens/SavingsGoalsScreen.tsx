@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface SavingsGoal {
   id: string;
@@ -49,19 +50,14 @@ const SavingsGoalsScreen: React.FC = () => {
   const [currentGoal, setCurrentGoal] = useState<SavingsGoal | null>(null);
   const [newAmount, setNewAmount] = useState('');
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
+  const modalScrollViewRef = useRef<ScrollView>(null);
+  const amountInputRef = useRef<TextInput>(null);
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   // Removed mock interstitial state
 
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const absoluteAmount = Math.abs(amount);
-    return `${isNegative ? '-' : ''}₹${absoluteAmount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
+  // Using centralized currency formatter - formatCurrency imported from utils
 
   const getProgress = (current: number, target: number) => {
     return Math.min(Math.round((current / target) * 100), 100);
@@ -336,8 +332,8 @@ const SavingsGoalsScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header */}
       <SavingsGoalsHeader 
@@ -657,9 +653,21 @@ const SavingsGoalsScreen: React.FC = () => {
         visible={isModalVisible}
         onRequestClose={() => setIsModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'position'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        >
+          <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+            <View style={styles.modalOverlay}>
+              <ScrollView
+                ref={modalScrollViewRef}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 20, paddingBottom: 40 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentInsetAdjustmentBehavior="always"
+              >
+                <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle} allowFontScaling={false}>Update Progress</Text>
                   <TouchableOpacity 
@@ -741,12 +749,22 @@ const SavingsGoalsScreen: React.FC = () => {
                   </Text>
                   
                   <Text style={styles.modalInputLabel} allowFontScaling={false}>Amount</Text>
-                  <TextInput style={styles.modalInput}
+                  <TextInput 
+                    ref={amountInputRef}
+                    style={styles.modalInput}
                     keyboardType="numeric"
                     value={newAmount}
                     onChangeText={setNewAmount}
                     placeholder="Enter amount"
-                    placeholderTextColor={theme.colors.textSecondary} allowFontScaling={false} />
+                    placeholderTextColor={theme.colors.textSecondary}
+                    allowFontScaling={false}
+                    onFocus={() => {
+                      // Scroll to bottom to show input field above keyboard
+                      setTimeout(() => {
+                        modalScrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 200);
+                    }}
+                  />
                 </View>
                 
                 {/* Banner Ad above Cancel and Update buttons */}
@@ -771,8 +789,10 @@ const SavingsGoalsScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                              </View>
+              </ScrollView>
            </View>
          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Interstitial modal removed; direct interstitial shown before navigation */}

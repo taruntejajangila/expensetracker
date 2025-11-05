@@ -147,13 +147,21 @@ const formatDateWithTime = (dateString: string | Date): string => {
 
 // Helper function to get bank logo
 const getBankLogo = (bankName: string): any => {
-  const normalizedBankName = (bankName || '').toLowerCase().trim();
+  if (!bankName) return null;
+  const normalizedName = bankName.toLowerCase().trim();
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const containsWord = (haystack: string, needle: string) => {
+    const re = new RegExp(`(^|\\b)${escapeRegex(needle)}(\\b|$)`);
+    return re.test(haystack);
+  };
   
-  // Bank slug mapping based on your provided list
+  // Bank slug mapping based on directory structure
   const bankSlugMap: { [key: string]: string } = {
     'hdfc': 'hdfc',
     'icici': 'icic', 
     'sbi': 'sbin',
+    'state bank of india': 'sbin',
+    'state bank': 'sbin',
     'axis': 'utib',
     'kotak': 'kkbk',
     'pnb': 'punb',
@@ -192,18 +200,46 @@ const getBankLogo = (bankName: string): any => {
     'standard chartered': 'scbl'
   };
 
-  // Find matching bank slug
-  let bankSlug = null;
-  for (const [key, slug] of Object.entries(bankSlugMap)) {
-    if (normalizedBankName.includes(key) || key.includes(normalizedBankName)) {
-      bankSlug = slug;
-      break;
-    }
+  // Get all bank keys
+  const bankKeys = Object.keys(bankSlugMap);
+  
+  // Priority 1: Exact match (case-insensitive)
+  const exactMatch = bankKeys.find(key => 
+    normalizedName === key.toLowerCase()
+  );
+  if (exactMatch) {
+    const bankSlug = bankSlugMap[exactMatch];
+    return getLogoBySlug(bankSlug);
   }
+  
+  // Priority 2: Full name contains key as word (sorted by length for more specific matches)
+  const sortedKeys = bankKeys.sort((a, b) => b.length - a.length);
+  const fullMatch = sortedKeys.find(key =>
+    containsWord(normalizedName, key.toLowerCase()) ||
+    containsWord(key.toLowerCase(), normalizedName)
+  );
+  if (fullMatch) {
+    const bankSlug = bankSlugMap[fullMatch];
+    return getLogoBySlug(bankSlug);
+  }
+  
+  // Priority 3: Explicit acronym map
+  const acronymSlugMap: { [key: string]: string } = {
+    'hdfc': 'hdfc','sbi':'sbin','axis':'utib','icici':'icic','kotak':'kkbk','pnb':'punb','bob':'barb','uco':'ucba','rbl':'ratn','idfc':'idfb','idbi':'ibkl','federal':'fdrl','dcb':'dcbl','csb':'csbk','bandhan':'bdbl','au':'aubl','jio':'jiop','paytm':'pytm','standard chartered':'scbl'
+  };
+  const acroKeys = Object.keys(acronymSlugMap).sort((a,b)=> b.length-a.length);
+  const acro = acroKeys.find(k => containsWord(normalizedName, k));
+  if (acro) {
+    const bankSlug = acronymSlugMap[acro];
+    return getLogoBySlug(bankSlug);
+  }
+  
+  return null;
+};
 
-  if (!bankSlug) {
-    return null; // Fallback to card icon
-  }
+// Helper function to get logo by slug
+const getLogoBySlug = (bankSlug: string): any => {
+  if (!bankSlug) return null;
 
   // Return the corresponding logo - using only folders with non-empty files
   const bankLogoMap: { [key: string]: any } = {
@@ -259,6 +295,9 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     'Freelance': require('../assets/images/categories/income/income_freelance_laptop.png'),
     'Investment': require('../assets/images/categories/income/income_other_general.png'),
     'Other Income': require('../assets/images/categories/income/income_other_general.png'),
+    'Bonus': require('../assets/images/categories/income/income_bonus_trophy.png'),
+    'Interest Income': require('../assets/images/categories/income/income_interest_bank.png'),
+    'Part Time Income': require('../assets/images/categories/income/income_part_time_clock.png'),
     
     // Expense Categories (matching database names)
     'Food & Dining': require('../assets/images/categories/expense/expense_dining_restaurant.png'),
@@ -269,6 +308,10 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     'Healthcare': require('../assets/images/categories/expense/expense_health_medical.png'),
     'Education': require('../assets/images/categories/expense/expense_education_school.png'),
     'Travel': require('../assets/images/categories/expense/expense_travel_airplane.png'),
+    'Subscription': require('../assets/images/categories/expense/expense_subscription_card.png'),
+    'Gifts & Donations': require('../assets/images/categories/expense/expense_gifts_donations.png'),
+    'Gas/Fuel': require('../assets/images/categories/expense/expense_gas_fuel.png'),
+    'EMI/Loan Payment': require('../assets/images/categories/expense/expense_emi_loan_payment.png'),
     
     // Legacy mappings for backward compatibility
     'Groceries': require('../assets/images/categories/expense/expense_groceries_cart.png'),
@@ -283,9 +326,10 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     'Investments': require('../assets/images/categories/expense/expense_savings_piggy_bank.png'),
     
     // Transfer Categories
-    'Transfer': require('../assets/images/categories/transfer/transfer_general_arrow.png'),
-    'Account Transfer': require('../assets/images/categories/transfer/transfer_general_arrow.png'),
-    'Money Transfer': require('../assets/images/categories/transfer/transfer_general_arrow.png'),
+    'Transfer': require('../assets/images/categories/transfer/transfer_balance_arrow.png'),
+    'Account Transfer': require('../assets/images/categories/transfer/transfer_balance_arrow.png'),
+    'Money Transfer': require('../assets/images/categories/transfer/transfer_balance_arrow.png'),
+    'Balance Transfer': require('../assets/images/categories/transfer/transfer_balance_arrow.png'),
   };
 
   return imageMap[categoryName] || null;
@@ -1260,7 +1304,13 @@ const TransactionDetailScreen: React.FC = () => {
                     </View>
                   )}
                   <Text style={styles.bankAccountName} allowFontScaling={false}>
-                    {transaction.bankAccountName || 'Bank Account'} • {transaction.bankAccountNumber?.slice(-4) || '****'}
+                    {(() => {
+                      const accountName = transaction.bankAccountName || 'Bank Account';
+                      const isCashAccount = accountName.toLowerCase().includes('cash') || accountName.toLowerCase().includes('wallet');
+                      return isCashAccount 
+                        ? accountName 
+                        : `${accountName} • ${transaction.bankAccountNumber?.slice(-4) || '****'}`;
+                    })()}
                   </Text>
                 </View>
               </View>

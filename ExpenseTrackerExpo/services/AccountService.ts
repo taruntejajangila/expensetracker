@@ -57,6 +57,56 @@ export default {
     }
   },
 
+  async checkDuplicate(nickname?: string, accountNumber?: string, bankName?: string, excludeId?: string): Promise<{ isDuplicate: boolean; message: string | null }> {
+    try {
+      const token = await getAuthToken();
+      
+      const queryParams = new URLSearchParams();
+      if (nickname) queryParams.append('nickname', nickname);
+      if (accountNumber) queryParams.append('accountNumber', accountNumber);
+      if (bankName) queryParams.append('bankName', bankName);
+      if (excludeId) queryParams.append('excludeId', excludeId);
+      
+      const response = await fetch(`${API_BASE_URL}/bank-accounts/check-duplicate?${queryParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Error checking for duplicates';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        return {
+          isDuplicate: false,
+          message: errorMessage
+        };
+      }
+
+      const result = await response.json();
+      
+      return {
+        isDuplicate: result.isDuplicate || false,
+        message: result.message || null
+      };
+    } catch (error: any) {
+      console.error('🔍 AccountService: Error checking duplicate:', error);
+      return {
+        isDuplicate: false,
+        message: error.message || 'Error checking for duplicates'
+      };
+    }
+  },
+
   async addAccount(account: any) {
     try {
       const token = await getAuthToken();
@@ -82,21 +132,23 @@ export default {
       console.log('🔍 AccountService: Add account response status:', response.status);
 
       if (!response.ok) {
+        // Read response as text first (can only read body once)
         const errorText = await response.text();
-        console.error('🔍 AccountService: Error response:', errorText);
+        let errorMessage = `HTTP error! status: ${response.status}`;
         
-        // Handle duplicate account error gracefully
-        if (response.status === 409) {
-          console.log('🔍 AccountService: Account already exists, this is expected for default wallet');
-          // Return the existing account data instead of throwing error
-          const existingAccounts = await this.getAccounts();
-          const cashWallet = existingAccounts.find(acc => acc.accountNumber === account.accountNumber);
-          if (cashWallet) {
-            return { success: true, data: cashWallet };
-          }
+        // Try to parse as JSON to get the specific error message
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          // If not JSON, use the text as error message
+          errorMessage = errorText || errorMessage;
         }
         
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        console.error('🔍 AccountService: Error response:', errorMessage);
+        
+        // Return error with specific message
+        return { success: false, message: errorMessage };
       }
 
       const result = await response.json();
@@ -127,7 +179,20 @@ export default {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Read response as text first (can only read body once)
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        // Try to parse as JSON to get the specific error message
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          // If not JSON, use the text as error message
+          errorMessage = errorText || errorMessage;
+        }
+        
+        return { success: false, message: errorMessage };
       }
 
       const result = await response.json();
@@ -135,11 +200,11 @@ export default {
       if (result.success) {
         return result;
       } else {
-        throw new Error(result.message || 'Failed to update account');
+        return { success: false, message: result.message || 'Failed to update account' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating account:', error);
-      return { success: false, message: error.message };
+      return { success: false, message: error.message || 'Failed to update account' };
     }
   },
 

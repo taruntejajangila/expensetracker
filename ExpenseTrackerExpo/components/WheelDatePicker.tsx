@@ -199,7 +199,7 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       left: 12,
       backgroundColor: theme.colors.background,
       paddingHorizontal: 4,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '600',
       color: theme.colors.text,
       zIndex: 1,
@@ -333,12 +333,12 @@ const WheelDatePicker: React.FC<WheelDatePickerProps> = ({
       backgroundColor: 'transparent',
     },
     wheelItemText: {
-      fontSize: 11,
+      fontSize: 20,
       color: '#999999',
       fontWeight: '400',
     },
     wheelItemTextSelected: {
-      fontSize: 13,
+      fontSize: 20,
       color: '#000000',
       fontWeight: '700',
     },

@@ -23,6 +23,7 @@ import SpendingAnalytics from '../components/SpendingAnalytics';
 import RecentActivity from '../components/RecentActivity';
 import CreditCardService from '../services/CreditCardService';
 import TransactionService, { Transaction } from '../services/transactionService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface CreditCardDetails {
   id: number;
@@ -209,9 +210,7 @@ const CreditCardDetailsScreen: React.FC = () => {
     Alert.alert('Pay', 'Pay functionality coming soon!');
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString()}`;
-  };
+  // Using centralized currency formatter - formatCurrency imported from utils
 
   const getUtilizationPercentage = (balance: number, limit: number) => {
     if (!limit || limit === 0) return 0;
@@ -585,7 +584,7 @@ const CreditCardDetailsScreen: React.FC = () => {
                     <View style={styles.financialDetails}>
                       <Text style={styles.financialLabel} allowFontScaling={false}>Credit Limit</Text>
                       <Text style={styles.financialValue} allowFontScaling={false}>
-                        ₹{creditCard.creditLimit ? creditCard.creditLimit.toLocaleString() : '0'}
+                        {formatCurrency(creditCard.creditLimit || 0)}
                       </Text>
                     </View>
                   </View>
@@ -597,7 +596,7 @@ const CreditCardDetailsScreen: React.FC = () => {
                     <View style={styles.financialDetails}>
                       <Text style={styles.financialLabel} allowFontScaling={false}>Available Credit</Text>
                       <Text style={styles.financialValue} allowFontScaling={false}>
-                        ₹{!isNaN(availableCredit) ? availableCredit.toLocaleString() : '0'}
+                        {formatCurrency(!isNaN(availableCredit) ? availableCredit : 0)}
                       </Text>
                     </View>
                   </View>

@@ -25,6 +25,7 @@ import { categoryService, Category } from '../services/CategoryService';
 import TransactionService from '../services/transactionService';
 import BudgetService from '../services/BudgetService';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 
 interface BudgetCategory {
@@ -201,15 +202,7 @@ const BudgetPlanningScreen: React.FC = () => {
     setCurrentBudget(budgetOverview);
   };
 
-  const formatCurrency = (amount: number) => {
-    if (isNaN(amount) || amount === null || amount === undefined) {
-      return '₹0';
-    }
-    return `₹${amount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
+  // Using centralized currency formatter - formatCurrency imported from utils
 
   const getProgressPercentage = (spent: number, budget: number) => {
     if (budget === 0 || isNaN(budget) || isNaN(spent)) return 0;
@@ -359,15 +352,15 @@ const BudgetPlanningScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header */}
       <BudgetHeader theme={theme} insets={insets} />
       
       <ScrollView 
         style={styles.content} 
-        contentContainerStyle={[styles.scrollContent, { paddingTop: 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 8 }]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -431,9 +424,6 @@ const BudgetPlanningScreen: React.FC = () => {
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle} allowFontScaling={false}>Expense Categories</Text>
-            <TouchableOpacity style={styles.addCategoryButton}>
-              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
-            </TouchableOpacity>
           </View>
           
           {currentBudget.categories.map((category, index) => {
@@ -731,7 +721,7 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
   overviewCard: {
     borderRadius: 20,
     padding: 24,
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: {

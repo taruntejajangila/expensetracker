@@ -24,6 +24,7 @@ import RecentActivity from '../components/RecentActivity';
 import TransactionService from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 
 
@@ -136,14 +137,7 @@ const AccountsScreen: React.FC = () => {
 
 
 
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const absoluteAmount = Math.abs(amount);
-    return `${isNegative ? '-' : ''}₹${absoluteAmount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
+  // Using centralized currency formatter - formatCurrency imported from utils
 
   const handleButtonPressIn = () => {
     Animated.spring(buttonScale, {

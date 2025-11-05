@@ -28,6 +28,7 @@ import DailyReminderService from '../services/DailyReminderService';
 import NotificationNavigationService from '../services/NotificationNavigationService';
 import OfflineBanner from '../components/OfflineBanner';
 import OfflineScreen from '../components/OfflineScreen';
+import { formatCurrency } from '../utils/currencyFormatter';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AdMobService from '../services/AdMobService';
 // Removed mock InterstitialAdModal
@@ -276,7 +277,6 @@ const HomeScreen: React.FC = () => {
       setAppInitialized(true);
       loadStats(true); // Force refresh stats
       loadTransactionData(true); // Force refresh transactions
-      loadAds(); // Force refresh banners
       // Clear the refresh flag to prevent infinite loops
       (navigation as any).setParams({ refresh: false });
     }
@@ -602,7 +602,6 @@ const HomeScreen: React.FC = () => {
         setIsDataStale(true); // Force refresh
         loadStats(true); // Force refresh stats
         loadTransactionData(true); // Force refresh transactions
-        loadAds();
       }, 1000);
       
       return () => clearTimeout(timer);
@@ -716,7 +715,6 @@ const HomeScreen: React.FC = () => {
         setAppInitialized(true);
         loadStats(true); // Force refresh stats
         loadTransactionData(true); // Force refresh transactions
-        loadAds(); // Force refresh banners
       }, DEBOUNCE_DELAY);
       
       // Cleanup function
@@ -735,7 +733,6 @@ const HomeScreen: React.FC = () => {
     await Promise.all([
       loadStats(true), // Force refresh stats
       loadTransactionData(true), // Force refresh transactions
-      loadAds()
     ]);
     setRefreshing(false);
   };
@@ -983,7 +980,7 @@ const HomeScreen: React.FC = () => {
       paddingHorizontal: theme.spacing.sm,
       paddingVertical: theme.spacing.md,
       marginTop: theme.spacing.sm, // Reduced space above card
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.lg - 6, // Reduced by 6px (24px -> 18px)
       borderWidth: 1,
       borderColor: '#E0E0E0',
       shadowColor: '#000000',
@@ -1273,15 +1270,16 @@ const HomeScreen: React.FC = () => {
       alignItems: 'center',
       marginTop: theme.spacing.lg,
       marginBottom: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.md,
+      width: '100%',
     },
     appQuote: {
-      fontSize: 36,
+      fontSize: 24,
       color: '#999999', // Lighter shade
-      textAlign: 'left',
+      textAlign: 'center',
       fontStyle: 'italic',
       fontWeight: '500',
-      lineHeight: 40,
+      lineHeight: 28,
       marginBottom: theme.spacing.sm,
     },
     appName: {
@@ -1297,9 +1295,11 @@ const HomeScreen: React.FC = () => {
       marginTop: theme.spacing.lg,
       marginBottom: 0,
       paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      width: '100%',
     },
     madeWithLoveText: {
-      fontSize: theme.fontSize.lg,
+      fontSize: 12,
       color: '#333333', // Darker for better visibility
       textAlign: 'center',
       fontStyle: 'italic',
@@ -1308,7 +1308,7 @@ const HomeScreen: React.FC = () => {
       marginBottom: 4,
     },
     madeWithLoveSubtext: {
-      fontSize: theme.fontSize.sm,
+      fontSize: 10,
       color: '#666666',
       textAlign: 'center',
       fontStyle: 'italic',
@@ -1965,8 +1965,8 @@ const HomeScreen: React.FC = () => {
                 try {
                   await AppOpenAdService.showInterstitial();
                   console.log('✅ Money Manager interstitial shown');
-                  // Reset counter to 5 for next round
-                  await AsyncStorage.setItem('moneyManagerClicks', '5');
+                // Reset counter to 5 for next round
+                await AsyncStorage.setItem('moneyManagerClicks', '5');
                   // Navigate after ad closes
                   setTimeout(() => {
                     navigation.navigate('SpentInMonth' as never);
@@ -2003,7 +2003,7 @@ const HomeScreen: React.FC = () => {
             <View style={styles.cardSpacer} />
             <Text style={styles.cardSubtitle} allowFontScaling={false}>Current Balance</Text>
             <Text style={styles.cardAmount} allowFontScaling={false}>
-              {loading ? '--' : `₹${currentBalance.toLocaleString()}`}
+              {loading ? '--' : formatCurrency(currentBalance)}
             </Text>
             <Text style={styles.cardDescription} allowFontScaling={false}>
               Including previous months savings
@@ -2021,15 +2021,15 @@ const HomeScreen: React.FC = () => {
             <View style={styles.cardRow}>
               <View style={styles.cardLeftColumn}>
                 <Text style={styles.cardLeftAmount} allowFontScaling={false}>
-                  {loading ? '--' : `₹${totalExpense.toLocaleString()}`}
+                  {loading ? '--' : formatCurrency(totalExpense)}
                 </Text>
               </View>
               <View style={styles.cardRightColumn}>
                 <Text style={styles.cardRightAmount} allowFontScaling={false}>
-                  {loading ? '--' : `₹${totalIncome.toLocaleString()}`}
+                  {loading ? '--' : formatCurrency(totalIncome)}
                 </Text>
                 <Text style={styles.cardRightSubtext} allowFontScaling={false}>
-                  (₹{totalIncome - previousMonthSavings < 0 ? 0 : (totalIncome - previousMonthSavings).toLocaleString()} this month + ₹{previousMonthSavings.toLocaleString()} previous savings)
+                  ({formatCurrency(totalIncome - previousMonthSavings < 0 ? 0 : totalIncome - previousMonthSavings)} this month + {formatCurrency(previousMonthSavings)} previous savings)
                 </Text>
               </View>
             </View>
@@ -2043,7 +2043,7 @@ const HomeScreen: React.FC = () => {
                   </View>
                   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={[styles.cardLeftAmount, { textAlign: 'center', marginTop: 4 }]} allowFontScaling={false}>
-                      {loading ? '--' : `₹${totalCreditCardExpenses.toLocaleString()}`}
+                      {loading ? '--' : formatCurrency(totalCreditCardExpenses)}
                     </Text>
                     <Text style={{ fontSize: 10, color: 'red', textAlign: 'center', marginTop: 2 }} allowFontScaling={false}>
                       (Credit Card Utilized)
@@ -2305,13 +2305,17 @@ const HomeScreen: React.FC = () => {
         )}
 
         {/* AdMob Banner Ad - Top */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
 
         {/* Top Spending Categories */}
         {!loading && spendingCategories.length > 0 && (
-          <View style={styles.spendingCategoriesCard}>
+          <TouchableOpacity 
+            style={styles.spendingCategoriesCard}
+            onPress={() => navigation.navigate('BudgetPlanning' as never)}
+            activeOpacity={0.7}
+          >
             <View style={styles.spendingCategoriesContent}>
               {/* Header with icon and title */}
               <View style={styles.spendingCategoriesHeader}>
@@ -2343,7 +2347,7 @@ const HomeScreen: React.FC = () => {
                         {category.category}
                       </Text>
                       <Text style={styles.spendingCategoryAmount} allowFontScaling={false}>
-                        ₹{category.amount.toLocaleString()}
+                        {formatCurrency(category.amount)}
                       </Text>
                     </View>
                     <View style={styles.spendingCategoryPercentageContainer}>
@@ -2355,7 +2359,7 @@ const HomeScreen: React.FC = () => {
                 </View>
               ))}
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Active Loans Summary */}
@@ -2390,7 +2394,7 @@ const HomeScreen: React.FC = () => {
                   <View style={styles.loanStatContent}>
                     <Text style={styles.loanStatLabel} allowFontScaling={false}>Outstanding</Text>
                     <Text style={styles.loanStatValue} allowFontScaling={false}>
-                      ₹{totalOutstandingBalance.toLocaleString()}
+                      {formatCurrency(totalOutstandingBalance)}
                     </Text>
                   </View>
                 </View>
@@ -2402,7 +2406,7 @@ const HomeScreen: React.FC = () => {
                   <View style={styles.loanStatContent}>
                     <Text style={styles.loanStatLabel} allowFontScaling={false}>Monthly</Text>
                     <Text style={styles.loanStatValue} allowFontScaling={false}>
-                      ₹{totalMonthlyPayment.toLocaleString()}
+                      {formatCurrency(totalMonthlyPayment)}
                     </Text>
                   </View>
                 </View>
@@ -2413,17 +2417,17 @@ const HomeScreen: React.FC = () => {
 
         {/* App Quote and Name */}
         <View style={styles.appQuoteContainer}>
-          <Text style={styles.appQuote}>
+          <Text style={styles.appQuote} allowFontScaling={false}>
             "Every rupee counts, every decision matters."
           </Text>
         </View>
 
         {/* Made with Love in INDIA */}
         <View style={styles.madeWithLoveContainer}>
-          <Text style={styles.madeWithLoveText}>
+          <Text style={styles.madeWithLoveText} allowFontScaling={false}>
             Made with ❤️ in INDIA
           </Text>
-          <Text style={styles.madeWithLoveSubtext}>
+          <Text style={styles.madeWithLoveSubtext} allowFontScaling={false}>
             MyPaisa Finance Manager
           </Text>
         </View>

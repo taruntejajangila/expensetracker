@@ -284,8 +284,8 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
@@ -578,7 +578,7 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
              </ScrollView>
      </KeyboardAvoidingView>
-  );
+   );
 };
 
 const createStyles = (theme: any) => StyleSheet.create({

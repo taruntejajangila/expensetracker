@@ -1,6 +1,15 @@
 // Import font fix first - must be before any other imports
 import './globalFontFix';
 
+// Import display size normalizer EARLY - before any Dimensions usage
+import { normalizeDisplaySize } from './utils/DisplaySizeNormalizer';
+
+// Normalize display size IMMEDIATELY on module load (before React imports)
+// This ensures Dimensions are locked before any component uses them
+if (typeof normalizeDisplaySize === 'function') {
+  normalizeDisplaySize();
+}
+
 // Import network error handler to override global fetch
 import './utils/NetworkErrorHandler';
 
@@ -117,7 +126,7 @@ function TabNavigator() {
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           allowFontScaling: false,
           marginTop: 2,
           fontWeight: '500',
@@ -197,16 +206,7 @@ function MainStackNavigator() {
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-      {/* Dev-only: Splash preview screen */}
-      <Stack.Screen name="DevSplash" component={DevSplashScreen} />
     </Stack.Navigator>
-  );
-}
-// Dev splash preview wrapper
-function DevSplashScreen() {
-  // Keep splash visible; no auto-close
-  return (
-    <SplashScreen onComplete={() => { /* stay on screen for live edits */ }} />
   );
 }
 
@@ -243,6 +243,11 @@ function AppNavigator() {
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [forceStopLoading, setForceStopLoading] = useState(false);
+
+  // Normalize display size on app start to prevent Android display size scaling
+  useEffect(() => {
+    normalizeDisplaySize();
+  }, []);
   
   // FOR TESTING: Force show onboarding (remove this in production)
   const FORCE_SHOW_ONBOARDING = false; // Set to false for production

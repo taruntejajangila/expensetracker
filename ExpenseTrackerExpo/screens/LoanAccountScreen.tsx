@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import LoanCard from '../components/LoanCard';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { currency } from '../utils/currencyFormatter';
 
 const LoanAccountScreen: React.FC = () => {
 	const { theme } = useTheme();
@@ -52,7 +53,7 @@ const LoanAccountScreen: React.FC = () => {
 
 	const styles = createStyles(theme);
 
-	const currency = (n?: number) => `₹${(Math.round(n || 0)).toLocaleString()}`;
+	// Using centralized currency formatter - currency function imported from utils
 	const dateFmt = (iso?: string) => {
 		if (!iso) return '--';
 		try {

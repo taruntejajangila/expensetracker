@@ -20,6 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "softwareKeyboardLayoutMode": "resize",
       "edgeToEdgeEnabled": true,
       "jsEngine": "hermes",
       "package": "com.taruntejajangila.mobileapp",
@@ -61,7 +62,9 @@
           "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "./plugins/withFixedDisplaySize",
+      "./plugins/withNativeDensityLock"
     ],
     "extra": {
       "eas": {

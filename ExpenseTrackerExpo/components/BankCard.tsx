@@ -3,6 +3,7 @@ import {  View, Text, StyleSheet, Image, Dimensions  } from 'react-native';
 
 
 import { Ionicons } from '@expo/vector-icons';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface BankCardProps {
   accountNumber?: string;
@@ -183,15 +184,24 @@ const BankCard: React.FC<BankCardProps> = ({
     }
   };
 
-  // Get bank logo based on bank name
+  // Get bank logo based on bank name (robust word-boundary + acronym matching)
   const getBankLogo = (bankName: string): any => {
-    const normalizedBankName = (bankName || '').toLowerCase().trim();
+    if (!bankName) return null;
+    
+    const normalizedName = bankName.toLowerCase().trim();
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const containsWord = (haystack: string, needle: string) => {
+      const re = new RegExp(`(^|\\b)${escapeRegex(needle)}(\\b|$)`);
+      return re.test(haystack);
+    };
     
     // Bank slug mapping based on directory structure
     const bankSlugMap: { [key: string]: string } = {
       'hdfc': 'hdfc',
       'icici': 'icic', 
       'sbi': 'sbin',
+      'state bank of india': 'sbin',
+      'state bank': 'sbin',
       'axis': 'utib',
       'kotak': 'kkbk',
       'pnb': 'punb',
@@ -230,18 +240,66 @@ const BankCard: React.FC<BankCardProps> = ({
       'standard chartered': 'scbl'
     };
 
-    // Find matching bank slug
-    let bankSlug = null;
-    for (const [key, slug] of Object.entries(bankSlugMap)) {
-      if (normalizedBankName.includes(key) || key.includes(normalizedBankName)) {
-        bankSlug = slug;
-        break;
-      }
-    }
+    // Common acronyms/nicknames mapping
+    const acronymSlugMap: { [key: string]: string } = {
+      'hdfc': 'hdfc',
+      'sbi': 'sbin',
+      'axis': 'utib',
+      'icici': 'icic',
+      'kotak': 'kkbk',
+      'pnb': 'punb',
+      'bob': 'barb',
+      'uco': 'ucba',
+      'rbl': 'ratn',
+      'idfc': 'idfb',
+      'idbi': 'ibkl',
+      'federal': 'fdrl',
+      'dcb': 'dcbl',
+      'csb': 'csbk',
+      'bandhan': 'bdbl',
+      'au': 'aubl',
+      'jio': 'jiop',
+      'paytm': 'pytm',
+      'standard chartered': 'scbl'
+    };
 
-    if (!bankSlug) {
-      return null; // Fallback to icon
+    // Get all bank keys
+    const bankKeys = Object.keys(bankSlugMap);
+    
+    // Priority 1: Exact match (case-insensitive)
+    const exactMatch = bankKeys.find(key => 
+      normalizedName === key.toLowerCase()
+    );
+    if (exactMatch) {
+      const bankSlug = bankSlugMap[exactMatch];
+      return getLogoBySlug(bankSlug);
     }
+    
+    // Priority 2: Full name contains key as word (sorted by length for specific matches)
+    const sortedKeys = bankKeys.sort((a, b) => b.length - a.length);
+    const fullMatch = sortedKeys.find(key => 
+      containsWord(normalizedName, key.toLowerCase()) ||
+      containsWord(key.toLowerCase(), normalizedName)
+    );
+    if (fullMatch) {
+      const bankSlug = bankSlugMap[fullMatch];
+      return getLogoBySlug(bankSlug);
+    }
+    
+    // Priority 3: Explicit acronym map (word-boundary)
+    const acroKeys = Object.keys(acronymSlugMap).sort((a,b)=> b.length-a.length);
+    const acro = acroKeys.find(k => containsWord(normalizedName, k));
+    if (acro) {
+      const bankSlug = acronymSlugMap[acro];
+      return getLogoBySlug(bankSlug);
+    }
+    
+    return null;
+  };
+
+  // Helper function to get logo by slug
+  const getLogoBySlug = (bankSlug: string): any => {
+    if (!bankSlug) return null;
 
     // Return the corresponding logo
     const bankLogoMap: { [key: string]: any } = {
@@ -329,7 +387,7 @@ const BankCard: React.FC<BankCardProps> = ({
         <View style={styles.balanceSection}>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel} allowFontScaling={false}>Available Balance</Text>
-            <Text style={styles.balanceValue} allowFontScaling={false}>{currencySymbol}{balance?.toLocaleString()}</Text>
+            <Text style={styles.balanceValue} allowFontScaling={false}>{formatCurrency(balance || 0, true)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel} allowFontScaling={false}>Account Type</Text>
@@ -456,4 +514,3 @@ const styles = StyleSheet.create({
 });
 
 export default BankCard;
-

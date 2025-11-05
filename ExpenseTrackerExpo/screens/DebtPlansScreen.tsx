@@ -17,6 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const DebtPlansScreen: React.FC = () => {
   const { scrollY } = useScroll();
@@ -463,14 +464,14 @@ const DebtPlansScreen: React.FC = () => {
                   <Ionicons name="card" size={16} color="#EF4444" />
                 </View>
                 <Text style={styles.statLabel} allowFontScaling={false}>Total Debt</Text>
-                <Text style={styles.statValue} allowFontScaling={false}>₹{totalDebt.toLocaleString()}</Text>
+                <Text style={styles.statValue} allowFontScaling={false}>{formatCurrency(totalDebt)}</Text>
               </View>
               <View style={styles.statItem}>
                 <View style={styles.statIconContainer}>
                   <Ionicons name="calendar" size={16} color="#3B82F6" />
                 </View>
                 <Text style={styles.statLabel} allowFontScaling={false}>Monthly Payments</Text>
-                <Text style={styles.statValue} allowFontScaling={false}>₹{totalEMI.toLocaleString()}</Text>
+                <Text style={styles.statValue} allowFontScaling={false}>{formatCurrency(totalEMI)}</Text>
               </View>
             </View>
             
@@ -480,7 +481,7 @@ const DebtPlansScreen: React.FC = () => {
                   <Ionicons name="trending-up" size={16} color="#F59E0B" />
                 </View>
                 <Text style={styles.statLabel} allowFontScaling={false}>Total Interest</Text>
-                <Text style={styles.statValue} allowFontScaling={false}>₹{(totalDebt * 0.3).toLocaleString()}</Text>
+                <Text style={styles.statValue} allowFontScaling={false}>{formatCurrency(totalDebt * 0.3)}</Text>
               </View>
               <View style={styles.statItem}>
                 <View style={styles.statIconContainer}>
@@ -546,7 +547,7 @@ const DebtPlansScreen: React.FC = () => {
                         </Text>
                         
                         <Text style={styles.debtDetailLine} allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail">
-                          Current Outstanding: <Text style={styles.boldText}>₹{(loan.balance || 0).toLocaleString()}</Text>
+                          Current Outstanding: <Text style={styles.boldText}>{formatCurrency(loan.balance || 0)}</Text>
                         </Text>
                         
                         <Text style={styles.debtDetailLine} allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail">
@@ -554,7 +555,7 @@ const DebtPlansScreen: React.FC = () => {
                         </Text>
                         
                         <Text style={styles.debtDetailLine} allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail">
-                          EMI: <Text style={styles.boldText}>₹{Math.round(loan.emi || 0).toLocaleString()}</Text>
+                          EMI: <Text style={styles.boldText}>{formatCurrency(Math.round(loan.emi || 0))}</Text>
                         </Text>
                       </View>
                       

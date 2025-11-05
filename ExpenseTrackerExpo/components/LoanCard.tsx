@@ -1,5 +1,6 @@
 import React from 'react';
 import {  View, Text, StyleSheet, Image, Dimensions  } from 'react-native';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 
 
@@ -112,13 +113,21 @@ const LoanCard: React.FC<LoanCardProps> = ({
 
   // Get bank logo source based on lender/bank name
   const getBankLogo = (lenderName: string): any => {
-    const normalizedLenderName = (lenderName || '').toLowerCase().trim();
-    
+    if (!lenderName) return null;
+    const normalizedName = lenderName.toLowerCase().trim();
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const containsWord = (haystack: string, needle: string) => {
+      const re = new RegExp(`(^|\\b)${escapeRegex(needle)}(\\b|$)`);
+      return re.test(haystack);
+    };
+
     // Bank slug mapping based on directory structure
     const bankSlugMap: { [key: string]: string } = {
       'hdfc': 'hdfc',
       'icici': 'icic', 
       'sbi': 'sbin',
+      'state bank of india': 'sbin',
+      'state bank': 'sbin',
       'axis': 'utib',
       'kotak': 'kkbk',
       'pnb': 'punb',
@@ -172,18 +181,46 @@ const LoanCard: React.FC<LoanCardProps> = ({
       'piramal finance': 'punb'
     };
 
-    // Find matching bank slug
-    let bankSlug = null;
-    for (const [key, slug] of Object.entries(bankSlugMap)) {
-      if (normalizedLenderName.includes(key) || key.includes(normalizedLenderName)) {
-        bankSlug = slug;
-        break;
-      }
+    // Get all bank keys
+    const bankKeys = Object.keys(bankSlugMap);
+    
+    // Priority 1: Exact match (case-insensitive)
+    const exactMatch = bankKeys.find(key => 
+      normalizedName === key.toLowerCase()
+    );
+    if (exactMatch) {
+      const bankSlug = bankSlugMap[exactMatch];
+      return getLogoBySlug(bankSlug);
     }
+    
+    // Priority 2: Full name contains key as word (sorted by length for more specific matches)
+    const sortedKeys = bankKeys.sort((a, b) => b.length - a.length);
+    const fullMatch = sortedKeys.find(key => 
+      containsWord(normalizedName, key.toLowerCase()) ||
+      containsWord(key.toLowerCase(), normalizedName)
+    );
+    if (fullMatch) {
+      const bankSlug = bankSlugMap[fullMatch];
+      return getLogoBySlug(bankSlug);
+    }
+    
+    // Priority 3: Explicit acronym map
+    const acronymSlugMap: { [key: string]: string } = {
+      'hdfc': 'hdfc','sbi':'sbin','axis':'utib','icici':'icic','kotak':'kkbk','pnb':'punb','bob':'barb','uco':'ucba','rbl':'ratn','idfc':'idfb','idbi':'ibkl','federal':'fdrl','dcb':'dcbl','csb':'csbk','bandhan':'bdbl','au':'aubl','jio':'jiop','paytm':'pytm','standard chartered':'scbl'
+    };
+    const acroKeys = Object.keys(acronymSlugMap).sort((a,b)=> b.length-a.length);
+    const acro = acroKeys.find(k => containsWord(normalizedName, k));
+    if (acro) {
+      const bankSlug = acronymSlugMap[acro];
+      return getLogoBySlug(bankSlug);
+    }
+    
+    return null;
+  };
 
-    if (!bankSlug) {
-      return null; // Fallback to emoji icon
-    }
+  // Helper function to get logo by slug
+  const getLogoBySlug = (bankSlug: string): any => {
+    if (!bankSlug) return null;
 
     // Return the corresponding logo
     const bankLogoMap: { [key: string]: any } = {
@@ -287,13 +324,13 @@ const LoanCard: React.FC<LoanCardProps> = ({
           {/* Balance Column */}
           <View style={styles.balanceColumn}>
             <Text style={styles.label} allowFontScaling={false}>Outstanding</Text>
-            <Text style={styles.loanName} allowFontScaling={false}>₹{currentBalance?.toLocaleString()}</Text>
+            <Text style={styles.loanName} allowFontScaling={false}>{formatCurrency(currentBalance || 0)}</Text>
           </View>
           
           {/* Monthly Payment Column */}
           <View style={styles.monthlyColumn}>
             <Text style={[styles.label, styles.rightAlignedText]} allowFontScaling={false} numberOfLines={1}>Monthly Payment</Text>
-            <Text style={[styles.loanName, styles.rightAlignedText]} allowFontScaling={false}>₹{monthlyPayment?.toLocaleString()}</Text>
+            <Text style={[styles.loanName, styles.rightAlignedText]} allowFontScaling={false}>{formatCurrency(monthlyPayment || 0)}</Text>
           </View>
         </View>
       </View>

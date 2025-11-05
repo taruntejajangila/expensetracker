@@ -20,7 +20,7 @@ export const initializeAppOpenAd = async () => {
     const { AppOpenAd: RNAppOpenAd, AdEventType } = require('react-native-google-mobile-ads');
     const adUnitId = Platform.OS === 'android'
       ? 'ca-app-pub-4113490348002307/8975566416' // MyPaisa App Open Ad
-      : 'ca-app-pub-3940256099942544/3419835294'; // Test ID for iOS
+      : 'ca-app-pub-4113490348002307/8975566416'; // MyPaisa App Open Ad (using Android ID for now)
     
     appOpenAd = RNAppOpenAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: false,
@@ -189,7 +189,7 @@ export const initializeInterstitial = async () => {
     const { InterstitialAd, AdEventType } = require('react-native-google-mobile-ads');
     const adUnitId = Platform.OS === 'android'
       ? 'ca-app-pub-4113490348002307/7222774699' // MyPaisa Interstitial Ad
-      : 'ca-app-pub-3940256099942544/4411468910'; // Test ID for iOS
+      : 'ca-app-pub-4113490348002307/7222774699'; // MyPaisa Interstitial Ad (using Android ID for now)
     
     interstitialAd = InterstitialAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: false,

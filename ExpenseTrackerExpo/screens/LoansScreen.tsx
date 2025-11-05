@@ -19,6 +19,7 @@ import { LoanService } from '../services/LoanService';
 import LoanCard from '../components/LoanCard';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface Loan {
   id: string;
@@ -147,12 +148,7 @@ const LoansScreen: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
+   // Using centralized currency formatter - formatCurrency imported from utils
 
   const getCompletionPercentage = (principal: number, currentBalance: number) => {
     return Math.round(((principal - currentBalance) / principal) * 100);

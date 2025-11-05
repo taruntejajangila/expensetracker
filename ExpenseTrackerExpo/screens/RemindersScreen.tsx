@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WheelDatePicker from '../components/WheelDatePicker';
+import WheelTimePicker from '../components/WheelTimePicker';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
 // Import new components and types
@@ -28,6 +29,7 @@ import { Reminder } from '../types/PaymentTypes';
 import TransactionAnalysisService from '../services/TransactionAnalysisService';
 import ReminderService from '../services/ReminderService';
 import { calculateDaysUntilDue, getUrgencyColor, formatDate } from '../utils/PaymentUtils';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -98,62 +100,8 @@ const RemindersScreen: React.FC = () => {
     amount: '',
   });
 
-  // Time input states
-  const [timeInputs, setTimeInputs] = useState({
-    hours: currentTime.time12.hours,
-    minutes: currentTime.time12.minutes,
-    period: currentTime.time12.period,
-  });
-
-  // Convert 24-hour time to 12-hour format
-  const convertTo12Hour = (time24: string) => {
-    const [hours, minutes] = time24.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return {
-      hours: displayHours.toString().padStart(2, '0'),
-      minutes: minutes.toString().padStart(2, '0'),
-      period,
-    };
-  };
-
-  // Convert 12-hour time to 24-hour format
-  const convertTo24Hour = (hours: string, minutes: string, period: string) => {
-    // Handle empty values
-    if (!hours || !minutes) {
-      return '09:00'; // Default time
-    }
-    
-    let hour24 = parseInt(hours);
-    if (isNaN(hour24)) {
-      return '09:00'; // Default if invalid
-    }
-    
-    if (period === 'AM' && hour24 === 12) {
-      hour24 = 0;
-    } else if (period === 'PM' && hour24 !== 12) {
-      hour24 += 12;
-    }
-    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
-  };
-
-  // Update time inputs when formData.time changes
-  useEffect(() => {
-    const time12 = convertTo12Hour(formData.time);
-    setTimeInputs(time12);
-  }, [formData.time]);
-
-  // Handle time input changes
-  const handleTimeChange = (field: 'hours' | 'minutes' | 'period', value: string) => {
-    const newTimeInputs = { ...timeInputs, [field]: value };
-    setTimeInputs(newTimeInputs);
-    
-    // Only update formData if we have valid values
-    if (newTimeInputs.hours && newTimeInputs.minutes) {
-      const time24 = convertTo24Hour(newTimeInputs.hours, newTimeInputs.minutes, newTimeInputs.period);
-      setFormData(prev => ({ ...prev, time: time24 }));
-    }
-  };
+  // Ref for modal ScrollView to scroll inputs into view
+  const modalScrollViewRef = useRef<ScrollView>(null);
 
   // Sample reminder types with icons and colors
   const reminderTypes = [
@@ -574,11 +522,6 @@ const RemindersScreen: React.FC = () => {
         repeat: 'none',
         category: '',
         amount: '',
-      });
-      setTimeInputs({
-        hours: resetTime.time12.hours,
-        minutes: resetTime.time12.minutes,
-        period: resetTime.time12.period,
       });
       setShowAddModal(false);
       setEditingReminder(null);
@@ -1145,61 +1088,6 @@ const RemindersScreen: React.FC = () => {
     timeInput: {
       flex: 0.4,
     },
-    timeInputContainer: {
-      flex: 0.4,
-    },
-    timeInputRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      gap: 12,
-      justifyContent: 'space-between',
-    },
-    timeField: {
-      flex: 1,
-    },
-    timeFieldLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 4,
-    },
-    timeTextInput: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-      textAlign: 'center',
-      minHeight: 40,
-    },
-    timeSeparator: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.text,
-      marginBottom: 8,
-      marginHorizontal: 4,
-    },
-    periodButton: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      minHeight: 40,
-    },
-    periodButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
     switchRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1390,8 +1278,8 @@ const RemindersScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header with Safe Area - Matching AccountsScreen */}
       <ScreenHeader theme={theme} insets={insets} />
@@ -1475,7 +1363,7 @@ const RemindersScreen: React.FC = () => {
                         <Text style={styles.reminderTime} allowFontScaling={false}>{reminder.time}</Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: urgencyColor }]} allowFontScaling={false}>
-                        ₹{reminder.amount?.toLocaleString()}
+                        {formatCurrency(reminder.amount || 0)}
                       </Text>
                     </View>
                   </View>
@@ -1517,7 +1405,7 @@ const RemindersScreen: React.FC = () => {
                         </Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: '#34C759' }]}>
-                        ₹{reminder.amount?.toLocaleString()}
+                        {formatCurrency(reminder.amount || 0)}
                       </Text>
                     </View>
                   </View>
@@ -1573,7 +1461,7 @@ const RemindersScreen: React.FC = () => {
                         <Text style={styles.reminderTime} allowFontScaling={false}>{reminder.time}</Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: urgencyColor }]} allowFontScaling={false}>
-                        ₹{reminder.amount?.toLocaleString()}
+                        {formatCurrency(reminder.amount || 0)}
                       </Text>
                     </View>
                   </View>
@@ -1615,7 +1503,7 @@ const RemindersScreen: React.FC = () => {
                         </Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: '#34C759' }]}>
-                        ₹{reminder.amount?.toLocaleString()}
+                        {formatCurrency(reminder.amount || 0)}
                       </Text>
                     </View>
                   </View>
@@ -1688,7 +1576,7 @@ const RemindersScreen: React.FC = () => {
                         <Text style={styles.reminderCategory} allowFontScaling={false}>{reminder.category}</Text>
                       )}
                       {reminder.amount && (
-                        <Text style={[styles.reminderAmount, { color: '#34C759' }]} allowFontScaling={false}>₹{reminder.amount.toLocaleString()}</Text>
+                        <Text style={[styles.reminderAmount, { color: '#34C759' }]} allowFontScaling={false}>{formatCurrency(reminder.amount)}</Text>
                       )}
                     </View>
 
@@ -1742,7 +1630,7 @@ const RemindersScreen: React.FC = () => {
                         <Text style={styles.reminderCategory} allowFontScaling={false}>{reminder.category}</Text>
                       )}
                       {reminder.amount && (
-                        <Text style={styles.reminderAmount} allowFontScaling={false}>₹{reminder.amount.toLocaleString()}</Text>
+                        <Text style={styles.reminderAmount} allowFontScaling={false}>{formatCurrency(reminder.amount)}</Text>
                       )}
                     </View>
 
@@ -1782,7 +1670,11 @@ const RemindersScreen: React.FC = () => {
         animationType="slide"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} allowFontScaling={false}>
@@ -1805,18 +1697,18 @@ const RemindersScreen: React.FC = () => {
                     category: '',
                     amount: '',
                   });
-                  setTimeInputs({
-                    hours: resetTime.time12.hours,
-                    minutes: resetTime.time12.minutes,
-                    period: resetTime.time12.period,
-                  });
                 }}
               >
                 <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              ref={modalScrollViewRef}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
               {/* Title */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel} allowFontScaling={false}>Title *</Text>
@@ -1826,6 +1718,11 @@ const RemindersScreen: React.FC = () => {
                   onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
                   placeholder="Enter reminder title"
                   placeholderTextColor="#999999"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      modalScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
@@ -1839,6 +1736,11 @@ const RemindersScreen: React.FC = () => {
                   placeholder="Enter reminder description"
                   placeholderTextColor="#999999"
                   multiline
+                  onFocus={() => {
+                    setTimeout(() => {
+                      modalScrollViewRef.current?.scrollTo({ y: 50, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
@@ -1887,60 +1789,10 @@ const RemindersScreen: React.FC = () => {
               {/* Time */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel} allowFontScaling={false}>Time</Text>
-                <View style={styles.timeInputRow}>
-                  <View style={styles.timeField}>
-                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Hours</Text>
-                    <TextInput
-                      style={styles.timeTextInput}
-                      value={timeInputs.hours}
-                      onChangeText={(value) => {
-                        const numValue = value.replace(/[^0-9]/g, '');
-                        if (numValue.length <= 2) {
-                          handleTimeChange('hours', numValue);
-                        }
-                      }}
-                      keyboardType="numeric"
-                      maxLength={2}
-                      placeholder="09"
-                      allowFontScaling={false}
-                      selectTextOnFocus={true}
-                    />
-                  </View>
-                  <Text style={styles.timeSeparator} allowFontScaling={false}>:</Text>
-                  <View style={styles.timeField}>
-                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Minutes</Text>
-                    <TextInput
-                      style={styles.timeTextInput}
-                      value={timeInputs.minutes}
-                      onChangeText={(value) => {
-                        const numValue = value.replace(/[^0-9]/g, '');
-                        if (numValue.length <= 2) {
-                          handleTimeChange('minutes', numValue);
-                        }
-                      }}
-                      keyboardType="numeric"
-                      maxLength={2}
-                      placeholder="00"
-                      allowFontScaling={false}
-                      selectTextOnFocus={true}
-                    />
-                  </View>
-                  <View style={styles.timeField}>
-                    <Text style={styles.timeFieldLabel} allowFontScaling={false}>Period</Text>
-                    <TouchableOpacity
-                      style={styles.periodButton}
-                      onPress={() => {
-                        const newPeriod = timeInputs.period === 'AM' ? 'PM' : 'AM';
-                        handleTimeChange('period', newPeriod);
-                      }}
-                    >
-                      <Text style={styles.periodButtonText} allowFontScaling={false}>
-                        {timeInputs.period}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <WheelTimePicker
+                  selectedTime={formData.time}
+                  onTimeChange={(time) => setFormData(prev => ({ ...prev, time }))}
+                />
               </View>
 
               {/* Category */}
@@ -1952,6 +1804,11 @@ const RemindersScreen: React.FC = () => {
                   onChangeText={(text) => setFormData(prev => ({ ...prev, category: text }))}
                   placeholder="e.g., Credit Card, Budget"
                   placeholderTextColor="#999999"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      modalScrollViewRef.current?.scrollTo({ y: 400, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
@@ -1965,6 +1822,11 @@ const RemindersScreen: React.FC = () => {
                   placeholder="0"
                   placeholderTextColor="#999999"
                   keyboardType="numeric"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      modalScrollViewRef.current?.scrollTo({ y: 500, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
@@ -2015,7 +1877,7 @@ const RemindersScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Confirmation Modal */}
@@ -2048,7 +1910,7 @@ const RemindersScreen: React.FC = () => {
                 <View style={styles.confirmModalDetails}>
                   <Text style={styles.confirmModalDetailTitle} allowFontScaling={false}>{confirmModalData.reminder.title}</Text>
                   <Text style={styles.confirmModalDetailAmount} allowFontScaling={false}>
-                    ₹{confirmModalData.reminder.amount?.toLocaleString()}
+                    {formatCurrency(confirmModalData.reminder.amount || 0)}
                   </Text>
                   <Text style={styles.confirmModalDetailDate} allowFontScaling={false}>
                     Due: {formatDate(confirmModalData.reminder.dueDate)}

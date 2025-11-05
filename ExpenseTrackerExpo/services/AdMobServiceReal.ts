@@ -4,8 +4,8 @@ import { Platform } from 'react-native';
 // YOUR REAL Ad Unit IDs from AdMob
 const AD_UNIT_IDS = {
   ios: {
-    banner: 'ca-app-pub-3940256099942544/2934735716', // Test banner (replace with iOS ID)
-    interstitial: 'ca-app-pub-3940256099942544/4411468910', // Test interstitial (replace with iOS ID)
+    banner: 'ca-app-pub-4113490348002307/5694070602', // MyPaisa Banner Ad (using Android ID for now)
+    interstitial: 'ca-app-pub-4113490348002307/7222774699', // MyPaisa Interstitial Ad (using Android ID for now)
   },
   android: {
     banner: 'ca-app-pub-4113490348002307/5694070602', // MyPaisa Banner Ad

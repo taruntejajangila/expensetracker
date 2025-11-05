@@ -17,6 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import CreditCardService from '../services/CreditCardService';
 import CreditCard from '../components/CreditCard';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface CreditCard {
   id: string;
@@ -81,12 +82,7 @@ const CreditCardScreen: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
+  // Using centralized currency formatter - formatCurrency imported from utils
 
   const getUtilizationPercentage = (balance: number, limit: number) => {
     return Math.round((balance / limit) * 100);

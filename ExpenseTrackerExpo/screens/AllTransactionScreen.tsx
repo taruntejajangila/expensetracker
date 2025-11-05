@@ -18,6 +18,7 @@ import TransactionService from '../services/transactionService';
 import OfflineScreen from '../components/OfflineScreen';
 import { useNetwork } from '../context/NetworkContext';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -1134,14 +1135,14 @@ const AllTransactionScreen: React.FC = () => {
           <View style={styles.summaryStats}>
             <View style={styles.statItem}>
               <Text style={styles.statLabel} allowFontScaling={false}>Income</Text>
-              <Text style={styles.incomeAmount} allowFontScaling={false}>₹{monthlySummary.income.toLocaleString()}</Text>
+              <Text style={styles.incomeAmount} allowFontScaling={false}>{formatCurrency(monthlySummary.income)}</Text>
             </View>
             
             <View style={styles.statDivider} />
             
             <View style={styles.statItem}>
               <Text style={styles.statLabel} allowFontScaling={false}>Spent</Text>
-              <Text style={styles.expenseAmount} allowFontScaling={false}>₹{monthlySummary.expense.toLocaleString()}</Text>
+              <Text style={styles.expenseAmount} allowFontScaling={false}>{formatCurrency(monthlySummary.expense)}</Text>
             </View>
             
             {monthlySummary.isCurrentMonth && (
@@ -1154,7 +1155,7 @@ const AllTransactionScreen: React.FC = () => {
                     styles.balanceAmount, 
                     { color: monthlySummary.balance >= 0 ? '#34C759' : '#FF3B30' }
                   ]}>
-                    ₹{monthlySummary.balance.toLocaleString()}
+                    {formatCurrency(monthlySummary.balance)}
                   </Text>
                 </View>
               </>
@@ -1261,7 +1262,7 @@ const AllTransactionScreen: React.FC = () => {
                        styles.expenseText,
                        selectedMonth === month.label && styles.selectedMonthText,
                      ]} allowFontScaling={false}>
-                     ₹{getMonthlyExpense(month.label).toLocaleString()}
+                     {formatCurrency(getMonthlyExpense(month.label))}
                    </Text>
                    <Text style={[
                        styles.monthText,

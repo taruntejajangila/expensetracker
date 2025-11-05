@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -20,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { formatCurrency, formatNumber } from '../utils/currencyFormatter';
 
 const { width } = Dimensions.get('window');
 
@@ -136,20 +138,7 @@ const LoanCalculatorScreen: React.FC = () => {
   };
 
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  // Using centralized currency formatter - formatCurrency and formatNumber imported from utils
 
   // Header Component
   const ScreenHeader: React.FC<{ theme: any; insets: any }> = ({ theme, insets }) => {
@@ -467,7 +456,10 @@ const LoanCalculatorScreen: React.FC = () => {
     amortizationCard: {
       backgroundColor: theme.colors.surface,
       borderRadius: 12,
-      padding: 16,
+      paddingTop: 16,
+      paddingBottom: 16,
+      paddingLeft: 8,
+      paddingRight: 16,
       marginTop: 20,
     borderWidth: 1,
       borderColor: theme.colors.border,
@@ -497,7 +489,8 @@ const LoanCalculatorScreen: React.FC = () => {
     flexDirection: 'row',
       backgroundColor: theme.colors.surface,
       paddingVertical: 12,
-      paddingHorizontal: 8,
+      paddingLeft: 0,
+      paddingRight: 8,
       borderRadius: 8,
       marginBottom: 8,
     },
@@ -507,11 +500,13 @@ const LoanCalculatorScreen: React.FC = () => {
       fontWeight: '600',
       color: theme.colors.textSecondary,
       textAlign: 'center',
+      paddingHorizontal: 2,
   },
     tableRow: {
     flexDirection: 'row',
     paddingVertical: 8,
-      paddingHorizontal: 8,
+      paddingLeft: 0,
+      paddingRight: 8,
     borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
@@ -520,6 +515,12 @@ const LoanCalculatorScreen: React.FC = () => {
       fontSize: 12,
       color: theme.colors.text,
     textAlign: 'center',
+      paddingHorizontal: 2,
+    },
+    periodColumn: {
+      flex: 0.7,
+      textAlign: 'left',
+      paddingLeft: 0,
     },
     loadingContainer: {
     alignItems: 'center',
@@ -537,8 +538,8 @@ const LoanCalculatorScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header with Safe Area */}
       <ScreenHeader theme={theme} insets={insets} />
@@ -658,6 +659,7 @@ const LoanCalculatorScreen: React.FC = () => {
              <TouchableOpacity 
                style={styles.primaryButton} 
                onPress={async () => {
+                 Keyboard.dismiss(); // Dismiss keyboard when calculate button is pressed
                  try { await AppOpenAdService.showInterstitial(); } catch {}
                  calculateLoan();
                }}
@@ -725,7 +727,7 @@ const LoanCalculatorScreen: React.FC = () => {
               <Text style={styles.amortizationTitle}>Amortization Schedule</Text>
               <View style={styles.amortizationTable}>
                 <View style={styles.tableHeader}>
-                  <Text style={styles.tableHeaderText}>Period</Text>
+                  <Text style={[styles.tableHeaderText, styles.periodColumn]}>Period</Text>
                   <Text style={styles.tableHeaderText}>Payment</Text>
                   <Text style={styles.tableHeaderText}>Principal</Text>
                   <Text style={styles.tableHeaderText}>Interest</Text>
@@ -734,7 +736,7 @@ const LoanCalculatorScreen: React.FC = () => {
                 
                 {amortization.map((entry, index) => (
                   <View key={index} style={styles.tableRow}>
-                    <Text style={styles.tableCell}>{entry.period}</Text>
+                    <Text style={[styles.tableCell, styles.periodColumn]}>{entry.period}</Text>
                     <Text style={styles.tableCell}>{formatCurrency(entry.payment)}</Text>
                     <Text style={styles.tableCell}>{formatCurrency(entry.principal)}</Text>
                     <Text style={styles.tableCell}>{formatCurrency(entry.interest)}</Text>

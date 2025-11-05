@@ -7,6 +7,7 @@ import { useScroll } from '../context/ScrollContext';
 import { LoanService, StoredLoan } from '../services/LoanService';
 import { Ionicons } from '@expo/vector-icons';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { currency } from '../utils/currencyFormatter';
 
 const { width } = Dimensions.get('window');
 
@@ -97,7 +98,7 @@ const LoanAmortizationScreen: React.FC = () => {
     setAmortizationSchedule(schedule);
   }, [loan]);
 
-  const currency = (n?: number) => `₹${(Math.round(n || 0)).toLocaleString()}`;
+  // Using centralized currency formatter - currency function imported from utils
   const dateFmt = (iso?: string) => {
     if (!iso) return '--';
     try {

@@ -58,8 +58,8 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
         return (
           <BannerAd
             unitId={Platform.OS === 'ios' 
-              ? 'ca-app-pub-3940256099942544/2934735716' // iOS test ID (update when ready)
-              : 'ca-app-pub-4113490348002307/5694070602'} // Android REAL Banner Ad
+              ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
+              : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
             size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
             requestOptions={{
               requestNonPersonalizedAdsOnly: false,

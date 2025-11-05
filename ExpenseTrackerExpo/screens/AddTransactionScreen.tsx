@@ -29,6 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { categoryService, Category } from '../services/CategoryService';
 import { getIconName } from '../utils/iconUtils';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const AddTransactionScreen = () => {
   const navigation = useNavigation();
@@ -441,11 +442,8 @@ const AddTransactionScreen = () => {
                             transferCategories;
 
   const selectedCategory = availableCategories.find(cat => cat.name === category);
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const abs = Math.abs(amount);
-    return `${isNegative ? '-' : ''}₹${abs.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
+  // Using centralized currency formatter
+  // Removed local formatCurrency function - now imported from utils
 
   // Validation function
   const validateForm = () => {
@@ -732,8 +730,8 @@ const AddTransactionScreen = () => {
       />
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
       {/* Custom Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 0 }]}>
