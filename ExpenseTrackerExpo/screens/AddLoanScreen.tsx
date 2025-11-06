@@ -698,7 +698,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     },
     saveButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         letterSpacing: 0.4,
     },

@@ -4,14 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  TextInput,
   StyleSheet,
   Animated,
   Dimensions,
   Alert,
-  TouchableWithoutFeedback,
-  Keyboard,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -45,10 +41,6 @@ const SavingsGoalsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { scrollY } = useScroll();
   const { isOfflineMode } = useNetwork();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentGoal, setCurrentGoal] = useState<SavingsGoal | null>(null);
-  const [newAmount, setNewAmount] = useState('');
-  const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
 
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +49,7 @@ const SavingsGoalsScreen: React.FC = () => {
   const formatCurrency = (amount: number) => {
     const isNegative = amount < 0;
     const absoluteAmount = Math.abs(amount);
-    return `${isNegative ? '-' : ''}Ôé╣${absoluteAmount.toLocaleString(undefined, {
+    return `${isNegative ? '-' : ''}₹${absoluteAmount.toLocaleString(undefined, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     })}`;
@@ -173,10 +165,10 @@ const SavingsGoalsScreen: React.FC = () => {
 
   const getStatusEmoji = (current: number, target: number) => {
     const progress = (current / target) * 100;
-    if (progress >= 100) return '­ƒÄë';
-    if (progress >= 75) return '­ƒÜÇ';
-    if (progress >= 50) return '­ƒÆ¬';
-    return '­ƒÄ»';
+    if (progress >= 100) return '🎉';
+    if (progress >= 75) return '🔥';
+    if (progress >= 50) return '⚡';
+    return '💪';
   };
 
   const loadGoals = async () => {
@@ -196,7 +188,7 @@ const SavingsGoalsScreen: React.FC = () => {
         category: goal.goalType || 'other',
       }));
       
-      console.log('­ƒöì SavingsGoalsScreen: Loaded goals:', mappedGoals.length);
+      console.log('🔍 SavingsGoalsScreen: Loaded goals:', mappedGoals.length);
       setGoals(mappedGoals);
     } catch (error) {
       console.error('Error loading goals:', error);
@@ -213,10 +205,8 @@ const SavingsGoalsScreen: React.FC = () => {
   );
 
   const handleUpdateProgress = (goal: SavingsGoal) => {
-    setCurrentGoal(goal);
-    setNewAmount(''); // Clear the input field
-    setTransactionType('add'); // Reset transaction type to default
-    setIsModalVisible(true);
+    // @ts-ignore
+    navigation.navigate('UpdateProgress', { goal });
   };
 
   const handleEditGoal = (goal: SavingsGoal) => {
@@ -224,47 +214,6 @@ const SavingsGoalsScreen: React.FC = () => {
     navigation.navigate('EditGoal', { goal });
   };
 
-  const handleSaveProgress = async () => {
-    if (currentGoal && newAmount) {
-      const amount = parseFloat(newAmount);
-      if (!isNaN(amount) && amount > 0) {
-        try {
-          let result: { success: boolean };
-          
-          if (transactionType === 'add') {
-            // Add money to the goal
-            result = await GoalService.addToGoal(currentGoal.id, amount);
-          } else {
-            // Withdraw money from the goal
-            // Check if withdrawal amount is valid
-            if (amount > currentGoal.currentAmount) {
-              Alert.alert('Error', 'Cannot withdraw more than the current amount saved.');
-              return;
-            }
-            result = await GoalService.withdrawFromGoal(currentGoal.id, amount);
-          }
-          
-          if (result.success) {
-            // Reload goals to get updated data
-            await loadGoals();
-            setIsModalVisible(false);
-            setCurrentGoal(null);
-            setNewAmount('');
-            setTransactionType('add'); // Reset to default
-          } else {
-            Alert.alert('Error', 'Failed to update goal progress. Please try again.');
-          }
-        } catch (error) {
-          console.error('Error updating goal progress:', error);
-          Alert.alert('Error', 'Failed to update goal progress. Please try again.');
-        }
-      } else {
-        Alert.alert('Error', 'Please enter a valid amount greater than 0.');
-      }
-    } else {
-      Alert.alert('Error', 'Please enter an amount.');
-    }
-  };
 
   const totalTarget = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
   const totalCurrent = goals.reduce((sum, goal) => sum + goal.currentAmount, 0);
@@ -327,7 +276,7 @@ const SavingsGoalsScreen: React.FC = () => {
   if (isOfflineMode) {
     return (
       <OfflineScreen 
-        title="Goals are sleeping ­ƒÆñ"
+        title="Goals are sleeping 💤"
         message="Your savings goals are stored safely in the cloud. Connect to the internet to track your progress and add new goals."
       />
     );
@@ -367,7 +316,7 @@ const SavingsGoalsScreen: React.FC = () => {
             style={styles.overallProgressCard}
           >
             <View style={styles.overallProgressHeader}>
-              <Text style={styles.overallProgressIcon} allowFontScaling={false}>­ƒÄ»</Text>
+              <Text style={styles.overallProgressIcon} allowFontScaling={false}>💪</Text>
               <Text style={styles.overallProgressTitle} allowFontScaling={false}>SAVINGS OVERVIEW</Text>
             </View>
             <View style={styles.overallProgressStats}>
@@ -424,14 +373,14 @@ const SavingsGoalsScreen: React.FC = () => {
                       <Text style={styles.goalName} allowFontScaling={false}>{goal.name}</Text>
                       <Text style={styles.goalTagline} allowFontScaling={false}>
                         {isCompleted 
-                          ? `­ƒÄë Goal achieved! Congratulations!`
+                          ? `🎉 Goal achieved! Congratulations!`
                           : `You still have ${getDaysRemaining(goal.deadline)} to fulfill your goal`
                         }
                       </Text>
                     </View>
                     <View style={styles.goalStatusBadge}>
                       <Text style={[styles.goalStatusText, { color: statusColor }]} allowFontScaling={false}>
-                        {isCompleted ? '­ƒÄë' : getStatusEmoji(goal.currentAmount, goal.targetAmount)}
+                        {isCompleted ? '🎉' : getStatusEmoji(goal.currentAmount, goal.targetAmount)}
                       </Text>
                     </View>
                   </View>
@@ -496,7 +445,7 @@ const SavingsGoalsScreen: React.FC = () => {
                         </Text>
                         <Text style={[styles.goalRemainingAmount, { color: statusColor }]} allowFontScaling={false}>
                           {isCompleted
-                            ? '­ƒÄë'
+                            ? '🎉'
                             : formatCurrency(goal.targetAmount - goal.currentAmount)}
                         </Text>
                       </View>
@@ -557,7 +506,7 @@ const SavingsGoalsScreen: React.FC = () => {
         {/* Empty State */}
         {!isLoading && goals.length === 0 && (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateIcon} allowFontScaling={false}>­ƒÄ»</Text>
+            <Text style={styles.emptyStateIcon} allowFontScaling={false}>💪</Text>
             <Text style={styles.emptyStateTitle} allowFontScaling={false}>No Savings Goals Yet</Text>
             <Text style={styles.emptyStateSubtitle} allowFontScaling={false}>
               Create your first savings goal to start tracking your progress
@@ -580,7 +529,7 @@ const SavingsGoalsScreen: React.FC = () => {
         <View style={styles.tipsSection}>
           <View style={styles.tipsHeader}>
             <View style={styles.tipsHeaderIcon}>
-              <Text style={styles.tipsHeaderIconText} allowFontScaling={false}>­ƒÆí</Text>
+              <Text style={styles.tipsHeaderIconText} allowFontScaling={false}>💡</Text>
             </View>
             <Text style={styles.tipsTitle} allowFontScaling={false}>Smart Savings Tips</Text>
             <Text style={styles.tipsSubtitle} allowFontScaling={false}>Boost your financial success with these proven strategies</Text>
@@ -589,7 +538,7 @@ const SavingsGoalsScreen: React.FC = () => {
           <View style={styles.tipsContainer}>
             <View style={styles.tipCard}>
               <View style={styles.tipIconContainer}>
-                <Text style={styles.tipIcon} allowFontScaling={false}>­ƒÄ»</Text>
+                <Text style={styles.tipIcon} allowFontScaling={false}>💪</Text>
               </View>
               <View style={styles.tipContent}>
                 <Text style={styles.tipHeader} allowFontScaling={false}>Set SMART Goals</Text>
@@ -604,7 +553,7 @@ const SavingsGoalsScreen: React.FC = () => {
 
             <View style={styles.tipCard}>
               <View style={styles.tipIconContainer}>
-                <Text style={styles.tipIcon} allowFontScaling={false}>­ƒÆ░</Text>
+                <Text style={styles.tipIcon} allowFontScaling={false}>🎯</Text>
               </View>
               <View style={styles.tipContent}>
                 <Text style={styles.tipHeader} allowFontScaling={false}>Pay Yourself First</Text>
@@ -619,7 +568,7 @@ const SavingsGoalsScreen: React.FC = () => {
 
             <View style={styles.tipCard}>
               <View style={styles.tipIconContainer}>
-                <Text style={styles.tipIcon} allowFontScaling={false}>­ƒôè</Text>
+                <Text style={styles.tipIcon} allowFontScaling={false}>🚀</Text>
               </View>
               <View style={styles.tipContent}>
                 <Text style={styles.tipHeader} allowFontScaling={false}>Track Progress Regularly</Text>
@@ -634,7 +583,7 @@ const SavingsGoalsScreen: React.FC = () => {
 
             <View style={styles.tipCard}>
               <View style={styles.tipIconContainer}>
-                <Text style={styles.tipIcon} allowFontScaling={false}>­ƒÜÇ</Text>
+                <Text style={styles.tipIcon} allowFontScaling={false}>🔥</Text>
               </View>
               <View style={styles.tipContent}>
                 <Text style={styles.tipHeader} allowFontScaling={false}>Start Small, Grow Big</Text>
@@ -650,132 +599,6 @@ const SavingsGoalsScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Update Progress Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle} allowFontScaling={false}>Update Progress</Text>
-                  <TouchableOpacity 
-                    style={styles.modalCloseButton}
-                    onPress={() => setIsModalVisible(false)}
-                  >
-                    <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.modalGoalInfo}>
-                  <View style={[styles.modalGoalIcon, { backgroundColor: getColorWithOpacity(currentGoal?.color || '#007AFF', 0.15) }]}>
-                    <Text style={styles.modalGoalIconText} allowFontScaling={false}>{currentGoal?.icon}</Text>
-                  </View>
-                  <Text style={styles.modalGoalName} allowFontScaling={false}>{currentGoal?.name}</Text>
-                </View>
-                
-                <View style={styles.modalProgressInfo}>
-                  <View style={styles.modalProgressItem}>
-                    <Text style={styles.modalProgressLabel} allowFontScaling={false}>Target Amount</Text>
-                    <Text style={styles.modalProgressValue} allowFontScaling={false}>
-                      {formatCurrency(currentGoal?.targetAmount || 0)}
-                    </Text>
-                  </View>
-                  <View style={styles.modalProgressItem}>
-                    <Text style={styles.modalProgressLabel} allowFontScaling={false}>Current Amount</Text>
-                    <Text style={styles.modalProgressValue} allowFontScaling={false}>
-                      {formatCurrency(currentGoal?.currentAmount || 0)}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.modalInputContainer}>
-                  <Text style={styles.modalInputLabel} allowFontScaling={false}>Transaction Type</Text>
-                  <View style={styles.transactionTypeContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.transactionTypeButton,
-                        transactionType === 'add' && styles.transactionTypeButtonActive
-                      ]}
-                      onPress={() => setTransactionType('add')}
-                    >
-                      <Ionicons 
-                        name="add-circle" 
-                        size={20} 
-                        color={transactionType === 'add' ? '#FFFFFF' : theme.colors.primary} 
-                      />
-                      <Text style={[
-                        styles.transactionTypeText,
-                        transactionType === 'add' && styles.transactionTypeTextActive
-                      ]} allowFontScaling={false}>
-                        Add Money
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[
-                        styles.transactionTypeButton,
-                        transactionType === 'withdraw' && styles.transactionTypeButtonActive
-                      ]}
-                      onPress={() => setTransactionType('withdraw')}
-                    >
-                      <Ionicons 
-                        name="remove-circle" 
-                        size={20} 
-                        color={transactionType === 'withdraw' ? '#FFFFFF' : theme.colors.primary} 
-                      />
-                      <Text style={[
-                        styles.transactionTypeText,
-                        transactionType === 'withdraw' && styles.transactionTypeTextActive
-                      ]} allowFontScaling={false}>
-                        Withdraw Money
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <Text style={styles.transactionTypeHint} allowFontScaling={false}>
-                    ­ƒÆí Withdraw option is available for personal emergencies or when you need to reallocate funds to other priorities.
-                  </Text>
-                  
-                  <Text style={styles.modalInputLabel} allowFontScaling={false}>Amount</Text>
-                  <TextInput style={styles.modalInput}
-                    keyboardType="numeric"
-                    value={newAmount}
-                    onChangeText={setNewAmount}
-                    placeholder="Enter amount"
-                    placeholderTextColor={theme.colors.textSecondary} allowFontScaling={false} />
-                </View>
-                
-                {/* Banner Ad above Cancel and Update buttons */}
-                <View style={styles.modalAdContainer}>
-                  <BannerAdComponent />
-                </View>
-                
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity 
-                    style={styles.modalCancelButton} 
-                    onPress={() => setIsModalVisible(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.modalCancelButtonText} allowFontScaling={false}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.modalSaveButton} 
-                    onPress={handleSaveProgress}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.modalSaveButtonText} allowFontScaling={false}>Update</Text>
-                  </TouchableOpacity>
-                </View>
-                             </View>
-           </View>
-         </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Interstitial modal removed; direct interstitial shown before navigation */}
     </KeyboardAvoidingView>
   );
 };
@@ -1222,204 +1045,6 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    padding: 24,
-    width: '100%',
-    maxWidth: 340,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 15,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalGoalInfo: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalGoalIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  modalGoalIconText: {
-    fontSize: 32,
-    textAlign: 'center',
-  },
-  modalGoalName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  modalGoalCategory: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
-  modalProgressInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  modalProgressItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  modalProgressLabel: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  modalProgressValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-    textAlign: 'center',
-  },
-  modalInputContainer: {
-    marginBottom: 24,
-  },
-  modalInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 8,
-  },
-  modalInput: {
-    width: '100%',
-    height: 56,
-    borderColor: theme.colors.border,
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  modalInputHint: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 8,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  transactionTypeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  transactionTypeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    backgroundColor: 'transparent',
-    gap: 8,
-  },
-  transactionTypeButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  transactionTypeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  transactionTypeTextActive: {
-    color: '#FFFFFF',
-  },
-  transactionTypeHint: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 16,
-    paddingHorizontal: 8,
-    fontStyle: 'italic',
-  },
-  modalAdContainer: {
-    alignItems: 'center',
-    paddingVertical: 4,
-    marginBottom: 16,
-    backgroundColor: 'transparent',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
-  },
-  modalSaveButton: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  modalSaveButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
   },
   tipsSection: {
     marginHorizontal: 20,

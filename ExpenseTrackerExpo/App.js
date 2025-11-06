@@ -51,6 +51,7 @@ import AddGoalScreen from './screens/AddGoalScreen';
 import EditCreditCardScreen from './screens/EditCreditCardScreen';
 import EditLoanScreen from './screens/EditLoanScreen';
 import EditGoalScreen from './screens/EditGoalScreen';
+import UpdateProgressScreen from './screens/UpdateProgressScreen';
 import BankAccountDetailScreen from './screens/BankAccountDetailScreen';
 import CreditCardDetailsScreen from './screens/CreditCardDetailsScreen';
 import LoanAccountScreen from './screens/LoanAccountScreen';
@@ -183,6 +184,7 @@ function MainStackNavigator() {
       {/* <Stack.Screen name="EditCreditCard" component={EditCreditCardScreen} /> */}
       <Stack.Screen name="EditLoan" component={EditLoanScreen} />
       <Stack.Screen name="EditGoal" component={EditGoalScreen} />
+      <Stack.Screen name="UpdateProgress" component={UpdateProgressScreen} />
       <Stack.Screen name="BankAccountDetail" component={BankAccountDetailScreen} />
       {/* Credit Cards feature hidden for v1 release */}
       {/* <Stack.Screen name="CreditCardDetails" component={CreditCardDetailsScreen} /> */}
@@ -368,11 +370,11 @@ function AppNavigator() {
         // 4. App was in background for at least 1 second (to avoid false positives from ad closes)
         // 5. No interstitial ad was just closed (wait at least 5 seconds)
         if (user && adMobInitialized && !showSplash && timeSinceBackground > 1000 && !wasInterstitialJustClosed) {
-          AppOpenAdService.showAppOpenAd()
-            .catch((error) => {
-              console.error('❌ App Open Ad failed on app state change:', error);
-              // Silently fail - don't crash the app
-            });
+        AppOpenAdService.showAppOpenAd()
+          .catch((error) => {
+            console.error('❌ App Open Ad failed on app state change:', error);
+            // Silently fail - don't crash the app
+          });
         } else if (wasInterstitialJustClosed) {
           console.log('⚠️ Skipping app open ad - interstitial ad was just closed');
         }
