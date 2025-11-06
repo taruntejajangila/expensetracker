@@ -51,19 +51,19 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   
   return (
     <View style={styles.container}>
-      <BannerAd
-        unitId={Platform.OS === 'ios' 
-          ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
-          : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-        requestOptions={{
-          requestNonPersonalizedAdsOnly: false,
-        }}
-        onAdLoaded={() => {
-          console.log('✅ Banner ad loaded');
-          setRetryCount(0); // Reset retry count on successful load
-        }}
-        onAdFailedToLoad={(error) => {
+          <BannerAd
+            unitId={Platform.OS === 'ios' 
+              ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
+              : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
+            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+            requestOptions={{
+              requestNonPersonalizedAdsOnly: false,
+            }}
+            onAdLoaded={() => {
+              console.log('✅ Banner ad loaded');
+              setRetryCount(0); // Reset retry count on successful load
+            }}
+            onAdFailedToLoad={(error) => {
           const errorCode = error?.code || '';
           const errorMessage = error?.message || '';
           
@@ -89,23 +89,23 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
           }
           
           // For other recoverable errors, retry
-          console.error('❌ Banner ad failed to load:', error);
-          if (retryCount < 3) {
-            const newRetryCount = retryCount + 1;
-            setRetryCount(newRetryCount);
-            console.log(`⚠️ Banner ad retry scheduled (attempt ${newRetryCount})`);
-          } else {
-            console.log('❌ Banner ad failed after 3 retries, will retry on next refresh');
+              console.error('❌ Banner ad failed to load:', error);
+              if (retryCount < 3) {
+                const newRetryCount = retryCount + 1;
+                setRetryCount(newRetryCount);
+                console.log(`⚠️ Banner ad retry scheduled (attempt ${newRetryCount})`);
+              } else {
+                console.log('❌ Banner ad failed after 3 retries, will retry on next refresh');
             setRetryCount(0);
-          }
-        }}
-        onAdOpened={() => {
-          console.log('📱 Banner ad opened');
-        }}
-        onAdClosed={() => {
-          console.log('📱 Banner ad closed');
-        }}
-      />
+              }
+            }}
+            onAdOpened={() => {
+              console.log('📱 Banner ad opened');
+            }}
+            onAdClosed={() => {
+              console.log('📱 Banner ad closed');
+            }}
+          />
     </View>
   );
 };

@@ -450,9 +450,9 @@ const AddAccountScreen: React.FC = () => {
           setErrors({});
           setBankSuggestion(null);
           
-          Alert.alert('Success', 'Account added successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
+        Alert.alert('Success', 'Account added successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
         } else {
           // Show specific error message from backend
           Alert.alert('Error', result.message || 'Failed to add account. Please try again.');

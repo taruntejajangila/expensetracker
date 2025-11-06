@@ -136,8 +136,8 @@ const RemindersScreen: React.FC = () => {
       cleanupExpiredPaidItems();
     }, [])
   );
-
-  // Set up periodic cleanup every 30 minutes
+    
+    // Set up periodic cleanup every 30 minutes
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       cleanupExpiredPaidItems();
@@ -145,8 +145,8 @@ const RemindersScreen: React.FC = () => {
     
     return () => clearInterval(cleanupInterval);
   }, []);
-
-  // Set up notification listeners
+    
+    // Set up notification listeners
   useEffect(() => {
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       // Handle notification received
@@ -570,18 +570,18 @@ const RemindersScreen: React.FC = () => {
           onPress: async () => {
             try {
               // Cancel notification
-              await cancelNotification(reminderId);
+            await cancelNotification(reminderId);
               
               // Delete from backend service
               await ReminderService.deleteReminder(reminderId);
               
               // Update local state immediately
-              setReminders(prev => prev.filter(r => r.id !== reminderId));
-              const updatedManualReminders = manualReminders.filter(r => r.id !== reminderId);
-              setManualReminders(updatedManualReminders);
+            setReminders(prev => prev.filter(r => r.id !== reminderId));
+            const updatedManualReminders = manualReminders.filter(r => r.id !== reminderId);
+            setManualReminders(updatedManualReminders);
               
               // Also update local storage
-              await saveManualReminders(updatedManualReminders);
+            await saveManualReminders(updatedManualReminders);
               
               // Reload reminders to ensure sync with backend
               await loadReminders();

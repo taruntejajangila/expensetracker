@@ -368,16 +368,16 @@ const AddTransactionScreen = () => {
             await restoreFormData();
           } else if (isActive && !savedData) {
             // Only reset if no saved data exists
-            setAmount('');
-            setTitle('');
-            setCategory('');
-            setNote('');
-            setErrors({});
-            setDate(new Date());
+        setAmount('');
+        setTitle('');
+        setCategory('');
+        setNote('');
+        setErrors({});
+        setDate(new Date());
           }
           if (isActive) {
-            setShowCategoryDropdown(false);
-            setShowAccountDropdown(false);
+        setShowCategoryDropdown(false);
+        setShowAccountDropdown(false);
           }
         })();
       }
@@ -666,7 +666,7 @@ const AddTransactionScreen = () => {
 
         // Clear saved form data after successful save
         await clearSavedFormData();
-        
+
         if (saveAndAddAnother && !isEditMode) {
           // Clear form for new transaction (only available when adding)
           setAmount('');
