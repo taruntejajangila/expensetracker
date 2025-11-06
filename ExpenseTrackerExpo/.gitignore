@@ -48,3 +48,6 @@ firebase-debug.log
 
 # Firebase Service Account Key (sensitive - do not commit)
 mypaisa-*-firebase-adminsdk-*.json
+
+# APK build files
+*.apk
