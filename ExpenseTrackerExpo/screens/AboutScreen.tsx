@@ -37,8 +37,8 @@ const AboutScreen: React.FC = () => {
 
   const openRateApp = () => {
     Alert.alert(
-      'Rate MyPaisa Finance Manager',
-      'Thank you for using MyPaisa Finance Manager! Would you like to rate us on the App Store?',
+      'Rate PaysaGo Finance Manager',
+      'Thank you for using PaysaGo Finance Manager! Would you like to rate us on the App Store?',
       [
         { text: 'Not Now', style: 'cancel' },
         { text: 'Rate App', onPress: () => {
@@ -51,13 +51,13 @@ const AboutScreen: React.FC = () => {
 
   const shareApp = () => {
     Alert.alert(
-      'Share MyPaisa Finance Manager',
+      'Share PaysaGo Finance Manager',
       'Help your friends manage their finances better!',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Share', onPress: () => {
           // In a real app, you would use the Share API
-          Alert.alert('Thank you!', 'Thank you for sharing MyPaisa Finance Manager with your friends!');
+          Alert.alert('Thank you!', 'Thank you for sharing PaysaGo Finance Manager with your friends!');
         }}
       ]
     );
@@ -275,7 +275,7 @@ const AboutScreen: React.FC = () => {
               About
             </Text>
             <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]} allowFontScaling={false}>
-              MyPaisa Finance Manager
+              PaysaGo Finance Manager
             </Text>
           </View>
         </View>
@@ -293,7 +293,7 @@ const AboutScreen: React.FC = () => {
           <View style={styles.appIcon}>
             <Text style={styles.appIconText} allowFontScaling={false}>💰</Text>
           </View>
-          <Text style={styles.appName} allowFontScaling={false}>MyPaisa Finance Manager</Text>
+          <Text style={styles.appName} allowFontScaling={false}>PaysaGo Finance Manager</Text>
           <Text style={styles.appTagline} allowFontScaling={false}>
             Your Personal Finance Companion
           </Text>
@@ -302,13 +302,13 @@ const AboutScreen: React.FC = () => {
 
         {/* Description Section */}
         <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle} allowFontScaling={false}>About MyPaisa Finance Manager</Text>
+          <Text style={styles.sectionTitle} allowFontScaling={false}>About PaysaGo Finance Manager</Text>
           <Text style={styles.descriptionText} allowFontScaling={false}>
-            MyPaisa Finance Manager is a comprehensive personal finance management app designed to help you take control of your money. 
+            PaysaGo Finance Manager is a comprehensive personal finance management app designed to help you take control of your money. 
             Track expenses, manage budgets, set savings goals, and make informed financial decisions.
           </Text>
           <Text style={styles.descriptionText} allowFontScaling={false}>
-            Built with modern technology and user-friendly design, MyPaisa Finance Manager makes financial management simple, 
+            Built with modern technology and user-friendly design, PaysaGo Finance Manager makes financial management simple, 
             secure, and accessible to everyone.
           </Text>
         </View>
@@ -396,7 +396,7 @@ const AboutScreen: React.FC = () => {
           <View style={styles.companyInfo}>
             <Ionicons name="business" size={16} color={theme.colors.primary} style={styles.companyIcon} />
             <Text style={styles.companyText} allowFontScaling={false}>Company</Text>
-            <Text style={styles.companyValue} allowFontScaling={false}>MyPaisa Technologies</Text>
+            <Text style={styles.companyValue} allowFontScaling={false}>PaysaGo Technologies</Text>
           </View>
           
           <View style={styles.companyInfo}>
@@ -441,7 +441,7 @@ const AboutScreen: React.FC = () => {
             Made with ❤️ in India
           </Text>
           <Text style={styles.copyrightText} allowFontScaling={false}>
-            © 2024 MyPaisa Technologies. All rights reserved.
+            © 2024 PaysaGo Technologies. All rights reserved.
           </Text>
         </View>
       </ScrollView>

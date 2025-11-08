@@ -2432,7 +2432,7 @@ const HomeScreen: React.FC = () => {
             Made with ❤️ in INDIA
           </Text>
           <Text style={styles.madeWithLoveSubtext} allowFontScaling={false}>
-            MyPaisa Finance Manager
+            PaysaGo Finance Manager
           </Text>
         </View>
 

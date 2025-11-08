@@ -173,7 +173,7 @@ const TermsConditionsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Agreement to Terms</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            By accessing and using MyPaisa Finance Manager, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these Terms & Conditions, please do not use our application.
+            By accessing and using PaysaGo Finance Manager, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these Terms & Conditions, please do not use our application.
           </Text>
         </View>
 
@@ -181,7 +181,7 @@ const TermsConditionsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Use License</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            Permission is granted to download and use MyPaisa Finance Manager for personal, non-commercial use only. This license shall automatically terminate if you violate any of these restrictions.
+            Permission is granted to download and use PaysaGo Finance Manager for personal, non-commercial use only. This license shall automatically terminate if you violate any of these restrictions.
           </Text>
           <View style={styles.highlightBox}>
             <Text style={styles.highlightText} allowFontScaling={false}>
@@ -206,7 +206,7 @@ const TermsConditionsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Data Accuracy & Disclaimer</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            While we strive to provide accurate calculations and financial insights, MyPaisa Finance Manager is a tool to help you manage your finances. You are solely responsible for verifying all financial data and making financial decisions.
+            While we strive to provide accurate calculations and financial insights, PaysaGo Finance Manager is a tool to help you manage your finances. You are solely responsible for verifying all financial data and making financial decisions.
           </Text>
           <View style={styles.highlightBox}>
             <Text style={styles.highlightText} allowFontScaling={false}>
@@ -232,7 +232,7 @@ const TermsConditionsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Subscription & Payments</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            Some features of MyPaisa Finance Manager may require a paid subscription. By purchasing a subscription, you agree to pay all applicable fees as described at the time of purchase.
+            Some features of PaysaGo Finance Manager may require a paid subscription. By purchasing a subscription, you agree to pay all applicable fees as described at the time of purchase.
           </Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
             Subscription fees are non-refundable except as required by law. You may cancel your subscription at any time, which will take effect at the end of the current billing period.
@@ -243,7 +243,7 @@ const TermsConditionsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Limitation of Liability</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            To the maximum extent permitted by law, MyPaisa Finance Manager shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the application.
+            To the maximum extent permitted by law, PaysaGo Finance Manager shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the application.
           </Text>
         </View>
 

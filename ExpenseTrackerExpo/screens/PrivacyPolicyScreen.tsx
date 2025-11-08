@@ -159,7 +159,7 @@ const PrivacyPolicyScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle} allowFontScaling={false}>Introduction</Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
-            MyPaisa Finance Manager ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
+            PaysaGo Finance Manager ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
           </Text>
           <Text style={styles.sectionText} allowFontScaling={false}>
             Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the application.

@@ -63,7 +63,7 @@ const slides: SlideData[] = [
   {
     id: 4,
     title: 'Start Your Financial Journey',
-    subtitle: 'Take control of your money with MyPaisa Finance Manager',
+    subtitle: 'Take control of your money with PaysaGo Finance Manager',
     description: '',
     icon: 'rocket',
     gradient: ['#FFFFFF', '#FFFFFF'],
@@ -286,7 +286,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
 
           {/* App Name for first slide */}
           {index === 0 && (
-            <Text style={styles.appName}>MyPaisa Finance Manager</Text>
+            <Text style={styles.appName}>PaysaGo Finance Manager</Text>
           )}
 
           {/* Title */}

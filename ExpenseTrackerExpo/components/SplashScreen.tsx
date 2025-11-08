@@ -190,7 +190,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
           ]}
           allowFontScaling={false}
         >
-          MyPaisa
+          PaysaGo
         </Animated.Text>
         <Animated.View
           style={[

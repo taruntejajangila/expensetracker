@@ -71,7 +71,7 @@ Since you already have AdMob configured (`ca-app-pub-4113490348002307~1599461669
 2. Create a new project (or use existing one)
 3. Add Android app to Firebase project:
    - Package name: `com.taruntejajangila.mobileapp`
-   - App nickname: "MyPaisa Finance Manager" (optional)
+   - App nickname: "PaysaGo Finance Manager" (optional)
 
 ### Step 2: Download google-services.json
 

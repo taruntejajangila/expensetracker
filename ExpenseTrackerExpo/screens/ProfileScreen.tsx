@@ -552,7 +552,7 @@ const ProfileScreen: React.FC = () => {
 
         {/* App Name */}
         <View style={styles.appNameContainer}>
-          <Text style={styles.appNameText} allowFontScaling={false}>MyPaisa Finance Manager</Text>
+          <Text style={styles.appNameText} allowFontScaling={false}>PaysaGo Finance Manager</Text>
         </View>
       </ScrollView>
 
