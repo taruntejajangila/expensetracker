@@ -17,6 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AccountService from '../services/AccountService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface AccountFormData {
@@ -574,9 +575,10 @@ const AddAccountScreen: React.FC = () => {
           setErrors({});
           setBankSuggestion(null);
           
-        Alert.alert('Success', 'Account added successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+          await AsyncStorage.setItem('addTransactionNewAccountId', result.data.id);
+          Alert.alert('Success', 'Account added successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
         } else {
           // Show specific error message from backend
           Alert.alert('Error', result.message || 'Failed to add account. Please try again.');

@@ -220,6 +220,28 @@ const AddTransactionScreen = () => {
     loadCategories();
   }, []);
 
+useEffect(() => {
+  const applyNewAccountSelection = async () => {
+    if (isEditMode || type !== 'income' || accounts.length === 0) {
+      return;
+    }
+    try {
+      const newAccountId = await AsyncStorage.getItem('addTransactionNewAccountId');
+      if (newAccountId) {
+        const exists = accounts.some(account => account.id === newAccountId);
+        if (exists) {
+          setSelectedAccountId(newAccountId);
+        }
+        await AsyncStorage.removeItem('addTransactionNewAccountId');
+      }
+    } catch (error) {
+      console.error('❌ Error applying newly created account selection:', error);
+    }
+  };
+
+  applyNewAccountSelection();
+}, [accounts, type, isEditMode]);
+
   // Categories are loaded once when component mounts - no need to refresh on every focus
 
   // Removed forceRefreshCategories - no longer needed with simplified category loading
