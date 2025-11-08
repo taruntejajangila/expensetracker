@@ -42,6 +42,8 @@ interface AmortizationEntry {
   balance: number;
 }
 
+const MAX_LOAN_AMOUNT = 10000000; // ₹1,00,00,000 (1 crore)
+
 const LoanCalculatorScreen: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -71,6 +73,14 @@ const LoanCalculatorScreen: React.FC = () => {
 
     if (amount <= 0 || rate < 0 || term <= 0) {
       Alert.alert('Error', 'Please enter valid positive numbers');
+      return;
+    }
+
+    if (amount > MAX_LOAN_AMOUNT) {
+      Alert.alert(
+        'Limit Exceeded',
+        'We currently support loan calculations up to ₹1,00,00,000 (1 crore).'
+      );
       return;
     }
 
@@ -564,7 +574,7 @@ const LoanCalculatorScreen: React.FC = () => {
                     placeholder="Enter loan amount"
                     placeholderTextColor={theme.colors.textSecondary}
                     keyboardType="numeric"
-                    maxLength={12}
+                    maxLength={8}
                     allowFontScaling={false}
                   />
                 </View>

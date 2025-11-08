@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -50,6 +50,7 @@ const AddAccountScreen: React.FC = () => {
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const duplicateCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+  const [existingAccounts, setExistingAccounts] = useState<any[]>([]);
 
   const accountTypes = [
     { id: 'wallet', name: 'Wallet', icon: 'wallet-outline', color: '#FF6B6B' },
@@ -57,6 +58,70 @@ const AddAccountScreen: React.FC = () => {
     { id: 'salary', name: 'Salary', icon: 'card-outline', color: '#45B7D1' },
     { id: 'current', name: 'Current', icon: 'business-outline', color: '#96CEB4' },
   ];
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAccounts = async () => {
+      try {
+        const data = await AccountService.getAccounts();
+        if (isMounted && Array.isArray(data)) {
+          setExistingAccounts(data);
+        }
+      } catch (error) {
+        console.error('AddAccountScreen: Error loading accounts for duplicate check:', error);
+      }
+    };
+    fetchAccounts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchAccountsOnFocus = async () => {
+        try {
+          const data = await AccountService.getAccounts();
+          if (isActive && Array.isArray(data)) {
+            setExistingAccounts(data);
+          }
+        } catch (error) {
+          console.error('AddAccountScreen: Error refreshing accounts for duplicate check:', error);
+        }
+      };
+      fetchAccountsOnFocus();
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  const hasAccountWithSameBankAndNumber = useCallback(
+    (bankName: string, accountNumber: string, excludeId?: string) => {
+      if (!bankName || !accountNumber) {
+        return false;
+      }
+      const normalizedBank = bankName.trim().toLowerCase();
+      const trimmedAccountNumber = accountNumber.trim();
+      if (!normalizedBank || !trimmedAccountNumber) {
+        return false;
+      }
+      return existingAccounts.some(account => {
+        if (!account) {
+          return false;
+        }
+        if (excludeId && account.id === excludeId) {
+          return false;
+        }
+        const accountBankName = ((account.bankName || account.name || '') as string).trim().toLowerCase();
+        const rawAccountNumber = (account.accountNumber || '').toString();
+        const lastFourDigits = rawAccountNumber.slice(-4);
+        return accountBankName === normalizedBank && lastFourDigits === trimmedAccountNumber;
+      });
+    },
+    [existingAccounts]
+  );
 
   // List of banks in alphabetical order (for autocomplete suggestion)
   const bankList = [
@@ -261,51 +326,78 @@ const AddAccountScreen: React.FC = () => {
 
     // Debounce the duplicate check
     duplicateCheckTimeoutRef.current = setTimeout(async () => {
-      if (!formData.nickname.trim() && !formData.accountNumber.trim()) {
+      const trimmedNickname = formData.nickname.trim();
+      const trimmedAccountNumber = formData.accountNumber.trim();
+      const trimmedBankName = formData.bankName.trim();
+
+      if (!trimmedNickname && !trimmedAccountNumber) {
+        return;
+      }
+
+      const sameBankDuplicate = hasAccountWithSameBankAndNumber(
+        trimmedBankName,
+        trimmedAccountNumber,
+        isEdit && editingAccount?.id ? editingAccount.id : undefined
+      );
+
+      if (sameBankDuplicate) {
+        setErrors(prev => ({
+          ...prev,
+          accountNumber: trimmedBankName
+            ? `Account number already exists for ${trimmedBankName}`
+            : 'Account number already exists for this bank',
+        }));
+        setCheckingDuplicate(false);
         return;
       }
 
       setCheckingDuplicate(true);
       try {
         const result = await AccountService.checkDuplicate(
-          formData.nickname.trim() || undefined,
-          formData.accountNumber.trim() || undefined,
-          formData.bankName.trim() || undefined,
+          trimmedNickname || undefined,
+          trimmedAccountNumber || undefined,
+          trimmedBankName || undefined,
           isEdit && editingAccount?.id ? editingAccount.id : undefined
         );
 
         if (result.isDuplicate && result.message) {
-          // Parse error message to determine which field(s) to show error on
-          // Backend may return multiple errors joined with ". "
           const errorMessages = result.message.split('. ').filter(msg => msg.trim());
           const newErrors: {[key: string]: string} = {};
           
           errorMessages.forEach(msg => {
             const lowerMsg = msg.toLowerCase();
             
-            // Check for bank + account number duplicate (most specific - check first)
-            if (lowerMsg.includes('bank') && lowerMsg.includes('number') && lowerMsg.includes('already')) {
-              newErrors.accountNumber = msg.trim();
-            }
-            // Check for account number duplicate (without bank)
-            else if (lowerMsg.includes('account number') && lowerMsg.includes('already in use')) {
-              newErrors.accountNumber = msg.trim();
-            }
-            // Check for nickname duplicate
-            else if (lowerMsg.includes('nickname') || (lowerMsg.includes('account name') && lowerMsg.includes('already'))) {
+            if (lowerMsg.includes('nickname') || (lowerMsg.includes('account name') && lowerMsg.includes('already'))) {
               newErrors.nickname = msg.trim();
+            } else if (lowerMsg.includes('account number')) {
+              const isSameBankConflict = hasAccountWithSameBankAndNumber(
+                trimmedBankName,
+                trimmedAccountNumber,
+                isEdit && editingAccount?.id ? editingAccount.id : undefined
+              );
+              if (isSameBankConflict) {
+                newErrors.accountNumber = msg.trim();
+              }
             }
           });
           
-          // If no specific field identified, show on nickname as fallback
-          if (Object.keys(newErrors).length === 0) {
-            newErrors.nickname = result.message;
+          if (Object.keys(newErrors).length > 0) {
+            setErrors(prev => ({
+              ...prev,
+              ...newErrors
+            }));
+          } else {
+            setErrors(prev => {
+              const updated = { ...prev };
+              if (updated.nickname && updated.nickname.toLowerCase().includes('nickname')) {
+                delete updated.nickname;
+              }
+              if (updated.accountNumber && updated.accountNumber.toLowerCase().includes('account number')) {
+                delete updated.accountNumber;
+              }
+              return updated;
+            });
           }
-          
-          setErrors(prev => ({
-            ...prev,
-            ...newErrors
-          }));
         } else {
           // Clear duplicate errors if not duplicate
           setErrors(prev => {
@@ -371,20 +463,52 @@ const AddAccountScreen: React.FC = () => {
       return;
     }
 
+    const trimmedNickname = formData.nickname.trim();
+    const trimmedAccountNumber = formData.accountNumber.trim();
+    const trimmedBankName = formData.bankName.trim();
+    const excludeId = isEdit && editingAccount?.id ? editingAccount.id : undefined;
+
+    if (hasAccountWithSameBankAndNumber(trimmedBankName, trimmedAccountNumber, excludeId)) {
+      Alert.alert(
+        'Duplicate Account',
+        trimmedBankName
+          ? `Account number already exists for ${trimmedBankName}`
+          : 'Account number already exists for this bank.'
+      );
+      return;
+    }
+
     // Final duplicate check before saving
     setCheckingDuplicate(true);
     try {
       const duplicateResult = await AccountService.checkDuplicate(
-        formData.nickname.trim(),
-        formData.accountNumber.trim(),
-        formData.bankName.trim(),
-        isEdit && editingAccount?.id ? editingAccount.id : undefined
+        trimmedNickname || undefined,
+        trimmedAccountNumber || undefined,
+        trimmedBankName || undefined,
+        excludeId
       );
 
       if (duplicateResult.isDuplicate && duplicateResult.message) {
-        Alert.alert('Duplicate Account', duplicateResult.message);
-        setCheckingDuplicate(false);
-        return;
+        const errorMessages = duplicateResult.message.split('. ').filter(msg => msg.trim());
+        const sameBankDuplicate = hasAccountWithSameBankAndNumber(
+          trimmedBankName,
+          trimmedAccountNumber,
+          excludeId
+        );
+
+        const shouldBlock = errorMessages.some(msg => {
+          const lowerMsg = msg.toLowerCase();
+          if (lowerMsg.includes('account number')) {
+            return sameBankDuplicate;
+          }
+          return true;
+        });
+
+        if (shouldBlock) {
+          Alert.alert('Duplicate Account', duplicateResult.message);
+          setCheckingDuplicate(false);
+          return;
+        }
       }
     } catch (error: any) {
       console.error('Error in final duplicate check:', error);

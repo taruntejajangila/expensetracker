@@ -509,6 +509,32 @@ const AddTransactionScreen = () => {
   // Removed local formatCurrency function - now imported from utils
 
   // Validation function
+  const isFutureDate = (inputDate: Date) => {
+    const normalizedSelected = new Date(inputDate);
+    normalizedSelected.setHours(0, 0, 0, 0);
+    const normalizedToday = new Date();
+    normalizedToday.setHours(0, 0, 0, 0);
+    return normalizedSelected.getTime() > normalizedToday.getTime();
+  };
+
+  const handleDateChange = (selectedDate: Date) => {
+    if (isFutureDate(selectedDate)) {
+      Alert.alert(
+        'Future Date Selected',
+        'You can only record transactions up to today. Please pick today or an earlier date.'
+      );
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setDate(today);
+      return;
+    }
+
+    setDate(selectedDate);
+    if (errors.date) {
+      setErrors(prev => ({ ...prev, date: '' }));
+    }
+  };
+
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -548,6 +574,11 @@ const AddTransactionScreen = () => {
       if (!toAccounts.find(acc => acc.id === selectedToAccountId)) {
         newErrors.toAccount = 'Selected destination account is no longer available. Please refresh and try again.';
       }
+    }
+
+    // Prevent future dates
+    if (isFutureDate(date)) {
+      newErrors.date = 'Choose today or an earlier date';
     }
 
     setErrors(newErrors);
@@ -1277,12 +1308,13 @@ const AddTransactionScreen = () => {
           <View style={styles.inputGroup}>
             <WheelDatePicker
               selectedDate={date}
-              onDateChange={setDate}
+              onDateChange={handleDateChange}
               label="Date"
               placeholder="Select transaction date"
               buttonStyle={styles.dropdownButton}
               textStyle={styles.dateText}
             />
+            {errors.date && <Text style={styles.errorText} allowFontScaling={false}>{errors.date}</Text>}
           </View>
 
           {/* Note Input */}
@@ -1314,18 +1346,22 @@ const AddTransactionScreen = () => {
               onPress={() => handleSaveTransaction(false)}
             >
               <Text style={styles.saveButtonText} allowFontScaling={false}>
-                {isEditMode ? `Update ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}` : `Save ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}`}
+                {isEditMode
+                  ? `Update ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}`
+                  : type === 'transfer'
+                    ? 'Transfer'
+                    : `Save ${type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'}`}
               </Text>
             </TouchableOpacity>
             
-            {!isEditMode && (
+            {!isEditMode && type !== 'transfer' && (
               <TouchableOpacity
                 style={[
                   styles.button, 
                   styles.saveAndAddButton,
                   {
-                    backgroundColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
-                    shadowColor: type === 'expense' ? '#FF4C4C' : type === 'transfer' ? '#8B5CF6' : theme.colors.primary,
+                    backgroundColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
+                    shadowColor: type === 'expense' ? '#FF4C4C' : theme.colors.primary,
                   }
                 ]}
                 onPress={() => handleSaveTransaction(true)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -59,6 +59,86 @@ const SpentInMonthScreen: React.FC = () => {
   const [categorySpending, setCategorySpending] = useState<any[]>([]);
   const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
   const [averageDailySpending, setAverageDailySpending] = useState(0);
+
+  // Month selection (current month + historical)
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 37 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      return {
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        shortLabel: date.toLocaleDateString('en-US', { month: 'short' }),
+        fullLabel: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        yearLabel: date.toLocaleDateString('en-US', { year: 'numeric' }),
+        date,
+      };
+    });
+  }, []);
+  // Dropdown state
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const dropdownAnimation = useRef(new Animated.Value(0)).current;
+  const dropdownScrollRef = useRef<ScrollView>(null);
+
+  // Monthly expense summary for dropdown labels
+  const [monthlyExpenseSummary, setMonthlyExpenseSummary] = useState<{ [key: string]: number }>({});
+  const [isExpenseSummaryLoading, setIsExpenseSummaryLoading] = useState(false);
+
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const selectedMonthOption = monthOptions[selectedMonthIndex] ?? monthOptions[0];
+
+  const hideDropdown = useCallback(() => {
+    if (!isDropdownVisible) {
+      return;
+    }
+    Animated.timing(dropdownAnimation, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => {
+      setIsDropdownVisible(false);
+    });
+  }, [isDropdownVisible, dropdownAnimation]);
+
+  const showDropdown = useCallback(() => {
+    if (isDropdownVisible) {
+      return;
+    }
+    if (!isExpenseSummaryLoading && Object.keys(monthlyExpenseSummary).length === 0) {
+      loadMonthlyExpenseSummary();
+    }
+    setIsDropdownVisible(true);
+    Animated.timing(dropdownAnimation, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
+  }, [
+    isDropdownVisible,
+    dropdownAnimation,
+    monthlyExpenseSummary,
+    isExpenseSummaryLoading,
+    loadMonthlyExpenseSummary,
+  ]);
+
+  const handleDropdownToggle = useCallback(() => {
+    if (isDropdownVisible) {
+      hideDropdown();
+    } else {
+      showDropdown();
+    }
+  }, [isDropdownVisible, hideDropdown, showDropdown]);
+
+  const handleSelectMonth = useCallback(
+    (index: number) => {
+      if (index === selectedMonthIndex) {
+        hideDropdown();
+        return;
+      }
+      setSelectedMonthIndex(index);
+      hideDropdown();
+    },
+    [selectedMonthIndex, hideDropdown]
+  );
   
   // Calculate progress based on income vs spent
   const progress = monthlyIncome > 0 ? (spentAmount / monthlyIncome) * 100 : 0;
@@ -74,8 +154,32 @@ const SpentInMonthScreen: React.FC = () => {
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  // Load transaction data
-  const loadTransactionData = async () => {
+  const loadMonthlyExpenseSummary = useCallback(async () => {
+    try {
+      setIsExpenseSummaryLoading(true);
+      const allTransactions = await TransactionService.getTransactions();
+      const summary: { [key: string]: number } = {};
+      allTransactions.forEach(transaction => {
+        if (!transaction?.date || transaction.type !== 'expense') {
+          return;
+        }
+        const date = new Date(transaction.date);
+        if (isNaN(date.getTime())) {
+          return;
+        }
+        const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        summary[label] = (summary[label] || 0) + parseFloat(transaction.amount || 0);
+      });
+      setMonthlyExpenseSummary(summary);
+    } catch (error) {
+      console.error('Error loading monthly expense summary:', error);
+    } finally {
+      setIsExpenseSummaryLoading(false);
+    }
+  }, []);
+
+  // Load transaction data for the selected month
+  const loadTransactionData = useCallback(async (referenceDate: Date) => {
     try {
       setLoading(true);
       
@@ -86,13 +190,17 @@ const SpentInMonthScreen: React.FC = () => {
       console.log('🔍 SpentInMonthScreen: Sample recent transaction:', recentTransactionData[0]);
       setRecentTransactions(recentTransactionData);
       
-      // Get current month and year
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
+      // Determine target month/year
+      const normalizedReference = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+      const targetMonth = normalizedReference.getMonth();
+      const targetYear = normalizedReference.getFullYear();
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const isCurrentMonth = targetMonth === currentMonth && targetYear === currentYear;
       
-      // Load transactions for current month only
-      const monthlyTransactions = await TransactionService.getTransactionsByMonth(currentYear, currentMonth);
+      // Load transactions for target month
+      const monthlyTransactions = await TransactionService.getTransactionsByMonth(targetYear, targetMonth);
       
       // Calculate monthly expenses
       console.log('🔍 SpentInMonthScreen: Monthly transactions:', monthlyTransactions.length);
@@ -108,6 +216,11 @@ const SpentInMonthScreen: React.FC = () => {
       
       console.log('🔍 SpentInMonthScreen: Total monthly expenses:', monthlyExpenses);
       setSpentAmount(monthlyExpenses);
+      const summaryLabel = normalizedReference.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      setMonthlyExpenseSummary(prev => ({
+        ...prev,
+        [summaryLabel]: monthlyExpenses,
+      }));
       
       // Calculate monthly income
       const totalMonthlyIncome = monthlyTransactions
@@ -127,9 +240,10 @@ const SpentInMonthScreen: React.FC = () => {
       
       // Calculate remaining days in the month
       const today = new Date();
-      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const currentDay = today.getDate();
-      const daysRemaining = lastDayOfMonth - currentDay + 1; // +1 to include today
+      const lastDayOfSelectedMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const daysRemaining = isCurrentMonth
+        ? lastDayOfSelectedMonth - today.getDate() + 1
+        : 0;
       setRemainingDays(daysRemaining);
       
       // Calculate safe to spend per day
@@ -148,15 +262,18 @@ const SpentInMonthScreen: React.FC = () => {
       const currentMonthTransactions = monthlyTransactions.filter(t => t.type === 'expense');
       
       // Daily spending trend (last 7 days)
-      const dailySpendingMap = new Map();
+      const endOfRange = isCurrentMonth
+        ? new Date(currentYear, currentMonth, today.getDate())
+        : new Date(targetYear, targetMonth + 1, 0);
+      const totalDaysToShow = Math.min(7, endOfRange.getDate());
+      const startDay = Math.max(1, endOfRange.getDate() - totalDaysToShow + 1);
       const last7Days = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+      for (let day = startDay; day <= endOfRange.getDate(); day++) {
+        const candidate = new Date(targetYear, targetMonth, day);
+        const dateStr = candidate.toISOString().split('T')[0];
         last7Days.push({
           date: dateStr,
-          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          dayName: candidate.toLocaleDateString('en-US', { weekday: 'short' }),
           amount: 0
         });
       }
@@ -192,10 +309,10 @@ const SpentInMonthScreen: React.FC = () => {
       
       // Weekly trend (4 weeks of current month)
       const weeklyTrendData = [];
-      const weeksInMonth = Math.ceil(lastDayOfMonth / 7);
+      const weeksInMonth = Math.ceil(lastDayOfSelectedMonth / 7);
       for (let week = 0; week < weeksInMonth; week++) {
         const weekStart = week * 7 + 1;
-        const weekEnd = Math.min(weekStart + 6, lastDayOfMonth);
+        const weekEnd = Math.min(weekStart + 6, lastDayOfSelectedMonth);
         let weekAmount = 0;
         
         currentMonthTransactions.forEach(transaction => {
@@ -215,7 +332,8 @@ const SpentInMonthScreen: React.FC = () => {
       setWeeklyTrend(weeklyTrendData);
       
       // Average daily spending
-      const avgDaily = currentDay > 0 ? monthlyExpenses / currentDay : 0;
+      const elapsedDays = isCurrentMonth ? today.getDate() : lastDayOfSelectedMonth;
+      const avgDaily = elapsedDays > 0 ? monthlyExpenses / elapsedDays : 0;
       setAverageDailySpending(avgDaily);
       
       console.log('🔍 SpentInMonthScreen: Expense trends calculated:', {
@@ -230,17 +348,39 @@ const SpentInMonthScreen: React.FC = () => {
       console.error('Error loading transaction data:', error);
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadTransactionData();
   }, []);
 
+  useEffect(() => {
+    if (!selectedMonthOption) {
+      return;
+    }
+    loadTransactionData(selectedMonthOption.date);
+  }, [selectedMonthOption, loadTransactionData]);
+
+  useEffect(() => {
+    loadMonthlyExpenseSummary();
+  }, [loadMonthlyExpenseSummary]);
+
+  useEffect(() => {
+    if (isDropdownVisible && dropdownScrollRef.current) {
+      const timeout = setTimeout(() => {
+        dropdownScrollRef.current?.scrollTo({
+          x: Math.max(0, selectedMonthIndex * 100),
+          animated: true,
+        });
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+  }, [isDropdownVisible, selectedMonthIndex]);
+  
   // Reload data when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
-      loadTransactionData();
-    }, [])
+    useCallback(() => {
+      if (!selectedMonthOption) {
+        return;
+      }
+      loadTransactionData(selectedMonthOption.date);
+    }, [selectedMonthOption, loadTransactionData])
   );
 
   // Date formatting function (robust version from HomeScreen)
@@ -317,6 +457,18 @@ const SpentInMonthScreen: React.FC = () => {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    headerCenterButton: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+    },
+    headerSubtitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
     headerRight: {
       alignItems: 'center',
       justifyContent: 'center',
@@ -345,6 +497,50 @@ const SpentInMonthScreen: React.FC = () => {
       height: 40,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    dropdownContainer: {
+      backgroundColor: '#FFFFFF',
+      overflow: 'hidden',
+    },
+    horizontalScrollContent: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+    },
+    monthItem: {
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      marginRight: 10,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      backgroundColor: '#F8F8F8',
+      minWidth: 110,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    selectedMonthItem: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    expenseText: {
+      fontSize: 12,
+      color: '#666666',
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    monthText: {
+      fontSize: 12,
+      color: '#333333',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    yearText: {
+      fontSize: 10,
+      color: '#666666',
+      marginTop: 2,
+    },
+    selectedMonthText: {
+      color: '#FFFFFF',
     },
          content: {
        flex: 1,
@@ -701,11 +897,17 @@ const SpentInMonthScreen: React.FC = () => {
   });
 
   // Header Component
-  const ScreenHeader: React.FC<{ user?: any; theme: any; insets: any }> = ({ user, theme, insets }) => {
+  const ScreenHeader: React.FC<{
+    user?: any;
+    theme: any;
+    insets: any;
+    selectedLabel: string;
+    isOpen: boolean;
+    onToggle: () => void;
+  }> = ({ user, theme, insets, selectedLabel, isOpen, onToggle }) => {
     // Different padding for Android vs iOS
     const headerPaddingTop = Platform.OS === 'android' ? insets.top + 5 : insets.top + 10;
-    const currentDate = new Date();
-    const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthYear = selectedLabel || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
     return (
       <View style={[styles.headerContainer, { paddingTop: headerPaddingTop, backgroundColor: theme.colors.background }]}>
@@ -721,14 +923,26 @@ const SpentInMonthScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.headerCenter}>
+          <TouchableOpacity
+            style={styles.headerCenterButton}
+            activeOpacity={0.7}
+            onPress={onToggle}
+          >
             <Text style={[styles.headerTitle, { color: theme.colors.text }]} allowFontScaling={false}>
               {monthYear}
             </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]} allowFontScaling={false}>
-              Monthly spending overview
-            </Text>
-          </View>
+            <View style={styles.headerSubtitleRow}>
+              <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]} allowFontScaling={false}>
+                Monthly spending overview
+              </Text>
+              <Ionicons
+                name={isOpen ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={theme.colors.textSecondary}
+                style={{ marginLeft: 6 }}
+              />
+            </View>
+          </TouchableOpacity>
           
           <View style={styles.headerRight}>
             {/* Empty space to balance the header */}
@@ -741,7 +955,98 @@ const SpentInMonthScreen: React.FC = () => {
      return (
      <View style={styles.container}>
        {/* Header with Safe Area */}
-       <ScreenHeader user={user} theme={theme} insets={insets} />
+      <ScreenHeader
+        user={user}
+        theme={theme}
+        insets={insets}
+        selectedLabel={selectedMonthOption?.fullLabel ?? ''}
+        isOpen={isDropdownVisible}
+        onToggle={handleDropdownToggle}
+      />
+
+      {isDropdownVisible && (
+        <Animated.View
+          style={[
+            styles.dropdownContainer,
+            {
+              opacity: dropdownAnimation,
+              maxHeight: dropdownAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 80],
+              }),
+              transform: [
+                {
+                  translateY: dropdownAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <ScrollView
+            ref={dropdownScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScrollContent}
+          >
+            {monthOptions.map((month, index) => {
+              const isSelected = index === selectedMonthIndex;
+              const isCurrentYear =
+                month.date.getFullYear() === new Date().getFullYear();
+              const expenseLabel =
+                monthlyExpenseSummary[
+                  month.date.toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                ] ?? 0;
+              const monthLabelText = isCurrentYear
+                ? month.date.toLocaleDateString('en-US', {
+                    month: 'short',
+                  })
+                : `${month.date
+                    .toLocaleDateString('en-US', { month: 'short' })
+                    .replace('.', '')}'${month.date
+                    .getFullYear()
+                    .toString()
+                    .slice(-2)}`;
+
+              return (
+                <TouchableOpacity
+                  key={month.key}
+                  style={[
+                    styles.monthItem,
+                    isSelected && styles.selectedMonthItem,
+                  ]}
+                  onPress={() => handleSelectMonth(index)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.expenseText,
+                      isSelected && styles.selectedMonthText,
+                    ]}
+                    allowFontScaling={false}
+                  >
+                    {formatCurrency(expenseLabel)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.monthText,
+                      isSelected && styles.selectedMonthText,
+                    ]}
+                    allowFontScaling={false}
+                  >
+                    {monthLabelText}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+      )}
        
        <ScrollView
          style={styles.content}
@@ -757,7 +1062,7 @@ const SpentInMonthScreen: React.FC = () => {
         <Text style={styles.monthTitle} allowFontScaling={false}>
           <Text style={{ fontWeight: 'normal' }} allowFontScaling={false}>Spent in </Text>
           <Text style={{ color: '#007AFF', fontWeight: 'bold' }} allowFontScaling={false}>
-            {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {selectedMonthOption?.fullLabel ?? ''}
           </Text>
         </Text>
 

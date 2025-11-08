@@ -36,6 +36,12 @@ const RegisterScreen: React.FC = () => {
   const { register } = useAuth();
   const { theme } = useTheme();
 
+  const keyboardVerticalOffset = Platform.select({
+    ios: 24,
+    android: (StatusBar.currentHeight ?? 0) + 24,
+    default: 0,
+  });
+
   const getPasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length >= 6) strength += 1;
@@ -71,6 +77,11 @@ const RegisterScreen: React.FC = () => {
     // Email format: user@domain.com
     const filteredText = text.replace(/[^a-zA-Z0-9.@_-]/g, '');
     setEmail(filteredText);
+  };
+
+  const handlePhoneChange = (text: string) => {
+    const filtered = text.replace(/[^0-9]/g, '');
+    setPhone(filtered);
   };
 
   // Check if email format is valid and domain is allowed
@@ -161,10 +172,11 @@ const RegisterScreen: React.FC = () => {
       flex: 1,
     },
     content: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       paddingHorizontal: 24,
       paddingTop: 40,
+      paddingBottom: 40,
     },
     header: {
       alignItems: 'center',
@@ -336,14 +348,16 @@ const RegisterScreen: React.FC = () => {
         style={styles.gradient}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          keyboardVerticalOffset={keyboardVerticalOffset}
+          enabled
         >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
@@ -431,7 +445,7 @@ const RegisterScreen: React.FC = () => {
                     placeholder="Enter 10-digit phone number"
                     placeholderTextColor="#999999"
                     value={phone}
-                    onChangeText={setPhone}
+                    onChangeText={handlePhoneChange}
                     onFocus={() => setFocusedInput('phone')}
                     onBlur={() => setFocusedInput(null)}
                     keyboardType="phone-pad"

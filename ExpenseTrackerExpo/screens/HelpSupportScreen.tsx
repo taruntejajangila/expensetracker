@@ -8,6 +8,7 @@ import {
   Linking,
   Alert,
   Platform,
+  Clipboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -561,16 +562,30 @@ const HelpSupportScreen: React.FC = () => {
         <Text style={styles.contactInfoTitle} allowFontScaling={false}>
           Contact Information
         </Text>
-        <View style={styles.contactItem}>
+        <TouchableOpacity
+          style={styles.contactItem}
+          activeOpacity={0.7}
+          onLongPress={async () => {
+            Clipboard.setString('support@mypaisa.com');
+            Alert.alert('Copied', 'Email address copied to clipboard.');
+          }}
+        >
           <Ionicons name="mail" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Email</Text>
           <Text style={styles.contactValue} allowFontScaling={false}>support@mypaisa.com</Text>
-        </View>
-        <View style={styles.contactItem}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.contactItem}
+          activeOpacity={0.7}
+          onLongPress={async () => {
+            Clipboard.setString('+91 98765 43210');
+            Alert.alert('Copied', 'Phone number copied to clipboard.');
+          }}
+        >
           <Ionicons name="call" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Phone</Text>
           <Text style={styles.contactValue} allowFontScaling={false}>+91 98765 43210</Text>
-        </View>
+        </TouchableOpacity>
         <View style={styles.contactItem}>
           <Ionicons name="time" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Hours</Text>

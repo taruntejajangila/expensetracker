@@ -32,6 +32,12 @@ const LoginScreen: React.FC = () => {
   const { login } = useAuth();
   const { theme } = useTheme();
 
+  const keyboardVerticalOffset = Platform.select({
+    ios: 24,
+    android: (StatusBar.currentHeight ?? 0) + 24,
+    default: 0,
+  });
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -57,10 +63,11 @@ const LoginScreen: React.FC = () => {
       flex: 1,
     },
     content: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       paddingHorizontal: 24,
       paddingTop: 60,
+      paddingBottom: 40,
     },
     header: {
       alignItems: 'center',
@@ -208,14 +215,16 @@ const LoginScreen: React.FC = () => {
         style={styles.gradient}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          keyboardVerticalOffset={keyboardVerticalOffset}
+          enabled
         >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>

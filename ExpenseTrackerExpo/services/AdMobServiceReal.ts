@@ -1,15 +1,15 @@
 import mobileAds, { InterstitialAd, AdEventType, BannerAd } from 'react-native-google-mobile-ads';
 import { Platform } from 'react-native';
 
-// YOUR REAL Ad Unit IDs from AdMob
+// TEST Ad Unit IDs from Google AdMob (for testing only)
 const AD_UNIT_IDS = {
   ios: {
-    banner: 'ca-app-pub-4113490348002307/5694070602', // MyPaisa Banner Ad (using Android ID for now)
-    interstitial: 'ca-app-pub-4113490348002307/7222774699', // MyPaisa Interstitial Ad (using Android ID for now)
+    banner: 'ca-app-pub-3940256099942544/2934735716', // Test Banner Ad (iOS)
+    interstitial: 'ca-app-pub-3940256099942544/4411468910', // Test Interstitial Ad (iOS)
   },
   android: {
-    banner: 'ca-app-pub-4113490348002307/5694070602', // MyPaisa Banner Ad
-    interstitial: 'ca-app-pub-4113490348002307/7222774699', // MyPaisa Interstitial Ad
+    banner: 'ca-app-pub-3940256099942544/6300978111', // Test Banner Ad (Android)
+    interstitial: 'ca-app-pub-3940256099942544/1033173712', // Test Interstitial Ad (Android)
   },
 };
 

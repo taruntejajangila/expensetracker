@@ -313,7 +313,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   // Month navigation buttons
   monthNavContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 80,
     left: 0,
     right: 0,
     flexDirection: 'row',

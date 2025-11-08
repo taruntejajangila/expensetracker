@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import Constants from 'expo-constants';
 
 // NOTE: Do not import react-native-google-mobile-ads at module top-level.
@@ -14,6 +14,7 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   const disableAds = (process.env.EXPO_PUBLIC_DISABLE_ADS === '1') || (Constants.appOwnership === 'expo');
   const [retryCount, setRetryCount] = useState(0);
   const [adLibraryLoaded, setAdLibraryLoaded] = useState(false);
+  const [bannerSize, setBannerSize] = useState<any>(null);
 
   // Note: Removed auto-refresh interval and retry remounting to prevent layout shifts/shaking
   // BannerAd from react-native-google-mobile-ads handles refresh internally
@@ -23,8 +24,34 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   useEffect(() => {
     if (!disableAds) {
       try {
-        require('react-native-google-mobile-ads');
+        const adLibrary = require('react-native-google-mobile-ads');
+        const { BannerAdSize } = adLibrary;
         setAdLibraryLoaded(true);
+        
+        // Calculate banner size - use actual screen width but prevent overflow
+        // Get actual window dimensions (these are already normalized by DisplaySizeNormalizer)
+        const windowDims = Dimensions.get('window');
+        const actualScreenWidth = windowDims.width; // This is already normalized by our DisplaySizeNormalizer
+        
+        // Use ANCHORED_ADAPTIVE_BANNER which is Google's recommended format
+        // It will adapt to the container width, and our container uses full width
+        // The DisplaySizeNormalizer ensures Dimensions.get() returns normalized values
+        const calculatedSize = BannerAdSize.ANCHORED_ADAPTIVE_BANNER || BannerAdSize.ADAPTIVE_BANNER || BannerAdSize.BANNER;
+        
+        // Don't constrain width - let the banner use full container width
+        // The container itself is already constrained by normalized dimensions
+        const maxWidth = undefined; // Let banner use full width of container
+        
+        setBannerSize(calculatedSize);
+        
+        console.log('📱 Banner ad size calculated:', {
+          actualScreenWidth: actualScreenWidth,
+          windowWidth: windowDims.width,
+          windowHeight: windowDims.height,
+          pixelRatio: windowDims.scale,
+          bannerSize: calculatedSize,
+          strategy: 'ANCHORED_ADAPTIVE_BANNER with full-width container',
+        });
       } catch (error) {
         console.warn('⚠️ BannerAd library failed to load:', error);
         setAdLibraryLoaded(false);
@@ -49,16 +76,21 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   // BannerAd handles its own refresh cycle internally without remounting
   const { BannerAd, BannerAdSize, AdEventType } = require('react-native-google-mobile-ads');
   
+  // Use calculated adaptive size if available, otherwise fallback to standard banner
+  // This ensures ads are responsive to screen size, not display size setting
+  const adSize = bannerSize || BannerAdSize.BANNER; // Fallback to standard 320x50 if not calculated yet
+  
   return (
     <View style={styles.container}>
-          <BannerAd
-            unitId={Platform.OS === 'ios' 
-              ? 'ca-app-pub-4113490348002307/5694070602' // MyPaisa Banner Ad (using Android ID for now)
-              : 'ca-app-pub-4113490348002307/5694070602'} // MyPaisa Banner Ad
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-            requestOptions={{
-              requestNonPersonalizedAdsOnly: false,
-            }}
+      <View style={styles.bannerWrapper}>
+        <BannerAd
+          unitId={Platform.OS === 'ios' 
+            ? 'ca-app-pub-3940256099942544/2934735716' // Test Banner Ad (iOS)
+            : 'ca-app-pub-3940256099942544/6300978111'} // Test Banner Ad (Android)
+          size={adSize}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: false,
+          }}
             onAdLoaded={() => {
               console.log('✅ Banner ad loaded');
               setRetryCount(0); // Reset retry count on successful load
@@ -71,7 +103,7 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
           if (errorCode === 'error-code-invalid-request' || errorMessage.includes('invalid')) {
             // Only log once per refresh cycle to reduce noise
             if (retryCount === 0) {
-              console.warn('⚠️ Banner ad unit ID may be invalid or not configured in AdMob. Check ad unit ID: ca-app-pub-4113490348002307/5694070602');
+              console.warn('⚠️ Banner ad unit ID may be invalid or not configured in AdMob. Check ad unit ID: ' + (Platform.OS === 'ios' ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-3940256099942544/6300978111'));
             }
             // Don't retry for invalid requests - they won't succeed
             setRetryCount(0);
@@ -106,6 +138,7 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
               console.log('📱 Banner ad closed');
             }}
           />
+      </View>
     </View>
   );
 };
@@ -113,11 +146,21 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    maxWidth: '100%', // Ensure container doesn't exceed screen width
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
     overflow: 'hidden',
     minHeight: 50, // Prevent layout shift when ad loads/unloads
+    // Constrain ad to normalized dimensions - prevents ads from growing with display size
+    alignItems: 'center', // Center the banner ad horizontally
+    justifyContent: 'center', // Center the banner ad vertically
+  },
+  bannerWrapper: {
+    width: '100%',
+    alignItems: 'center', // Center the banner ad within wrapper
+    justifyContent: 'center', // Center the banner ad within wrapper
+    maxWidth: '100%', // Ensure wrapper doesn't exceed container
   },
   placeholder: {
     width: '100%',
