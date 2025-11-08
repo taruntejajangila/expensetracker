@@ -1,5 +1,5 @@
-// Admin Panel API Service
-// Connects to the backend API for real data
+// PaysaGo Admin Panel API Service
+// Handles authenticated requests to the PaysaGo backend for admin operations.
 
 import { API_BASE_URL } from '../../config/api.config';
 

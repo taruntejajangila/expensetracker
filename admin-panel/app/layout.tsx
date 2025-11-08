@@ -9,8 +9,8 @@ import ConditionalLayout from './components/ConditionalLayout'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Mobile App Admin Panel',
-  description: 'Admin panel for managing mobile app and users',
+  title: 'PaysaGo Admin Panel',
+  description: 'Admin panel for managing PaysaGo users and platform data',
 }
 
 export default function RootLayout({
