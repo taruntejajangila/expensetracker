@@ -8,6 +8,29 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+
+const LOG_DIRECTORY = path.join(process.cwd(), 'logs');
+const LOG_FILE_CONFIG: Array<{ file: string; defaultSource: string }> = [
+  { file: 'error.log', defaultSource: 'system' },
+  { file: 'combined.log', defaultSource: 'system' }
+];
+
+interface StructuredLogEntry {
+  id: string;
+  level: LogLevel;
+  message: string;
+  timestamp: string;
+  source: string;
+  details?: string | null;
+  stackTrace?: string | null;
+}
+
+interface LoadStructuredLogsOptions {
+  level?: string;
+  limit: number;
+}
+
 const router = express.Router();
 
 // Configure multer for image uploads (using memory storage for Cloudinary)
@@ -529,60 +552,23 @@ router.put('/users/:id/status', authenticateToken, requireAnyRole(['admin', 'sup
 // GET /api/admin/logs/errors - Get error logs
 router.get('/logs/errors', authenticateToken, requireAnyRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    // For now, return simulated error logs
-    // In a real system, you'd query from a logs table or file
-    const errorLogs = [
-      {
-        id: 1,
-        level: 'ERROR',
-        message: 'Database connection timeout after 30 seconds',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        source: 'database',
-        details: 'Failed to establish connection to PostgreSQL database. Connection pool exhausted.',
-        stackTrace: 'Error: Connection timeout\n    at Pool.connect (/app/node_modules/pg/lib/pool.js:45:12)\n    at async query (/app/src/database/connection.js:23:5)'
-      },
-      {
-        id: 2,
-        level: 'WARN',
-        message: 'High memory usage detected: 85% of available memory',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        source: 'system',
-        details: 'Memory usage has exceeded the warning threshold. Consider optimizing queries or increasing server resources.',
-        stackTrace: null
-      },
-      {
-        id: 3,
-        level: 'ERROR',
-        message: 'Failed to process transaction: Invalid amount format',
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-        source: 'api',
-        details: 'Transaction validation failed due to invalid amount format. Expected numeric value but received string.',
-        stackTrace: 'ValidationError: Invalid amount format\n    at validateTransaction (/app/src/validators/transaction.js:15:8)\n    at async createTransaction (/app/src/controllers/transaction.js:42:12)'
-      },
-      {
-        id: 4,
-        level: 'INFO',
-        message: 'User authentication successful',
-        timestamp: new Date(Date.now() - 900000).toISOString(),
-        source: 'auth',
-        details: 'User admin@expensetracker.com successfully authenticated via JWT token.',
-        stackTrace: null
-      },
-      {
-        id: 5,
-        level: 'WARN',
-        message: 'Slow query detected: 2.5 seconds execution time',
-        timestamp: new Date(Date.now() - 450000).toISOString(),
-        source: 'database',
-        details: 'Query execution time exceeded 2 seconds. Query: SELECT * FROM transactions WHERE user_id = ? AND created_at > ?',
-        stackTrace: null
-      }
-    ];
+    const requestedLevel = typeof req.query.level === 'string' ? req.query.level.toUpperCase() : undefined;
+    const requestedLimit = Number(req.query.limit);
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 500)) : 200;
 
-    logger.info(`Admin error logs requested by user: ${req.user?.id}`);
+    const logs = await loadStructuredLogs({
+      level: requestedLevel,
+      limit
+    });
+
+    logger.info(`Admin error logs requested by user: ${req.user?.id}`, {
+      requestedLevel,
+      returnedCount: logs.length
+    });
+
     res.json({
       success: true,
-      data: errorLogs
+      data: logs
     });
   } catch (error) {
     logger.error('Error fetching error logs:', error);
@@ -2801,5 +2787,120 @@ router.post('/banners/upload', authenticateToken, requireAnyRole(['admin', 'supe
     });
   }
 });
+
+const SUPPORTED_LOG_LEVELS: ReadonlyArray<LogLevel> = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
+
+const parseLogLine = (line: string): Record<string, any> | null => {
+  try {
+    return JSON.parse(line);
+  } catch (error) {
+    logger.warn('Failed to parse log line as JSON', { error: (error as Error).message, linePreview: line.slice(0, 120) });
+    return null;
+  }
+};
+
+const deriveLogLevel = (entry: Record<string, any>, fallback?: LogLevel): LogLevel | null => {
+  const levelCandidate = (entry.level || entry.levels || entry.severity || fallback || '').toString().toUpperCase();
+  if (SUPPORTED_LOG_LEVELS.includes(levelCandidate as LogLevel)) {
+    return levelCandidate as LogLevel;
+  }
+  return null;
+};
+
+const deriveLogSource = (entry: Record<string, any>, defaultSource: string): string => {
+  const sourceCandidate =
+    entry.source ||
+    entry.context?.source ||
+    entry.context?.module ||
+    entry.module ||
+    entry.service ||
+    entry.label;
+
+  if (typeof sourceCandidate === 'string' && sourceCandidate.trim().length > 0) {
+    return sourceCandidate;
+  }
+
+  return defaultSource;
+};
+
+const buildStructuredLog = (
+  rawEntry: Record<string, any>,
+  defaultSource: string,
+  index: number,
+  fileName: string,
+  fallbackLevel?: LogLevel
+): StructuredLogEntry | null => {
+  const level = deriveLogLevel(rawEntry, fallbackLevel);
+  if (!level) {
+    return null;
+  }
+
+  const timestamp = typeof rawEntry.timestamp === 'string' ? rawEntry.timestamp : new Date().toISOString();
+  const message = typeof rawEntry.message === 'string' ? rawEntry.message : 'Untitled log message';
+  const details =
+    typeof rawEntry.details === 'string'
+      ? rawEntry.details
+      : typeof rawEntry.meta?.details === 'string'
+        ? rawEntry.meta.details
+        : typeof rawEntry.error?.message === 'string'
+          ? rawEntry.error.message
+          : undefined;
+  const stackTrace =
+    typeof rawEntry.stack === 'string'
+      ? rawEntry.stack
+      : typeof rawEntry.error?.stack === 'string'
+        ? rawEntry.error.stack
+        : undefined;
+
+  return {
+    id: rawEntry.id?.toString() || `${fileName}-${timestamp}-${index}`,
+    level,
+    message,
+    timestamp,
+    source: deriveLogSource(rawEntry, defaultSource),
+    details: details ?? null,
+    stackTrace: stackTrace ?? null
+  };
+};
+
+const loadStructuredLogs = async ({ level, limit }: LoadStructuredLogsOptions): Promise<StructuredLogEntry[]> => {
+  const entries: StructuredLogEntry[] = [];
+  const normalizedRequestedLevel = level && SUPPORTED_LOG_LEVELS.includes(level as LogLevel) ? (level as LogLevel) : undefined;
+
+  for (const fileConfig of LOG_FILE_CONFIG) {
+    const filePath = path.join(LOG_DIRECTORY, fileConfig.file);
+    try {
+      const fileContent = await fs.promises.readFile(filePath, 'utf8');
+      const lines = fileContent.split(/\r?\n/).filter((line) => line.trim().length > 0);
+      const samplingWindow = Math.max(limit * 2, 200);
+      const recentLines = lines.slice(-samplingWindow);
+
+      recentLines.forEach((line, index) => {
+        const parsed = parseLogLine(line);
+        if (!parsed) return;
+
+        const structured = buildStructuredLog(parsed, fileConfig.defaultSource, index, fileConfig.file);
+        if (!structured) return;
+
+        if (normalizedRequestedLevel && structured.level !== normalizedRequestedLevel) {
+          return;
+        }
+
+        entries.push(structured);
+      });
+    } catch (error) {
+      const errorCode = (error as NodeJS.ErrnoException).code;
+      if (errorCode === 'ENOENT') {
+        logger.warn('Log file not found while loading structured logs', { filePath });
+        continue;
+      }
+      logger.error('Failed to read log file', { filePath, error: (error as Error).message });
+    }
+  }
+
+  entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return entries.slice(0, limit);
+};
 
 export default router;
