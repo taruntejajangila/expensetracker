@@ -544,6 +544,18 @@ export interface Alert {
   details: string
 }
 
+export type SystemLogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG'
+
+export interface SystemErrorLog {
+  id: string | number
+  level: SystemLogLevel
+  message: string
+  timestamp: string
+  source: string
+  details?: string | null
+  stackTrace?: string | null
+}
+
 export interface AlertStatistics {
   severity: string
   count: number
@@ -728,8 +740,8 @@ class AdminAPIService {
   }
 
   // Get error logs
-  async getErrorLogs(): Promise<any[]> {
-    return this.makeRequest<any[]>('/admin/logs/errors')
+  async getErrorLogs(): Promise<SystemErrorLog[]> {
+    return this.makeRequest<SystemErrorLog[]>('/admin/logs/errors')
   }
 
   // Get performance metrics
