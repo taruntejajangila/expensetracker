@@ -89,17 +89,17 @@ export default function FinancialPage() {
   const formatCurrency = (amount: any) => {
     // Convert to number and handle all edge cases
     if (amount === null || amount === undefined) {
-      return '$0'
+      return '₹0'
     }
     
     const numAmount = Number(amount)
     if (isNaN(numAmount)) {
-      return '$0'
+      return '₹0'
     }
     
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(numAmount)
