@@ -377,16 +377,16 @@ const AddAccountScreen: React.FC = () => {
                 isEdit && editingAccount?.id ? editingAccount.id : undefined
               );
               if (isSameBankConflict) {
-                newErrors.accountNumber = msg.trim();
-              }
+              newErrors.accountNumber = msg.trim();
+            }
             }
           });
           
           if (Object.keys(newErrors).length > 0) {
-            setErrors(prev => ({
-              ...prev,
-              ...newErrors
-            }));
+          setErrors(prev => ({
+            ...prev,
+            ...newErrors
+          }));
           } else {
             setErrors(prev => {
               const updated = { ...prev };
@@ -506,9 +506,9 @@ const AddAccountScreen: React.FC = () => {
         });
 
         if (shouldBlock) {
-          Alert.alert('Duplicate Account', duplicateResult.message);
-          setCheckingDuplicate(false);
-          return;
+        Alert.alert('Duplicate Account', duplicateResult.message);
+        setCheckingDuplicate(false);
+        return;
         }
       }
     } catch (error: any) {
@@ -576,9 +576,9 @@ const AddAccountScreen: React.FC = () => {
           setBankSuggestion(null);
           
           await AsyncStorage.setItem('addTransactionNewAccountId', result.data.id);
-          Alert.alert('Success', 'Account added successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
+        Alert.alert('Success', 'Account added successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
         } else {
           // Show specific error message from backend
           Alert.alert('Error', result.message || 'Failed to add account. Please try again.');
