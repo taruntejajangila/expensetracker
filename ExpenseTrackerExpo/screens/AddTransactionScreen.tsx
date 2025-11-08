@@ -984,7 +984,14 @@ const AddTransactionScreen = () => {
                 <TextInput style={styles.amountInput}
                   value={amount}
                   onChangeText={(text) => {
-                    setAmount(text);
+                    const sanitized = text.replace(/[^0-9.]/g, '');
+                    const parts = sanitized.split('.');
+                    if (parts.length > 2) {
+                      return;
+                    }
+                    const normalized =
+                      parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
+                    setAmount(normalized);
                     if (errors.amount) {
                       setErrors(prev => ({ ...prev, amount: ''}));
                     }

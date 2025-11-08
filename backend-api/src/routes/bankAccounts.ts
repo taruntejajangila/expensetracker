@@ -88,27 +88,6 @@ router.get('/check-duplicate', authenticateToken, async (req: any, res: any) => 
     
     const duplicateChecks: string[] = [];
     
-    // Check for duplicate account number
-    if (accountNumber && accountNumber.trim() !== '') {
-      let accountNumberQuery = `
-        SELECT id, account_name, bank_name, account_number 
-        FROM bank_accounts 
-        WHERE user_id = $1 AND account_number = $2 AND account_number != ''
-      `;
-      const accountNumberValues: any[] = [userId, accountNumber];
-      
-      if (excludeId) {
-        accountNumberQuery += ' AND id != $3';
-        accountNumberValues.push(excludeId);
-      }
-      
-      const accountNumberResult = await req.app.locals.db.query(accountNumberQuery, accountNumberValues);
-      
-      if (accountNumberResult.rows.length > 0) {
-        duplicateChecks.push(`Account number ${accountNumber} is already in use`);
-      }
-    }
-    
     // Check for duplicate nickname
     if (nickname && nickname.trim() !== '') {
       let nicknameQuery = `
@@ -131,7 +110,7 @@ router.get('/check-duplicate', authenticateToken, async (req: any, res: any) => 
     }
     
     // Check for duplicate bank + account number combination
-    if (bankName && accountNumber && accountNumber.trim() !== '') {
+    if (bankName && bankName.trim() !== '' && accountNumber && accountNumber.trim() !== '') {
       let bankAccountQuery = `
         SELECT id, account_name, bank_name, account_number 
         FROM bank_accounts 
@@ -258,8 +237,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       FROM bank_accounts 
       WHERE user_id = $1 
       AND (
-        (account_number = $2 AND account_number != '') 
-        OR (account_name = $3)
+        (account_name = $3)
         OR (bank_name = $4 AND account_number = $2 AND account_number != '')
       )
     `;
@@ -271,9 +249,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       const duplicates = duplicateResult.rows;
       let errorMessage = 'Account already exists: ';
       
-      if (duplicates.some((d: any) => d.account_number === accountNumber && d.account_number !== '')) {
-        errorMessage += `Account number ${accountNumber} is already in use`;
-      } else if (duplicates.some((d: any) => d.account_name === name)) {
+      if (duplicates.some((d: any) => d.account_name === name)) {
         errorMessage += `Account nickname "${name}" is already in use`;
       } else if (duplicates.some((d: any) => d.bank_name === bankName && d.account_number === accountNumber)) {
         errorMessage += `Account with bank ${bankName} and number ${accountNumber} already exists`;
@@ -374,9 +350,8 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          WHERE user_id = $1 
          AND id != $2
          AND (
-           (account_number = $3 AND account_number != '' AND $3 != '') 
-           OR (account_name = $4 AND $4 != '')
-           OR (bank_name = $5 AND account_number = $3 AND account_number != '' AND $3 != '')
+         (account_name = $4 AND $4 != '')
+         OR (bank_name = $5 AND account_number = $3 AND account_number != '' AND $3 != '')
          )
        `;
        
@@ -394,9 +369,7 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
          const duplicates = duplicateResult.rows;
          let errorMessage = 'Account already exists: ';
          
-         if (duplicates.some((d: any) => d.account_number === (accountNumber || checkResult.rows[0].account_number) && (accountNumber || checkResult.rows[0].account_number) !== '')) {
-           errorMessage += `Account number ${accountNumber || checkResult.rows[0].account_number} is already in use`;
-         } else if (duplicates.some((d: any) => d.account_name === (name || checkResult.rows[0].account_name))) {
+         if (duplicates.some((d: any) => d.account_name === (name || checkResult.rows[0].account_name))) {
            errorMessage += `Account nickname "${name || checkResult.rows[0].account_name}" is already in use`;
          } else if (duplicates.some((d: any) => d.bank_name === (bankName || checkResult.rows[0].bank_name) && d.account_number === (accountNumber || checkResult.rows[0].account_number))) {
            errorMessage += `Account with bank ${bankName || checkResult.rows[0].bank_name} and number ${accountNumber || checkResult.rows[0].account_number} already exists`;
