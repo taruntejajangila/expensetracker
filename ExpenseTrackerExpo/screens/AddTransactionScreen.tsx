@@ -187,6 +187,9 @@ const AddTransactionScreen = () => {
           setAccounts([newWallet]);
           setSelectedAccountId(newWallet.id);
         }
+        // Clear saved form data after restoring so it doesn't persist for unrelated visits
+        await AsyncStorage.removeItem('addTransactionFormData');
+        console.log('🗑️ Cleared saved form data after restore');
       }
       
       // Update ad counter
