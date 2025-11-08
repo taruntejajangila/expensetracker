@@ -149,18 +149,7 @@ const LoanAmortizationScreen: React.FC = () => {
             </Text>
           </View>
           
-          <View style={styles.headerRight}>
-            <TouchableOpacity 
-              style={styles.shareButton}
-              onPress={() => {
-                // TODO: Implement share functionality
-                console.log('Share amortization schedule');
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="share-outline" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerRight} />
         </View>
       </View>
     );
@@ -358,12 +347,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     marginTop: 2,
-  },
-  shareButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollContent: {
     paddingHorizontal: 16,
