@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
-import { formatCurrency, formatNumber } from '../utils/currencyFormatter';
+import { formatCurrency, formatNumber, formatIndianNumberInput } from '../utils/currencyFormatter';
 
 const { width } = Dimensions.get('window');
 
@@ -569,8 +569,19 @@ const LoanCalculatorScreen: React.FC = () => {
                   <Text style={styles.currencySymbol} allowFontScaling={false}>₹</Text>
                   <TextInput
                     style={styles.amountInput}
-                    value={loanAmount}
-                    onChangeText={setLoanAmount}
+                    value={formatIndianNumberInput(loanAmount)}
+                    onChangeText={(text) => {
+                      const sanitizedInput = text.replace(/,/g, '');
+                      const sanitized = sanitizedInput.replace(/[^0-9.]/g, '');
+                      const parts = sanitized.split('.');
+                      if (parts.length > 2) {
+                        return;
+                      }
+                      const integerPart = parts[0];
+                      const decimalPart = parts[1] ? parts[1].slice(0, 2) : '';
+                      const normalized = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+                      setLoanAmount(normalized);
+                    }}
                     placeholder="Enter loan amount"
                     placeholderTextColor={theme.colors.textSecondary}
                     keyboardType="numeric"

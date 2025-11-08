@@ -68,6 +68,39 @@ export const formatNumber = (num: number, showDecimals: boolean = false): string
 };
 
 /**
+ * Format a numeric string for input fields using the Indian grouping system.
+ * Accepts a raw string containing only digits and an optional decimal point.
+ */
+export const formatIndianNumberInput = (rawValue: string): string => {
+  if (!rawValue) {
+    return '';
+  }
+
+  const parts = rawValue.split('.');
+  let integerPart = parts[0];
+  const decimalPart = parts[1] ?? '';
+
+  if (!integerPart) {
+    integerPart = '0';
+  }
+
+  // Remove leading zeros while keeping at least one digit
+  integerPart = integerPart.replace(/^0+(?!$)/, '');
+
+  if (integerPart.length <= 3) {
+    const base = integerPart;
+    return decimalPart ? `${base}.${decimalPart}` : base;
+  }
+
+  const lastThree = integerPart.slice(-3);
+  const rest = integerPart.slice(0, -3);
+  const formattedRest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+  const formattedInteger = `${formattedRest},${lastThree}`;
+
+  return decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+};
+
+/**
  * Quick format function for currency (shorthand)
  * Same as formatCurrency(amount, true, false)
  */

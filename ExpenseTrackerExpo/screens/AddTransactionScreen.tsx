@@ -29,7 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { categoryService, Category } from '../services/CategoryService';
 import { getIconName } from '../utils/iconUtils';
-import { formatCurrency } from '../utils/currencyFormatter';
+import { formatCurrency, formatIndianNumberInput } from '../utils/currencyFormatter';
 
 const AddTransactionScreen = () => {
   const navigation = useNavigation();
@@ -982,15 +982,17 @@ const AddTransactionScreen = () => {
               <View style={styles.amountContainer}>
                 <Text style={styles.currencySymbol} allowFontScaling={false}>₹</Text>
                 <TextInput style={styles.amountInput}
-                  value={amount}
+                  value={formatIndianNumberInput(amount)}
                   onChangeText={(text) => {
-                    const sanitized = text.replace(/[^0-9.]/g, '');
+                    const sanitizedInput = text.replace(/,/g, '');
+                    const sanitized = sanitizedInput.replace(/[^0-9.]/g, '');
                     const parts = sanitized.split('.');
                     if (parts.length > 2) {
                       return;
                     }
-                    const normalized =
-                      parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
+                    const integerPart = parts[0];
+                    const decimalPart = parts[1] ? parts[1].slice(0, 2) : '';
+                    const normalized = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
                     setAmount(normalized);
                     if (errors.amount) {
                       setErrors(prev => ({ ...prev, amount: ''}));
