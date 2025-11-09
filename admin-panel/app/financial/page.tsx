@@ -20,6 +20,7 @@ import {
   PiggyBank
 } from 'lucide-react'
 import adminAPI, { FinancialAnalytics, FinancialSummary } from '../services/api'
+import { formatNumber } from '../../utils/numberFormatter'
 
 // Emoji mapping function for categories
 const getCategoryEmoji = (categoryName: string) => {
@@ -250,7 +251,7 @@ export default function FinancialPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active Users</p>
-                <p className="text-2xl font-bold text-gray-900">{financialSummary.active_users}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatNumber(financialSummary.active_users || 0)}</p>
               </div>
             </div>
           </div>
@@ -269,11 +270,11 @@ export default function FinancialPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-900">{financialAnalytics.financialStats.total_transactions?.toLocaleString() || '0'}</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatNumber(financialAnalytics.financialStats.total_transactions || 0)}</div>
                   <div className="text-sm text-gray-600">Total Transactions</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-900">{financialAnalytics.financialStats.active_users?.toLocaleString() || '0'}</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatNumber(financialAnalytics.financialStats.active_users || 0)}</div>
                   <div className="text-sm text-gray-600">Active Users</div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, User, Mail, Calendar, Activity, CreditCard, TrendingUp, AlertCircle, RefreshCw, DollarSign, Laptop, Briefcase, Home, Gift, Plus, ShoppingCart, Utensils, Zap, ShoppingBag, Film, Car, Plane, CreditCard as CardIcon, Heart, GraduationCap, TrendingUp as TrendingUpIcon, Users, Clock, Wifi } from 'lucide-react'
 import adminAPI from '../../services/api'
+import { formatCurrency } from '../../utils/numberFormatter'
 
 interface UserDetails {
   id: string
@@ -512,7 +513,7 @@ export default function UserDetailsPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Balance</span>
                               <span className="text-lg font-bold text-gray-900">
-                                ₹{parseFloat(account.balance || 0).toLocaleString()}
+                                {formatCurrency(parseFloat(account.balance || '0'))}
                               </span>
                             </div>
                             
@@ -572,7 +573,7 @@ export default function UserDetailsPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Balance</span>
                               <span className="text-lg font-bold text-gray-900">
-                                ₹{parseFloat(account.balance || 0).toLocaleString()}
+                                {formatCurrency(parseFloat(account.balance || '0'))}
                               </span>
                             </div>
                             
@@ -607,12 +608,10 @@ export default function UserDetailsPage() {
                       </div>
                       <div className="text-xs text-gray-600">Cash Wallets</div>
                     </div>
-                    <div>
-                      <div className="text-lg font-semibold text-gray-600">
-                        ₹{user.accounts.reduce((total: number, acc: any) => total + parseFloat(acc.balance || 0), 0).toLocaleString()}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                        <div className="text-sm text-gray-600">Total Account Balance</div>
+                        <div className="text-xl font-bold text-gray-900">{formatCurrency(user.accounts.reduce((total: number, acc: any) => total + parseFloat(acc.balance || 0), 0))}</div>
                       </div>
-                      <div className="text-xs text-gray-600">Total Balance</div>
-                    </div>
                     <div>
                       <div className="text-lg font-semibold text-purple-600">
                         {user.accounts.filter((acc: any) => parseFloat(acc.balance || 0) > 0).length}

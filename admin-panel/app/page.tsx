@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Users, Smartphone, CreditCard, TrendingUp, Activity, DollarSign, AlertTriangle, CheckCircle, XCircle, FileSearch, Bell } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import adminAPI, { SystemStats, SystemHealth, LiveTraffic } from './services/api'
+import { formatNumber } from '../utils/numberFormatter'
 
 
 export default function Dashboard() {
@@ -219,7 +220,7 @@ export default function Dashboard() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Users</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.totalUsers.toLocaleString()}
+                  {formatNumber(stats.totalUsers)}
                 </p>
               </div>
             </div>
@@ -233,7 +234,7 @@ export default function Dashboard() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active Users</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.activeUsers.toLocaleString()}
+                  {formatNumber(stats.activeUsers)}
                 </p>
               </div>
             </div>
@@ -256,7 +257,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {liveTraffic ? liveTraffic.liveUsers.toLocaleString() : '0'}
+                  {liveTraffic ? formatNumber(liveTraffic.liveUsers) : '0'}
                 </p>
                                  <div className="text-xs text-gray-500 space-y-1">
                    <p>{liveTraffic ? `${liveTraffic.hourlyActive} active (2h)` : '0 active (2h)'}</p>

@@ -1,23 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { 
-  BarChart3, 
-  Users, 
-  TrendingUp, 
-  Activity, 
-  Clock, 
-  Target, 
-  Smartphone, 
-  Database, 
-  Zap,
-  RefreshCw,
-  Calendar,
-  PieChart,
-  LineChart,
-  Gauge
-} from 'lucide-react'
-import adminAPI, { UsageAnalytics, PerformanceAnalytics, TrendsAnalytics } from '../services/api'
+import { useEffect, useMemo, useState } from 'react'
+import { BarChart, LineChart, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, CartesianGrid, XAxis, YAxis, Bar, Line, AreaChart, Area } from 'recharts'
+import { Activity, AlertTriangle, BarChart3, CheckCircle, Clock, CreditCard, DollarSign, Download, Eye, Filter, Layers, PieChart as PieChartIcon, RefreshCw, Search, Server, ShoppingBag, Smartphone, Target, TrendingDown, TrendingUp, Users } from 'lucide-react'
+import adminAPI, { AnalyticsResponse, PeriodOption } from '../services/api'
+import { formatNumber } from '../../utils/numberFormatter'
 
 export default function AnalyticsPage() {
   const [usageAnalytics, setUsageAnalytics] = useState<UsageAnalytics | null>(null)
@@ -338,7 +325,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Total Requests:</span>
-                <span className="font-medium">{performanceAnalytics.apiPerformance.overall.totalRequests.toLocaleString()}</span>
+                <span className="font-medium">{formatNumber(performanceAnalytics.apiPerformance.overall.totalRequests)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Error Rate:</span>

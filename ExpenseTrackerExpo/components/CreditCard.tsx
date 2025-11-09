@@ -1,6 +1,8 @@
-import React from 'react';
-import {  View, Text, StyleSheet, Image, Dimensions  } from 'react-native';
-
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, Image, useWindowDimensions } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 
 interface CreditCardProps {
@@ -14,8 +16,6 @@ interface CreditCardProps {
   currentBalance?: number;
   cardColor?: string;
 }
-
-const { width } = Dimensions.get('window');
 
 const CreditCard: React.FC<CreditCardProps> = ({
   cardNumber = '8050 5040 2030 3020',
@@ -74,8 +74,10 @@ const CreditCard: React.FC<CreditCardProps> = ({
     }
   };
 
+  const { width } = useWindowDimensions();
+
   return (
-    <View style={[styles.container, { backgroundColor: getCardColor() }]}>
+    <View style={[styles.container, { backgroundColor: getCardColor(), width: Math.min(width * 0.9, 380) }]}>
       {/* Background image with reduced opacity to show dynamic colors */}
       <Image 
         source={require('./CreditCardUI/images/bg.png')} 
@@ -105,15 +107,15 @@ const CreditCard: React.FC<CreditCardProps> = ({
         <View style={styles.financialSection}>
           <View style={styles.financialRow}>
             <Text style={styles.financialLabel} allowFontScaling={false}>Limit</Text>
-            <Text style={styles.financialValue} allowFontScaling={false}>₹{creditLimit?.toLocaleString()}</Text>
+            <Text style={styles.financialValue} allowFontScaling={false}>{formatCurrency(creditLimit || 0)}</Text>
           </View>
           <View style={styles.financialRow}>
             <Text style={styles.financialLabel} allowFontScaling={false}>Available</Text>
-            <Text style={styles.financialValue} allowFontScaling={false}>₹{(creditLimit - currentBalance)?.toLocaleString()}</Text>
+            <Text style={styles.financialValue} allowFontScaling={false}>{formatCurrency((creditLimit || 0) - (currentBalance || 0))}</Text>
           </View>
           <View style={styles.financialRow}>
             <Text style={styles.financialLabel} allowFontScaling={false}>Outstanding</Text>
-            <Text style={styles.financialValue} allowFontScaling={false}>₹{currentBalance?.toLocaleString()}</Text>
+            <Text style={styles.financialValue} allowFontScaling={false}>{formatCurrency(currentBalance || 0)}</Text>
           </View>
         </View>
       </View>
@@ -127,7 +129,6 @@ const styles = StyleSheet.create({
     padding: 25,
     borderRadius: 28,
     maxWidth: 380,
-    width: width * 0.9,
     height: 220, // Fixed height for consistency
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },

@@ -23,6 +23,7 @@ import GoalService, { Goal } from '../services/GoalService';
 import { useFocusEffect } from '@react-navigation/native';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface SavingsGoal {
   id: string;
@@ -45,15 +46,6 @@ const SavingsGoalsScreen: React.FC = () => {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   // Removed mock interstitial state
-
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const absoluteAmount = Math.abs(amount);
-    return `${isNegative ? '-' : ''}₹${absoluteAmount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
 
   const getProgress = (current: number, target: number) => {
     return Math.min(Math.round((current / target) * 100), 100);

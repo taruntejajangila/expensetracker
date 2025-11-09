@@ -4,6 +4,7 @@ import {  View, Text, StyleSheet  } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface CashWalletProps {
   balance: number;
@@ -39,7 +40,7 @@ const CashWallet: React.FC<CashWalletProps> = ({
         <View style={styles.cardDetails}>
           <View style={styles.nameNumber}>
             <Text style={styles.label} allowFontScaling={false}>Available Balance</Text>
-            <Text style={styles.number} allowFontScaling={false}>₹{balance.toLocaleString()}</Text>
+            <Text style={styles.number} allowFontScaling={false}>{formatCurrency(balance)}</Text>
             <Text style={styles.name} allowFontScaling={false}>CASH ACCOUNT</Text>
           </View>
           <View style={styles.balanceSection}>

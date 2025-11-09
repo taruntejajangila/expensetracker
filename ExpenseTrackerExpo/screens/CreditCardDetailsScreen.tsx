@@ -610,7 +610,7 @@ const CreditCardDetailsScreen: React.FC = () => {
                     <View style={styles.financialDetails}>
                       <Text style={styles.financialLabel} allowFontScaling={false}>Current Balance</Text>
                       <Text style={styles.financialValue} allowFontScaling={false}>
-                        ₹{creditCard.currentBalance ? creditCard.currentBalance.toLocaleString() : '0'}
+                        {formatCurrency(creditCard.currentBalance || 0)}
                       </Text>
                     </View>
                   </View>
@@ -762,7 +762,7 @@ const CreditCardDetailsScreen: React.FC = () => {
               <View style={styles.reminderTextContainer}>
                 <Text style={styles.reminderTitle} allowFontScaling={false}>Payment Due Soon</Text>
                 <Text style={styles.reminderSubtitle} allowFontScaling={false}>
-                  Your payment of ₹{creditCard.currentBalance.toLocaleString()} is due in {daysUntilDue} day{daysUntilDue === 1 ? '' : 's'}. Make sure to pay on time to avoid late fees.
+                  Your payment of {formatCurrency(creditCard.currentBalance || 0)} is due in {daysUntilDue} day{daysUntilDue === 1 ? '' : 's'}. Make sure to pay on time to avoid late fees.
                 </Text>
               </View>
             </View>

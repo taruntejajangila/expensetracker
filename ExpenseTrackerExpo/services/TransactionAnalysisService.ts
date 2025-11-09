@@ -3,6 +3,7 @@ import { Reminder } from '../types/PaymentTypes';
 import TransactionService from './transactionService';
 import { LoanService } from './LoanService';
 import ReminderService from './ReminderService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 // Transaction interface (assuming this exists in your app)
 interface Transaction {
@@ -260,11 +261,11 @@ class TransactionAnalysisService {
       let description = mostDescriptive.description;
       if (!description || description.trim() === '') {
         // Create a meaningful title based on category and average amount
-        description = `${lastTransaction.category} payment (₹${Math.round(avgAmount).toLocaleString()})`;
+        description = `${lastTransaction.category} payment (${formatCurrency(Math.round(avgAmount))})`;
       } else {
         // If using an existing description, make sure it reflects the average amount if it contains an amount
         // Replace any amount in the description with the average amount
-        description = description.replace(/₹[0-9,]+/g, `₹${Math.round(avgAmount).toLocaleString()}`);
+        description = description.replace(/₹[0-9,]+/g, formatCurrency(Math.round(avgAmount)));
       }
       
       const pattern = {
@@ -299,11 +300,11 @@ class TransactionAnalysisService {
       let description = mostDescriptive.description;
       if (!description || description.trim() === '') {
         // Create a meaningful title based on category and average amount
-        description = `${lastTransaction.category} payment (₹${Math.round(avgAmount).toLocaleString()})`;
+        description = `${lastTransaction.category} payment (${formatCurrency(Math.round(avgAmount))})`;
       } else {
         // If using an existing description, make sure it reflects the average amount if it contains an amount
         // Replace any amount in the description with the average amount
-        description = description.replace(/₹[0-9,]+/g, `₹${Math.round(avgAmount).toLocaleString()}`);
+        description = description.replace(/₹[0-9,]+/g, formatCurrency(Math.round(avgAmount)));
       }
       
       const pattern = {
@@ -430,7 +431,7 @@ class TransactionAnalysisService {
           const reminder: Reminder = {
             id: `loan_${loan.id}_${nextEMIDate.getTime()}`, // Use EMI date for consistent ID
             title: `${loan.name} EMI`,
-            description: `EMI payment of ₹${loan.monthlyPayment.toLocaleString()} is due on ${nextEMIDate.toLocaleDateString()}`,
+            description: `EMI payment of ${formatCurrency(Number(loan.monthlyPayment) || 0)} is due on ${nextEMIDate.toLocaleDateString()}`,
             type: 'payment',
             date: reminderDate,
             time: '09:00',
@@ -514,7 +515,7 @@ class TransactionAnalysisService {
             const reminder: Reminder = {
               id: `smart_${pattern.category.toLowerCase().replace(/\s+/g, '_')}_${nextDueDate.getTime()}`, // Use due date for consistent ID
               title: pattern.description, // Use actual transaction description
-              description: `Payment of ₹${pattern.amount.toLocaleString()} is due on ${nextDueDate.toLocaleDateString()}`,
+              description: `Payment of ${formatCurrency(pattern.amount)} is due on ${nextDueDate.toLocaleDateString()}`,
               type: 'payment',
               date: reminderDate,
               time: '09:00',
@@ -557,7 +558,7 @@ class TransactionAnalysisService {
             const reminder: Reminder = {
               id: `smart_${pattern.category.toLowerCase().replace(/\s+/g, '_')}_weekly_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               title: pattern.description, // Use actual transaction description
-              description: `Payment of ₹${pattern.amount.toLocaleString()} is due on ${nextDueDate.toLocaleDateString()}`,
+              description: `Payment of ${formatCurrency(pattern.amount)} is due on ${nextDueDate.toLocaleDateString()}`,
               type: 'payment',
               date: reminderDate,
               time: '09:00',

@@ -76,6 +76,20 @@ export interface LoanAmortizationSchedule {
 class LoanService {
   private static instance: LoanService;
 
+  private readonly currencyFormatter = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
+  private formatCurrency(amount: number | null | undefined): string {
+    if (amount === null || amount === undefined || Number.isNaN(amount)) {
+      return '₹0';
+    }
+    return this.currencyFormatter.format(amount);
+  }
+
   static getInstance(): LoanService {
     if (!LoanService.instance) {
       LoanService.instance = new LoanService();
@@ -248,10 +262,10 @@ class LoanService {
   private getDuplicateErrorMessage(reason: string, existingLoan: Loan): string {
     switch (reason) {
       case 'exact_duplicate':
-        return `A loan with identical details already exists: "${existingLoan.name}" (₹${existingLoan.amount.toLocaleString()}, ${existingLoan.interestRate * 100}%, ${existingLoan.termMonths} months, ${existingLoan.lender || 'No lender'})`;
+        return `A loan with identical details already exists: "${existingLoan.name}" (${this.formatCurrency(existingLoan.amount)}, ${existingLoan.interestRate * 100}%, ${existingLoan.termMonths} months, ${existingLoan.lender || 'No lender'})`;
       
       case 'similar_loan':
-        return `A similar loan already exists: "${existingLoan.name}" from ${existingLoan.lender || 'the same lender'} with amount ₹${existingLoan.amount.toLocaleString()}. Please use a different name or lender.`;
+        return `A similar loan already exists: "${existingLoan.name}" from ${existingLoan.lender || 'the same lender'} with amount ${this.formatCurrency(existingLoan.amount)}. Please use a different name or lender.`;
       
       case 'same_name_lender':
         return `A loan named "${existingLoan.name}" already exists from ${existingLoan.lender || 'the same lender'}. Please use a different name or lender.`;

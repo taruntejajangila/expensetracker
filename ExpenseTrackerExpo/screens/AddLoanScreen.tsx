@@ -10,6 +10,7 @@ import { BannerAdComponent } from '../components/AdMobComponents';
  
 import { useTheme } from '../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { formatNumber } from '../utils/currencyFormatter';
  
 
 const AddLoanScreen: React.FC = () => {
@@ -205,8 +206,8 @@ const AddLoanScreen: React.FC = () => {
     const monthlyLabel = isInterestOnly ? 'Monthly Interest' : 'Monthly EMI';
 
     const formattedMonthly = useMemo(() => {
-        if (monthlyAmount == null || !isFinite(monthlyAmount)) return '--';
-        return Math.round(monthlyAmount).toLocaleString(undefined, { maximumFractionDigits: 0 });
+         if (monthlyAmount == null || !isFinite(monthlyAmount)) return '--';
+        return formatNumber(Math.round(monthlyAmount));
     }, [monthlyAmount]);
 
     // Clear or prefill inputs when screen gains focus

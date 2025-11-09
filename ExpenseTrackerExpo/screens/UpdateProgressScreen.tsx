@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import GoalService from '../services/GoalService';
+import { formatCurrency } from '../utils/currencyFormatter';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface SavingsGoal {
@@ -44,15 +45,6 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
   const [newAmount, setNewAmount] = useState('');
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
   const [isLoading, setIsLoading] = useState(false);
-
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const absoluteAmount = Math.abs(amount);
-    return `${isNegative ? '-' : ''}₹${absoluteAmount.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    })}`;
-  };
 
   const getColorWithOpacity = (color: string, opacity: number) => {
     // Convert hex to rgba

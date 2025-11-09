@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CreditCard from '../components/CreditCard';
 import CreditCardService from '../services/CreditCardService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 const AddCreditCardScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -400,7 +401,7 @@ const AddCreditCardScreen: React.FC = () => {
               <View style={styles.summaryContainer}>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel} allowFontScaling={false}>Available Credit:</Text>
-                  <Text style={styles.summaryValue} allowFontScaling={false}>₹{availableCredit.toLocaleString()}</Text>
+                  <Text style={styles.summaryValue} allowFontScaling={false}>{formatCurrency(isNaN(availableCredit) ? 0 : availableCredit)}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel} allowFontScaling={false}>Credit Utilization:</Text>

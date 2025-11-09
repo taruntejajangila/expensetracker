@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import WheelDatePicker from '../components/WheelDatePicker';
 import GoalService from '../services/GoalService';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface AddGoalScreenProps {
   navigation: any;
@@ -203,7 +204,7 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
 
     // Show action sheet with goal options
     const options = goalOptions.map(goal => ({
-      text: `${goal.name} - ₹${parseInt(goal.amount).toLocaleString()}`,
+      text: `${goal.name} - ${formatCurrency(Number(goal.amount) || 0)}`,
       onPress: () => {
         console.log(`🔍 AddGoalScreen: Auto-filling with ${goal.name}...`);
         setGoalName(goal.name);
@@ -313,7 +314,7 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
                   {goalName || 'Your Goal Name'}
                 </Text>
                 <Text style={styles.previewAmount} allowFontScaling={false}>
-                  {targetAmount ? `₹${parseFloat(targetAmount).toLocaleString()}` : '₹0'}
+                  {targetAmount ? formatCurrency(parseFloat(targetAmount)) : formatCurrency(0)}
                 </Text>
               </View>
             </View>

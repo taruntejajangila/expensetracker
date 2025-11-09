@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GoalService from '../services/GoalService';
 import { BannerAdComponent } from '../components/AdMobComponents';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface EditGoalScreenProps {
   route: {
@@ -235,14 +236,14 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
               <View style={styles.previewMainInfo}>
                 <Text style={styles.previewHeaderText} allowFontScaling={false}>{goalName || 'Your Goal Name'}</Text>
                 <Text style={styles.previewSubtitle} allowFontScaling={false}>
-                  Target: {targetAmount ? `₹${parseFloat(targetAmount).toLocaleString()}` : '₹0'}
+                  Target: {targetAmount ? formatCurrency(parseFloat(targetAmount)) : formatCurrency(0)}
                 </Text>
               </View>
             </View>
             <View style={styles.previewDetails}>
               <View style={styles.previewDetailItem}>
                 <Text style={styles.previewDetailText} allowFontScaling={false}>
-                  Current: ₹{goal.currentAmount.toLocaleString()}
+                  Current: {formatCurrency(goal.currentAmount)}
                 </Text>
               </View>
               <View style={styles.previewDetailItem}>

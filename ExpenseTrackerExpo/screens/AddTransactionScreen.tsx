@@ -828,7 +828,7 @@ useEffect(() => {
         const projected = currentBalance - parsedAmount;
         Alert.alert(
           'Insufficient funds',
-          `This will make ${acc?.name || 'the account'} ${balanceType} ${projected < 0 ? '-' : ''}₹${Math.abs(projected).toLocaleString()}. Continue?`,
+          `This will make ${acc?.name || 'the account'} ${balanceType} ${formatCurrency(projected)}. Continue?`,
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Proceed', style: 'destructive', onPress: () => { void proceedSave(); } },

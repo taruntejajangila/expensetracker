@@ -5,6 +5,7 @@ import {  View, Text, StyleSheet, TouchableOpacity  } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Transaction } from '../services/transactionService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface RecentActivityProps {
   transactions: Transaction[];
@@ -64,7 +65,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
               </View>
               <View style={styles.transactionRight}>
                 <Text style={styles.modernTransactionAmount} allowFontScaling={false}>
-                  {transaction.type === 'expense' ? '-' : '+'}₹{transaction.amount.toLocaleString()}
+                  {transaction.type === 'expense' ? '-' : '+'}{formatCurrency(transaction.amount)}
                 </Text>
                 <View style={styles.transactionCategory}>
                   <Text style={styles.categoryText} allowFontScaling={false}>

@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Smartphone, Download, Settings, Activity, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { AppWindow, Users, Download, Shield, Bell, RefreshCw, Smartphone, Target, Award, Star, BarChart3, Clock, Activity, CheckCircle, AlertTriangle } from 'lucide-react'
+import adminAPI from '../services/api'
+import { formatNumber } from '../../utils/numberFormatter'
 
 // Mock app data - replace with real API calls
 const mockAppData = {
@@ -111,7 +114,7 @@ export default function MobileAppPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Downloads</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAppData.totalDownloads.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAppData.totalDownloads)}</p>
             </div>
           </div>
         </div>
@@ -123,7 +126,7 @@ export default function MobileAppPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900">{mockAppData.activeUsers.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatNumber(mockAppData.activeUsers)}</p>
             </div>
           </div>
         </div>
@@ -230,7 +233,7 @@ export default function MobileAppPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {feature.users.toLocaleString()}
+                    {formatNumber(feature.users)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">

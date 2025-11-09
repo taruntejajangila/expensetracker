@@ -18,11 +18,17 @@ import {
   XCircle
 } from 'lucide-react'
 import adminAPI, {
-  RealtimeMonitoring,
-  AnomalyDetection,
-  PerformanceMonitoring,
-  UserActivityTracking
+  SystemHealthMetrics,
+  DatabaseHealth,
+  ApiPerformance,
+  ErrorLog,
+  CacheMetrics,
+  QueueMetrics,
+  ServiceStatus,
+  SlowQuery,
+  ServerMetrics
 } from '../services/api'
+import { formatNumber } from '../../utils/numberFormatter'
 
 export default function MonitoringPage() {
   const [realtimeData, setRealtimeData] = useState<RealtimeMonitoring | null>(null)
@@ -495,10 +501,10 @@ export default function MonitoringPage() {
                           {table.tablename}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {table.live_tuples.toLocaleString()}
+                          {formatNumber(table.live_tuples)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {table.dead_tuples.toLocaleString()}
+                          {formatNumber(table.dead_tuples)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {table.last_vacuum ? formatDate(table.last_vacuum) : 'Never'}
@@ -545,7 +551,7 @@ export default function MonitoringPage() {
                           {formatDate(user.join_date)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {user.total_transactions}
+                          {formatNumber(user.total_transactions)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {user.last_activity ? formatDate(user.last_activity) : 'Never'}
@@ -572,7 +578,7 @@ export default function MonitoringPage() {
                 {activityData.featureUsage.map((feature) => (
                   <div key={feature.feature} className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm font-medium text-gray-600 capitalize">{feature.feature}</div>
-                    <div className="text-2xl font-bold text-gray-900">{feature.total_usage}</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatNumber(feature.total_usage)}</div>
                     <div className="text-sm text-gray-500">{feature.users_count} users</div>
                   </div>
                 ))}

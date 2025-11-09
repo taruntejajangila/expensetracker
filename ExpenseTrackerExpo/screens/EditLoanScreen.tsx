@@ -7,6 +7,7 @@ import { LoanService, StoredLoan } from '../services/LoanService';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { formatNumber } from '../utils/currencyFormatter';
 
 interface RouteParams {
   loanId: string;
@@ -296,8 +297,10 @@ const EditLoanScreen: React.FC = () => {
     const monthlyLabel = isInterestOnly ? 'Monthly Interest' : 'Monthly EMI';
 
     const formattedMonthly = useMemo(() => {
-        if (monthlyAmount == null || !isFinite(monthlyAmount)) return '--';
-        return Math.round(monthlyAmount).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        if (monthlyAmount === null || isNaN(Number(monthlyAmount))) {
+            return '--';
+        }
+        return formatNumber(Math.round(Number(monthlyAmount)));
     }, [monthlyAmount]);
 
     const handleSubmit = async () => {
@@ -409,7 +412,7 @@ const EditLoanScreen: React.FC = () => {
                 interestRate: Number(interestRate),
                 tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
                 emiStartDate: emiStartDate,
-                monthlyPayment: calculateEMI(),
+                monthlyPayment: monthlyAmount || 0,
                 remainingBalance: Number(principal), // Map currentBalance to remainingBalance
             };
 
