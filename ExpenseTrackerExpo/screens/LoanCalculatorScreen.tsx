@@ -585,7 +585,7 @@ const LoanCalculatorScreen: React.FC = () => {
                     placeholder="Enter loan amount"
                     placeholderTextColor={theme.colors.textSecondary}
                     keyboardType="numeric"
-                    maxLength={8}
+                    maxLength={12}
                     allowFontScaling={false}
                   />
                 </View>

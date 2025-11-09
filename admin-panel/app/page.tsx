@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Users, Smartphone, CreditCard, TrendingUp, Activity, DollarSign, AlertTriangle, CheckCircle, XCircle, FileSearch, Bell } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import adminAPI, { SystemStats, SystemHealth, LiveTraffic } from './services/api'
-import { formatNumber } from '../utils/numberFormatter'
+import { formatNumber } from '@/utils/numberFormatter'
 
 
 export default function Dashboard() {

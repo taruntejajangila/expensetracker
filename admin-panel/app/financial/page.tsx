@@ -20,7 +20,7 @@ import {
   PiggyBank
 } from 'lucide-react'
 import adminAPI, { FinancialAnalytics, FinancialSummary } from '../services/api'
-import { formatNumber } from '../../utils/numberFormatter'
+import { formatNumber } from '@/utils/numberFormatter'
 
 // Emoji mapping function for categories
 const getCategoryEmoji = (categoryName: string) => {

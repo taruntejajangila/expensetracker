@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AppWindow, Users, Download, Shield, Bell, RefreshCw, Smartphone, Target, Award, Star, BarChart3, Clock, Activity, CheckCircle, AlertTriangle } from 'lucide-react'
 import adminAPI from '../services/api'
-import { formatNumber } from '../../utils/numberFormatter'
+import { formatNumber } from '@/utils/numberFormatter'
 
 // Mock app data - replace with real API calls
 const mockAppData = {

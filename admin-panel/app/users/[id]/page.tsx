@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, User, Mail, Calendar, Activity, CreditCard, TrendingUp, AlertCircle, RefreshCw, DollarSign, Laptop, Briefcase, Home, Gift, Plus, ShoppingCart, Utensils, Zap, ShoppingBag, Film, Car, Plane, CreditCard as CardIcon, Heart, GraduationCap, TrendingUp as TrendingUpIcon, Users, Clock, Wifi } from 'lucide-react'
 import adminAPI from '../../services/api'
-import { formatCurrency } from '../../utils/numberFormatter'
+import { formatCurrency } from '@/utils/numberFormatter'
 
 interface UserDetails {
   id: string

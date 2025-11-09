@@ -28,7 +28,7 @@ import adminAPI, {
   SlowQuery,
   ServerMetrics
 } from '../services/api'
-import { formatNumber } from '../../utils/numberFormatter'
+import { formatNumber } from '@/utils/numberFormatter'
 
 export default function MonitoringPage() {
   const [realtimeData, setRealtimeData] = useState<RealtimeMonitoring | null>(null)
