@@ -309,7 +309,7 @@ router.patch('/:id/progress', async (req: express.Request, res: express.Response
 
     // First check if the goal exists and belongs to the user
     const existingGoal = await db.query(
-      'SELECT id, current_amount, target_amount FROM goals WHERE id = $1 AND user_id = $2',
+      'SELECT id, current_amount, target_amount, status FROM goals WHERE id = $1 AND user_id = $2',
       [goalId, userId]
     );
 
@@ -318,12 +318,36 @@ router.patch('/:id/progress', async (req: express.Request, res: express.Response
     }
 
     const goal = existingGoal.rows[0];
+    const currentAmount = parseFloat(goal.current_amount);
+    const targetAmount = parseFloat(goal.target_amount);
+    const numericAmount = parseFloat(amount);
     let newCurrentAmount: number;
 
+    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount must be a number greater than 0.'
+      });
+    }
+
     if (operation === 'add') {
-      newCurrentAmount = parseFloat(goal.current_amount) + parseFloat(amount);
+      const remainingCapacity = targetAmount - currentAmount;
+      const roundedRemaining = Math.max(0, Math.round(remainingCapacity * 100) / 100);
+      if (remainingCapacity <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Goal already reached the target amount.'
+        });
+      }
+      if (numericAmount > remainingCapacity) {
+        return res.status(400).json({
+          success: false,
+          message: `You can only add up to ${roundedRemaining} to reach this goal.`
+        });
+      }
+      newCurrentAmount = currentAmount + numericAmount;
     } else if (operation === 'withdraw') {
-      newCurrentAmount = parseFloat(goal.current_amount) - parseFloat(amount);
+      newCurrentAmount = currentAmount - numericAmount;
       if (newCurrentAmount < 0) {
         newCurrentAmount = 0;
       }
@@ -335,8 +359,8 @@ router.patch('/:id/progress', async (req: express.Request, res: express.Response
     }
 
     // Determine new status based on progress
-    const progressPercentage = (newCurrentAmount / parseFloat(goal.target_amount)) * 100;
-    let newStatus = goal.status;
+    const progressPercentage = (newCurrentAmount / targetAmount) * 100;
+    let newStatus = goal.status || 'active';
     
     if (progressPercentage >= 100) {
       newStatus = 'completed';

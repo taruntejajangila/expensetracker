@@ -228,7 +228,7 @@ export default {
     }
   },
 
-  async addToGoal(id: string, amount: number): Promise<{ success: boolean }> {
+  async addToGoal(id: string, amount: number): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('🔍 GoalService: Adding to goal in cloud database...');
       const token = await getAuthToken();
@@ -254,17 +254,23 @@ export default {
         console.log('🔍 GoalService: Successfully added to goal');
         return { success: true };
       } else {
-        const errorData = await response.json();
-        console.error('🔍 GoalService: Error adding to goal:', errorData);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('🔍 GoalService: Error adding to goal:', errorData);
+          errorMessage = errorData?.message || errorMessage;
+        } catch (parseError) {
+          console.error('🔍 GoalService: Failed to parse error response for addToGoal', parseError);
+        }
+        return { success: false, message: errorMessage };
       }
     } catch (error) {
       console.error('🔍 GoalService: Error adding to goal:', error);
-      return { success: false };
+      return { success: false, message: error instanceof Error ? error.message : 'Unexpected error occurred.' };
     }
   },
 
-  async withdrawFromGoal(id: string, amount: number): Promise<{ success: boolean }> {
+  async withdrawFromGoal(id: string, amount: number): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('🔍 GoalService: Withdrawing from goal in cloud database...');
       const token = await getAuthToken();
@@ -290,13 +296,19 @@ export default {
         console.log('🔍 GoalService: Successfully withdrew from goal');
         return { success: true };
       } else {
-        const errorData = await response.json();
-        console.error('🔍 GoalService: Error withdrawing from goal:', errorData);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('🔍 GoalService: Error withdrawing from goal:', errorData);
+          errorMessage = errorData?.message || errorMessage;
+        } catch (parseError) {
+          console.error('🔍 GoalService: Failed to parse error response for withdrawFromGoal', parseError);
+        }
+        return { success: false, message: errorMessage };
       }
     } catch (error) {
       console.error('🔍 GoalService: Error withdrawing from goal:', error);
-      return { success: false };
+      return { success: false, message: error instanceof Error ? error.message : 'Unexpected error occurred.' };
     }
   },
 

@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import GoalService from '../services/GoalService';
+import { formatIndianNumberInput } from '../utils/currencyFormatter';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface SavingsGoal {
@@ -63,13 +64,19 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   };
 
+  const handleAmountChange = (text: string) => {
+    const formatted = formatIndianNumberInput(text);
+    setNewAmount(formatted);
+  };
+
   const handleSaveProgress = async () => {
     if (!newAmount) {
       Alert.alert('Error', 'Please enter an amount.');
       return;
     }
 
-    const amount = parseFloat(newAmount);
+    const sanitizedAmount = newAmount.replace(/,/g, '');
+    const amount = parseFloat(sanitizedAmount);
     if (isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount greater than 0.');
       return;
@@ -77,7 +84,26 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
 
     try {
       setIsLoading(true);
-      let result: { success: boolean };
+      let result: { success: boolean; message?: string };
+
+      if (transactionType === 'add') {
+        const remainingCapacity = Math.max(goal.targetAmount - goal.currentAmount, 0);
+
+        if (remainingCapacity <= 0) {
+          Alert.alert('Goal Completed', 'You have already reached this goal\'s target amount.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (amount > remainingCapacity) {
+          Alert.alert(
+            'Amount Too High',
+            `You can add up to ${formatCurrency(remainingCapacity)} to reach this goal.`
+          );
+          setIsLoading(false);
+          return;
+        }
+      }
       
       if (transactionType === 'add') {
         // Add money to the goal
@@ -94,6 +120,7 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
       }
       
       if (result.success) {
+        setNewAmount('');
         Alert.alert('Success', 'Goal progress updated successfully!', [
           {
             text: 'OK',
@@ -103,7 +130,7 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
           }
         ]);
       } else {
-        Alert.alert('Error', 'Failed to update goal progress. Please try again.');
+        Alert.alert('Error', result.message || 'Failed to update goal progress. Please try again.');
       }
     } catch (error) {
       console.error('Error updating goal progress:', error);
@@ -233,7 +260,7 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
             style={styles.input}
             keyboardType="numeric"
             value={newAmount}
-            onChangeText={setNewAmount}
+            onChangeText={handleAmountChange}
             placeholder="Enter amount"
             placeholderTextColor={theme.colors.textSecondary}
             editable={!isLoading}
