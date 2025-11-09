@@ -15,7 +15,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import GoalService from '../services/GoalService';
-import { formatIndianNumberInput } from '../utils/currencyFormatter';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
 interface SavingsGoal {
@@ -62,11 +61,6 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  };
-
-  const handleAmountChange = (text: string) => {
-    const formatted = formatIndianNumberInput(text);
-    setNewAmount(formatted);
   };
 
   const handleSaveProgress = async () => {
@@ -260,7 +254,7 @@ const UpdateProgressScreen: React.FC<UpdateProgressScreenProps> = ({ route, navi
             style={styles.input}
             keyboardType="numeric"
             value={newAmount}
-            onChangeText={handleAmountChange}
+            onChangeText={setNewAmount}
             placeholder="Enter amount"
             placeholderTextColor={theme.colors.textSecondary}
             editable={!isLoading}
