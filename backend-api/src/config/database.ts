@@ -11,12 +11,13 @@ logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`)
 logger.info(`DB_PORT: ${process.env.DB_PORT}`);
 
 // Database configuration - Use DATABASE_URL if available, otherwise use individual variables
+// Increased timeouts for Railway/cloud databases which may be slower
 const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 30000, // Increased to 30 seconds for Railway/cloud databases
+  max: 10, // Reduced pool size to avoid too many simultaneous connections
+  idleTimeoutMillis: 60000, // Close idle clients after 60 seconds
+  connectionTimeoutMillis: 60000, // Increased to 60 seconds for Railway/cloud databases
   maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
   keepAlive: true, // Keep connections alive
   keepAliveInitialDelayMillis: 10000, // Start keepalive after 10 seconds
@@ -27,9 +28,9 @@ const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
   password: process.env.DB_PASSWORD || 'password',
   port: parseInt(process.env.DB_PORT || '5432'),
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 30000, // Increased to 30 seconds
+  max: 10, // Reduced pool size
+  idleTimeoutMillis: 60000, // Close idle clients after 60 seconds
+  connectionTimeoutMillis: 60000, // Increased to 60 seconds
   maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
@@ -53,16 +54,36 @@ const pool = new Pool(dbConfig);
 
 // Test database connection and initialize schema
 const testConnection = async (): Promise<void> => {
+  let client: any = null;
   try {
-    const client = await pool.connect();
+    // Add wrapper timeout to prevent hanging indefinitely
+    const connectionPromise = pool.connect();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout after 65 seconds')), 65000)
+    );
+    
+    logger.debug('Attempting to get client from pool...');
+    client = await Promise.race([connectionPromise, timeoutPromise]) as any;
+    
+    logger.debug('Client obtained, executing test query...');
     const result = await client.query('SELECT NOW()');
     logger.info(`✅ Database connected successfully at ${result.rows[0].now}`);
     
     // Initialize database schema
+    logger.debug('Initializing database schema...');
     await initializeDatabaseSchema(client);
     
+    logger.debug('Schema initialized, releasing client...');
     client.release();
+    client = null;
   } catch (error) {
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        logger.error('Error releasing client:', releaseError);
+      }
+    }
     logger.error('❌ Database connection failed:', error);
     throw error;
   }
@@ -615,34 +636,45 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
 };
 
 // Connect to database with retry logic
-export const connectDatabase = async (maxRetries: number = 3, retryDelay: number = 5000): Promise<void> => {
+export const connectDatabase = async (maxRetries: number = 5, retryDelay: number = 10000): Promise<void> => {
   let lastError: any = null;
+  
+  // Set up event listeners for the pool (only once)
+  if (!pool.listeners('connect').length) {
+    pool.on('connect', (client) => {
+      logger.debug('🔄 New client connected to database');
+    });
+
+    pool.on('error', (err, client) => {
+      logger.error('❌ Unexpected error on idle client:', err);
+      // Don't throw - let the pool handle reconnection
+    });
+
+    pool.on('remove', (client) => {
+      logger.debug('🔄 Client removed from pool');
+    });
+  }
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      const startTime = Date.now();
       logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      
       await testConnection();
       
-      // Set up event listeners for the pool
-      pool.on('connect', (client) => {
-        logger.debug('🔄 New client connected to database');
-      });
-
-      pool.on('error', (err, client) => {
-        logger.error('❌ Unexpected error on idle client:', err);
-        // Don't throw - let the pool handle reconnection
-      });
-
-      pool.on('remove', (client) => {
-        logger.debug('🔄 Client removed from pool');
-      });
-
-      logger.info('✅ Database connection established successfully');
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      logger.info(`✅ Database connection established successfully (took ${duration}s)`);
       return; // Success!
       
     } catch (error) {
       lastError = error;
-      logger.warn(`⚠️ Database connection attempt ${attempt} failed:`, error instanceof Error ? error.message : error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn(`⚠️ Database connection attempt ${attempt} failed: ${errorMessage}`);
+      
+      // Check if it's a timeout error
+      if (errorMessage.includes('timeout') || errorMessage.includes('Connection terminated')) {
+        logger.warn('⚠️ This appears to be a network/database timeout issue. The database may be slow to respond.');
+      }
       
       if (attempt < maxRetries) {
         logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
@@ -652,7 +684,14 @@ export const connectDatabase = async (maxRetries: number = 3, retryDelay: number
   }
   
   // All retries failed
-  logger.error(`❌ Failed to connect to database after ${maxRetries} attempts:`, lastError);
+  logger.error(`❌ Failed to connect to database after ${maxRetries} attempts`);
+  logger.error('❌ Last error:', lastError instanceof Error ? lastError.message : lastError);
+  logger.warn('⚠️  Server will continue running, but database-dependent features will not work.');
+  logger.warn('⚠️  Please check:');
+  logger.warn('   1. DATABASE_URL is correct in Railway environment variables');
+  logger.warn('   2. Database service is running and accessible');
+  logger.warn('   3. Network connectivity between services');
+  
   throw lastError;
 };
 

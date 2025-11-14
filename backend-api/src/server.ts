@@ -141,6 +141,7 @@ app.get('/health', async (req, res) => {
   try {
     // Check database connection (non-blocking, with timeout)
     let dbStatus = 'unknown';
+    let dbError = null;
     try {
       const pool = getPool();
       const result = await Promise.race([
@@ -148,8 +149,9 @@ app.get('/health', async (req, res) => {
         new Promise<any>((resolve) => setTimeout(() => resolve(null), 2000)) // 2 second timeout
       ]);
       dbStatus = result && result.rows && result.rows[0]?.health_check === 1 ? 'connected' : 'disconnected';
-    } catch (error) {
+    } catch (error: any) {
       dbStatus = 'disconnected';
+      dbError = error.message || 'Unknown error';
     }
 
     // Always return 200 OK - server is running
@@ -161,7 +163,10 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       version: '1.0.0',
-      database: dbStatus
+      database: {
+        status: dbStatus,
+        error: dbError
+      }
     });
   } catch (error) {
     // Even on error, return 200 to indicate server is running
@@ -172,7 +177,10 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       version: '1.0.0',
-      database: 'unknown'
+      database: {
+        status: 'unknown',
+        error: 'Health check error'
+      }
     });
   }
 });
