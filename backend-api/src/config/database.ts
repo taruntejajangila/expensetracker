@@ -16,8 +16,10 @@ const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+  connectionTimeoutMillis: 30000, // Increased to 30 seconds for Railway/cloud databases
   maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
+  keepAlive: true, // Keep connections alive
+  keepAliveInitialDelayMillis: 10000, // Start keepalive after 10 seconds
 } : {
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
@@ -27,8 +29,10 @@ const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+  connectionTimeoutMillis: 30000, // Increased to 30 seconds
   maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 };
 
 // Debug: Log the actual config being used
@@ -610,28 +614,46 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   `);
 };
 
-// Connect to database
-export const connectDatabase = async (): Promise<void> => {
-  try {
-    await testConnection();
-    
-    // Set up event listeners for the pool
-    pool.on('connect', (client) => {
-      logger.debug('🔄 New client connected to database');
-    });
+// Connect to database with retry logic
+export const connectDatabase = async (maxRetries: number = 3, retryDelay: number = 5000): Promise<void> => {
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      await testConnection();
+      
+      // Set up event listeners for the pool
+      pool.on('connect', (client) => {
+        logger.debug('🔄 New client connected to database');
+      });
 
-    pool.on('error', (err, client) => {
-      logger.error('❌ Unexpected error on idle client:', err);
-    });
+      pool.on('error', (err, client) => {
+        logger.error('❌ Unexpected error on idle client:', err);
+        // Don't throw - let the pool handle reconnection
+      });
 
-    pool.on('remove', (client) => {
-      logger.debug('🔄 Client removed from pool');
-    });
+      pool.on('remove', (client) => {
+        logger.debug('🔄 Client removed from pool');
+      });
 
-  } catch (error) {
-    logger.error('❌ Failed to connect to database:', error);
-    throw error;
+      logger.info('✅ Database connection established successfully');
+      return; // Success!
+      
+    } catch (error) {
+      lastError = error;
+      logger.warn(`⚠️ Database connection attempt ${attempt} failed:`, error instanceof Error ? error.message : error);
+      
+      if (attempt < maxRetries) {
+        logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
   }
+  
+  // All retries failed
+  logger.error(`❌ Failed to connect to database after ${maxRetries} attempts:`, lastError);
+  throw lastError;
 };
 
 // Get database pool

@@ -127,7 +127,19 @@ export const authenticateUser = async (loginData: LoginUserData): Promise<User |
 // Get user by ID - Fixed for Railway deployment to handle both users and admin_users tables
 export const getUserById = async (userId: string): Promise<User | null> => {
   const pool = getPool();
-  const client = await pool.connect();
+  let client;
+  
+  try {
+    // Add timeout to prevent hanging on connection
+    client = await Promise.race([
+      pool.connect(),
+      new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+      )
+    ]);
+  } catch (error) {
+    throw new Error('Database connection failed');
+  }
   
   try {
     // First check regular users table (users table has first_name + last_name, not name)
@@ -177,7 +189,9 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     
     return null;
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 };
 

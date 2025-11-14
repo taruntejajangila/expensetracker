@@ -61,26 +61,46 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // Get user from database to ensure they still exist and are active
-    const user = await getUserById(decoded.userId);
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        message: 'User not found or inactive'
-      });
+    // Try to get user from database to ensure they still exist and are active
+    // If database is unavailable, use JWT token data (graceful degradation)
+    try {
+      const user = await getUserById(decoded.userId);
+      if (user) {
+        // Add user info to request
+        req.user = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name
+        };
+        logger.debug(`User authenticated: ${user.id} (${user.email})`);
+        next();
+        return;
+      } else {
+        // User not found in database
+        res.status(401).json({
+          success: false,
+          message: 'User not found or inactive'
+        });
+        return;
+      }
+    } catch (dbError: any) {
+      // Database connection error - use JWT token data as fallback
+      logger.warn('Database unavailable for user lookup, using JWT token data:', dbError.message);
+      
+      // Use decoded token data as fallback (graceful degradation)
+      // Note: JWT only contains userId, email, role (not name)
+      req.user = {
+        id: decoded.userId,
+        email: decoded.email || '',
+        role: decoded.role || 'user',
+        name: 'User' // Default name since not in JWT
+      };
+      
+      logger.debug(`User authenticated via JWT (DB unavailable): ${decoded.userId}`);
+      next();
       return;
     }
-
-    // Add user info to request
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name
-    };
-
-    logger.debug(`User authenticated: ${user.id} (${user.email})`);
-    next();
   } catch (error) {
     logger.error('Authentication error:', error);
     res.status(401).json({
