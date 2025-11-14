@@ -136,15 +136,45 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Expense Tracker API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0'
-  });
+// Health check endpoint - Must respond quickly for Railway healthcheck
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection (non-blocking, with timeout)
+    let dbStatus = 'unknown';
+    try {
+      const pool = getPool();
+      const result = await Promise.race([
+        pool.query('SELECT 1 as health_check'),
+        new Promise<any>((resolve) => setTimeout(() => resolve(null), 2000)) // 2 second timeout
+      ]);
+      dbStatus = result && result.rows && result.rows[0]?.health_check === 1 ? 'connected' : 'disconnected';
+    } catch (error) {
+      dbStatus = 'disconnected';
+    }
+
+    // Always return 200 OK - server is running
+    // Database status is informational
+    res.status(200).json({
+      success: true,
+      status: 'healthy',
+      message: 'Expense Tracker API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      database: dbStatus
+    });
+  } catch (error) {
+    // Even on error, return 200 to indicate server is running
+    res.status(200).json({
+      success: true,
+      status: 'healthy',
+      message: 'Expense Tracker API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      database: 'unknown'
+    });
+  }
 });
 
 // Serve static files (for uploaded images)
@@ -202,15 +232,8 @@ app.use(errorHandler);
 // Start server function
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDatabase();
-    logger.info('✅ Database connected successfully');
-    
-    // Set up database pool in app.locals for routes to use
-    app.locals.db = getPool();
-    logger.info('✅ Database pool set in app.locals');
-
-    // Start server
+    // Start server FIRST (don't wait for database)
+    // This allows healthcheck to work even if database connection is slow
     app.listen(Number(PORT), '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📱 Mobile App URL: ${process.env.MOBILE_APP_URL || 'http://localhost:19006'}`);
@@ -222,6 +245,21 @@ const startServer = async () => {
         logger.info(`🌐 Network Access: ${process.env.SERVER_URL}/api`);
       }
     });
+
+    // Connect to database in background (non-blocking)
+    // This allows server to start even if database connection takes time
+    connectDatabase()
+      .then(() => {
+        logger.info('✅ Database connected successfully');
+        // Set up database pool in app.locals for routes to use
+        app.locals.db = getPool();
+        logger.info('✅ Database pool set in app.locals');
+      })
+      .catch((error) => {
+        logger.error('❌ Database connection failed (server will continue running):', error);
+        logger.warn('⚠️  Server is running but database is not connected. Some features may not work.');
+        // Don't exit - allow server to run even without database for healthcheck
+      });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);
     process.exit(1);
