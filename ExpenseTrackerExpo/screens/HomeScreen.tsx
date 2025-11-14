@@ -980,6 +980,30 @@ const HomeScreen: React.FC = () => {
       paddingTop: 0, // No top padding to eliminate space
       paddingBottom: 150, // Add padding for tab bar and floating button
     },
+    // TEST BUTTON - Remove in production
+    testButton: {
+      backgroundColor: '#FF6B6B',
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      marginHorizontal: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#FF6B6B',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    testButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
     featuredCard: {
       backgroundColor: '#FFFFFF',
       borderRadius: theme.borderRadius.lg,
@@ -1950,6 +1974,17 @@ const HomeScreen: React.FC = () => {
       >
         {/* Header with Safe Area - Now Scrollable */}
         <HomeHeader user={user} theme={theme} insets={insets} />
+        
+        {/* TEST BUTTON: OTP Login - Remove in production */}
+        <TouchableOpacity
+          style={styles.testButton}
+          onPress={() => navigation.navigate('OTPRequest' as never)}
+        >
+          <Ionicons name="phone-portrait-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.testButtonText} allowFontScaling={false}>
+            🧪 TEST: Login with Phone (OTP)
+          </Text>
+        </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.featuredCard}

@@ -9,46 +9,61 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from '../../config/api.config';
 
-const { width, height } = Dimensions.get('window');
-
-const LoginScreen: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const OTPRequestScreen: React.FC = () => {
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [focusedInput, setFocusedInput] = useState(false);
   
   const navigation = useNavigation();
-  const { login } = useAuth();
   const { theme } = useTheme();
 
-  const keyboardVerticalOffset = Platform.select({
-    ios: 24,
-    android: (StatusBar.currentHeight ?? 0) + 24,
-    default: 0,
-  });
+  const handleRequestOTP = async () => {
+    if (!phone.trim()) {
+      Alert.alert('Error', 'Please enter your phone number');
+      return;
+    }
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    // Format phone number (add country code if missing)
+    const formattedPhone = phone.startsWith('+') 
+      ? phone.replace(/\s/g, '') 
+      : `+91${phone.replace(/\s/g, '')}`;
+
+    // Validate phone number format
+    const phoneRegex = /^\+?[1-9]\d{10,14}$/;
+    if (!phoneRegex.test(formattedPhone)) {
+      Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
 
     try {
       setIsLoading(true);
-      await login(email.trim(), password);
-    } catch (error: any) {
-      Alert.alert('Login Failed', error.message);
+
+      const response = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formattedPhone })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Navigate to OTP verification screen
+        navigation.navigate('OTPVerify' as never, { phone: formattedPhone } as never);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('OTP request error:', error);
+      Alert.alert('Error', 'Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -130,9 +145,9 @@ const LoginScreen: React.FC = () => {
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingVertical: 16,
-      fontSize: 14,
+      fontSize: 16,
       color: '#000000',
-      paddingRight: 50,
+      paddingLeft: 50,
       height: 56,
     },
     inputFocused: {
@@ -146,17 +161,11 @@ const LoginScreen: React.FC = () => {
     },
     inputIcon: {
       position: 'absolute',
-      right: 16,
+      left: 16,
       top: 16,
       zIndex: 1,
     },
-    passwordToggle: {
-      position: 'absolute',
-      right: 16,
-      top: 16,
-      zIndex: 1,
-    },
-    loginButton: {
+    button: {
       backgroundColor: '#007AFF',
       borderRadius: 12,
       paddingVertical: 16,
@@ -168,12 +177,12 @@ const LoginScreen: React.FC = () => {
       shadowRadius: 8,
       elevation: 8,
     },
-    loginButtonText: {
+    buttonText: {
       color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '600',
     },
-    loginButtonDisabled: {
+    buttonDisabled: {
       backgroundColor: '#CCCCCC',
       shadowOpacity: 0,
       elevation: 0,
@@ -182,28 +191,20 @@ const LoginScreen: React.FC = () => {
       alignItems: 'center',
       marginTop: 32,
     },
-    registerText: {
+    footerText: {
       fontSize: 12,
       color: '#666666',
     },
-    registerLink: {
+    footerLink: {
       color: '#007AFF',
       fontWeight: '600',
     },
-    divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginVertical: 24,
-    },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: '#E9ECEF',
-    },
-    dividerText: {
-      marginHorizontal: 16,
+    infoText: {
       fontSize: 12,
       color: '#666666',
+      textAlign: 'center',
+      marginTop: 16,
+      lineHeight: 18,
     },
   });
 
@@ -217,112 +218,86 @@ const LoginScreen: React.FC = () => {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
-          keyboardVerticalOffset={keyboardVerticalOffset}
-          enabled
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Text style={styles.logo} allowFontScaling={false}>💰</Text>
+                <Text style={styles.logo} allowFontScaling={false}>📱</Text>
               </View>
-              <Text style={styles.title} allowFontScaling={false}>Welcome Back</Text>
-              <Text style={styles.subtitle} allowFontScaling={false}>Sign in to continue tracking your expenses</Text>
+              <Text style={styles.title} allowFontScaling={false}>Phone Verification</Text>
+              <Text style={styles.subtitle} allowFontScaling={false}>
+                Enter your phone number to receive OTP
+              </Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label} allowFontScaling={false}>Email Address</Text>
+                <Text style={styles.label} allowFontScaling={false}>Phone Number</Text>
                 <View style={styles.inputWrapper}>
-                  <TextInput style={[
-                      styles.input,
-                      focusedInput === 'email' && styles.inputFocused,
-                    ]}
-                    placeholder="Enter your email"
-                    placeholderTextColor="#999999"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => setFocusedInput('email')}
-                    onBlur={() => setFocusedInput(null)}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    allowFontScaling={false}
-                  />
                   <Ionicons 
-                    name="mail-outline" 
+                    name="call-outline" 
                     size={20} 
                     color="#999999" 
                     style={styles.inputIcon}
                   />
-                </View>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label} allowFontScaling={false}>Password</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput style={[
+                  <TextInput
+                    style={[
                       styles.input,
-                      focusedInput === 'password' && styles.inputFocused,
+                      focusedInput && styles.inputFocused,
                     ]}
-                    placeholder="Enter your password"
+                    placeholder="+91 9876543210"
                     placeholderTextColor="#999999"
-                    value={password}
-                    onChangeText={setPassword}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput(null)}
-                    secureTextEntry={!showPassword}
+                    value={phone}
+                    onChangeText={(text) => {
+                      // Allow only numbers and + at start
+                      const cleaned = text.replace(/[^\d+]/g, '');
+                      if (cleaned.startsWith('+') || cleaned.length === 0) {
+                        setPhone(cleaned);
+                      } else if (!cleaned.includes('+')) {
+                        setPhone(cleaned);
+                      }
+                    }}
+                    onFocus={() => setFocusedInput(true)}
+                    onBlur={() => setFocusedInput(false)}
+                    keyboardType="phone-pad"
                     autoCapitalize="none"
                     autoCorrect={false}
                     allowFontScaling={false}
                   />
-                  <TouchableOpacity
-                    style={styles.passwordToggle}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color="#999999" 
-                    />
-                  </TouchableOpacity>
                 </View>
+                <Text style={styles.infoText} allowFontScaling={false}>
+                  We'll send a 6-digit OTP to this number
+                </Text>
               </View>
 
               <TouchableOpacity
                 style={[
-                  styles.loginButton,
-                  isLoading && styles.loginButtonDisabled,
+                  styles.button,
+                  isLoading && styles.buttonDisabled,
                 ]}
-                onPress={handleLogin}
+                onPress={handleRequestOTP}
                 disabled={isLoading}
               >
-                <Text style={styles.loginButtonText} allowFontScaling={false}>
-                  {isLoading ? 'Signing In...' : 'Sign In'}
+                <Text style={styles.buttonText} allowFontScaling={false}>
+                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('OTPRequest' as never)}
-                style={{ marginBottom: 16 }}
-              >
-                <Text style={[styles.registerText, { color: '#007AFF', fontWeight: '600' }]} allowFontScaling={false}>
-                  Login with Phone Number (OTP)
-                </Text>
-              </TouchableOpacity>
-              <Text style={styles.registerText} allowFontScaling={false}>
-                Don't have an account?{' '}
-                <Text style={styles.registerLink}
-                  onPress={() => navigation.navigate('Register' as never)}
+              <Text style={styles.footerText} allowFontScaling={false}>
+                Already have an account?{' '}
+                <Text 
+                  style={styles.footerLink}
+                  onPress={() => navigation.navigate('Login' as never)}
                   allowFontScaling={false}
                 >
-                  Create Account
+                  Login with Email
                 </Text>
               </Text>
             </View>
@@ -333,4 +308,5 @@ const LoginScreen: React.FC = () => {
   );
 };
 
-export default LoginScreen; 
+export default OTPRequestScreen;
+

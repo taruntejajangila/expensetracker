@@ -6,6 +6,7 @@ import { validateRequest } from '../middleware/validation';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
+import { TwoFactorService } from '../services/twoFactorService';
 
 // Force Railway rebuild - change password route enabled
 
@@ -456,6 +457,172 @@ router.post('/change-password',
         success: false,
         message: 'Failed to change password',
         error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      });
+    }
+  }
+);
+
+// POST /api/auth/request-otp - Request OTP via SMS
+router.post('/request-otp',
+  [
+    body('phone').isMobilePhone('any').withMessage('Valid phone number required')
+  ],
+  validateRequest,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { phone } = req.body;
+
+      // Format phone number (ensure it starts with +)
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+
+      logger.info(`OTP request for phone: ${formattedPhone}`);
+
+      // Rate limiting: Check if user requested OTP recently
+      const recentOTP = await pool.query(`
+        SELECT created_at FROM otp_verifications 
+        WHERE phone = $1 AND created_at > NOW() - INTERVAL '1 hour'
+        ORDER BY created_at DESC
+      `, [formattedPhone]);
+
+      if (recentOTP.rows.length >= 3) {
+        return res.status(429).json({
+          success: false,
+          message: 'Too many OTP requests. Please try again later.'
+        });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Store OTP in database (expires in 5 minutes)
+      await pool.query(`
+        INSERT INTO otp_verifications (phone, otp, expires_at)
+        VALUES ($1, $2, NOW() + INTERVAL '5 minutes')
+      `, [formattedPhone, otp]);
+
+      // Send OTP via 2Factor.in
+      const sent = await TwoFactorService.sendOTP(formattedPhone, otp);
+
+      if (!sent) {
+        // Delete the OTP if sending failed
+        await pool.query(`
+          DELETE FROM otp_verifications 
+          WHERE phone = $1 AND otp = $2
+        `, [formattedPhone, otp]);
+
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send OTP. Please try again.'
+        });
+      }
+
+      logger.info(`OTP sent successfully to ${formattedPhone}`);
+
+      res.json({
+        success: true,
+        message: 'OTP sent to your phone number'
+        // NOTE: Never send OTP in response!
+      });
+
+    } catch (error) {
+      logger.error('OTP request error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP'
+      });
+    }
+  }
+);
+
+// POST /api/auth/verify-otp - Verify OTP and login/register
+router.post('/verify-otp',
+  [
+    body('phone').isMobilePhone('any').withMessage('Valid phone number required'),
+    body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+  ],
+  validateRequest,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { phone, otp } = req.body;
+
+      // Format phone number
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+
+      // Find valid OTP
+      const otpRecord = await pool.query(`
+        SELECT * FROM otp_verifications 
+        WHERE phone = $1 
+          AND otp = $2 
+          AND expires_at > NOW()
+          AND used = false
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `, [formattedPhone, otp]);
+
+      if (otpRecord.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired OTP'
+        });
+      }
+
+      // Mark OTP as used
+      await pool.query(`
+        UPDATE otp_verifications 
+        SET used = true 
+        WHERE id = $1
+      `, [otpRecord.rows[0].id]);
+
+      // Find or create user
+      let user = await pool.query(
+        'SELECT id, email, first_name, last_name, phone, created_at FROM users WHERE phone = $1',
+        [formattedPhone]
+      );
+
+      if (user.rows.length === 0) {
+        // Create new user with phone number
+        const newUser = await pool.query(`
+          INSERT INTO users (phone, first_name, last_name, is_active, created_at)
+          VALUES ($1, $2, $3, true, NOW())
+          RETURNING id, phone, first_name, last_name, email, created_at
+        `, [formattedPhone, 'User', '']);
+        
+        user = newUser;
+      }
+
+      const userData = user.rows[0];
+
+      // Generate JWT tokens
+      const accessToken = generateAccessToken(
+        userData.id,
+        userData.email || formattedPhone,
+        'user'
+      );
+      const refreshToken = generateRefreshToken(userData.id);
+
+      logger.info(`User logged in via OTP: ${userData.id}`);
+
+      res.json({
+        success: true,
+        message: 'OTP verified successfully',
+        data: {
+          user: {
+            id: userData.id,
+            phone: userData.phone,
+            name: `${userData.first_name} ${userData.last_name}`.trim() || 'User',
+            email: userData.email,
+            createdAt: userData.created_at
+          },
+          accessToken,
+          refreshToken
+        }
+      });
+
+    } catch (error) {
+      logger.error('OTP verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to verify OTP'
       });
     }
   }
