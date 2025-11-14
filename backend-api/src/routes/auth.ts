@@ -518,7 +518,7 @@ router.post('/request-otp',
 
       logger.info(`OTP sent successfully to ${formattedPhone}`);
 
-      res.json({
+      return res.json({
         success: true,
         message: 'OTP sent to your phone number'
         // NOTE: Never send OTP in response!
@@ -526,7 +526,7 @@ router.post('/request-otp',
 
     } catch (error) {
       logger.error('OTP request error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to send OTP'
       });
@@ -602,7 +602,7 @@ router.post('/verify-otp',
 
       logger.info(`User logged in via OTP: ${userData.id}`);
 
-      res.json({
+      return res.json({
         success: true,
         message: 'OTP verified successfully',
         data: {
@@ -620,7 +620,7 @@ router.post('/verify-otp',
 
     } catch (error) {
       logger.error('OTP verification error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to verify OTP'
       });
