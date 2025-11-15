@@ -490,16 +490,20 @@ router.post('/request-otp',
       logger.info(`OTP request for phone: ${formattedPhone}`);
 
       // Rate limiting: Check if user requested OTP recently
+      // Allow 15 requests per hour (increased for testing)
       const recentOTP = await pool.query(`
         SELECT created_at FROM otp_verifications 
         WHERE phone = $1 AND created_at > NOW() - INTERVAL '1 hour'
         ORDER BY created_at DESC
       `, [formattedPhone]);
 
-      if (recentOTP.rows.length >= 3) {
+      if (recentOTP.rows.length >= 15) {
+        const oldestRequest = new Date(recentOTP.rows[recentOTP.rows.length - 1].created_at);
+        const waitTime = Math.ceil((60 - (Date.now() - oldestRequest.getTime()) / 1000 / 60));
+        
         return res.status(429).json({
           success: false,
-          message: 'Too many OTP requests. Please try again later.'
+          message: `Too many OTP requests. Please wait ${waitTime} minutes before requesting again.`
         });
       }
 
