@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -516,6 +516,27 @@ useEffect(() => {
     }
   }, [isEditMode, editTransaction, accounts]);
 
+  // Track previous type to detect changes
+  const prevTypeRef = useRef<'expense' | 'income' | 'transfer' | null>(null);
+
+  // Clear form fields when transaction type changes (only in add mode, not edit mode)
+  useEffect(() => {
+    // Skip on initial mount (when prevTypeRef.current is null)
+    if (prevTypeRef.current !== null && prevTypeRef.current !== type && !isEditMode) {
+      // Clear all input fields when type changes
+      setAmount('');
+      setTitle('');
+      setCategory('');
+      setNote('');
+      setSelectedAccountId(null);
+      setSelectedToAccountId(null);
+      setErrors({});
+      // Keep the date as is (user might want to keep the selected date)
+    }
+    // Update the ref to track current type
+    prevTypeRef.current = type;
+  }, [type, isEditMode]);
+
   // Get categories based on transaction type
   const getCategoriesByType = (transactionType: 'expense' | 'income' | 'transfer') => {
     return categories.filter(cat => cat.type === transactionType);
@@ -915,13 +936,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'expense' && styles.toggleButtonExpense
                        ]}
-                       onPress={() => {
-                         setType('expense');
-                         // Clear category if it doesn't exist in expense categories
-                         if (category && !expenseCategories.find(cat => cat.name === category)) {
-                           setCategory('');
-                         }
-                       }}
+                      onPress={() => {
+                        setType('expense');
+                      }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 
@@ -943,13 +960,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'income' && styles.toggleButtonActive
                        ]}
-                       onPress={() => {
-                         setType('income');
-                         // Clear category if it doesn't exist in income categories
-                         if (category && !incomeCategories.find(cat => cat.name === category)) {
-                           setCategory('');
-                         }
-                       }}
+                      onPress={() => {
+                        setType('income');
+                      }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 
@@ -971,13 +984,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'transfer' && styles.toggleButtonTransfer
                        ]}
-                       onPress={() => {
-                         setType('transfer');
-                         // Clear category if it doesn't exist in transfer categories
-                         if (category && !transferCategories.find(cat => cat.name === category)) {
-                           setCategory('');
-                         }
-                       }}
+                      onPress={() => {
+                        setType('transfer');
+                      }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 
