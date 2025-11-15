@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../../config/api.config';
 
 const OTPRequestScreen: React.FC = () => {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+91');
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(false);
   
@@ -27,20 +27,25 @@ const OTPRequestScreen: React.FC = () => {
   const { theme } = useTheme();
 
   const handleRequestOTP = async () => {
-    if (!phone.trim()) {
+    // Ensure +91 is present
+    let formattedPhone = phone.trim();
+    
+    if (!formattedPhone || formattedPhone === '+91') {
       Alert.alert('Error', 'Please enter your phone number');
       return;
     }
 
-    // Format phone number (add country code if missing)
-    const formattedPhone = phone.startsWith('+') 
-      ? phone.replace(/\s/g, '') 
-      : `+91${phone.replace(/\s/g, '')}`;
+    // Ensure it starts with +91
+    if (!formattedPhone.startsWith('+91')) {
+      formattedPhone = `+91${formattedPhone.replace(/^\+/, '').replace(/\s/g, '')}`;
+    } else {
+      formattedPhone = formattedPhone.replace(/\s/g, '');
+    }
 
-    // Validate phone number format
-    const phoneRegex = /^\+?[1-9]\d{10,14}$/;
+    // Validate Indian phone number format (+91 followed by 10 digits)
+    const phoneRegex = /^\+91[6-9]\d{9}$/;
     if (!phoneRegex.test(formattedPhone)) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      Alert.alert('Error', 'Please enter a valid 10-digit Indian phone number');
       return;
     }
 
@@ -147,8 +152,9 @@ const OTPRequestScreen: React.FC = () => {
       paddingVertical: 16,
       fontSize: 16,
       color: '#000000',
-      paddingLeft: 50,
+      paddingLeft: 90,
       height: 56,
+      textAlignVertical: 'center',
     },
     inputFocused: {
       borderColor: '#007AFF',
@@ -164,6 +170,21 @@ const OTPRequestScreen: React.FC = () => {
       left: 16,
       top: 16,
       zIndex: 1,
+    },
+    countryCodeContainer: {
+      position: 'absolute',
+      left: 50,
+      top: 0,
+      bottom: 0,
+      zIndex: 2,
+      justifyContent: 'center',
+      paddingRight: 8,
+    },
+    countryCode: {
+      fontSize: 16,
+      color: '#666666',
+      fontWeight: '400',
+      lineHeight: 20,
     },
     button: {
       backgroundColor: '#007AFF',
@@ -245,22 +266,21 @@ const OTPRequestScreen: React.FC = () => {
                     color="#999999" 
                     style={styles.inputIcon}
                   />
+                  <View style={styles.countryCodeContainer}>
+                    <Text style={styles.countryCode}>+91</Text>
+                  </View>
                   <TextInput
                     style={[
                       styles.input,
                       focusedInput && styles.inputFocused,
                     ]}
-                    placeholder="+91 9876543210"
+                    placeholder="9876543210"
                     placeholderTextColor="#999999"
-                    value={phone}
+                    value={phone.replace('+91', '')}
                     onChangeText={(text) => {
-                      // Allow only numbers and + at start
-                      const cleaned = text.replace(/[^\d+]/g, '');
-                      if (cleaned.startsWith('+') || cleaned.length === 0) {
-                        setPhone(cleaned);
-                      } else if (!cleaned.includes('+')) {
-                        setPhone(cleaned);
-                      }
+                      // Only allow digits, limit to 10 digits
+                      const digits = text.replace(/\D/g, '').slice(0, 10);
+                      setPhone(`+91${digits}`);
                     }}
                     onFocus={() => setFocusedInput(true)}
                     onBlur={() => setFocusedInput(false)}
@@ -271,7 +291,7 @@ const OTPRequestScreen: React.FC = () => {
                   />
                 </View>
                 <Text style={styles.infoText} allowFontScaling={false}>
-                  We'll send a 6-digit OTP to this number
+                  We'll send a 6-digit OTP to this number (India: +91)
                 </Text>
               </View>
 

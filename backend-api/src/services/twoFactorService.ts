@@ -26,10 +26,12 @@ export class TwoFactorService {
       // Remove + from phone number for 2Factor.in API
       const cleanPhone = phone.replace(/^\+/, '');
       
-      // 2Factor.in API endpoint
+      // 2Factor.in SMS endpoint - ensures SMS delivery (not voice call)
+      // Format: /SMS/{API_KEY}/{PHONE}/{OTP}
+      // Note: If you're still getting voice calls, check 2Factor.in dashboard settings
       const url = `${TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}`;
       
-      logger.info(`Sending OTP via 2Factor.in to ${phone}`);
+      logger.info(`Sending OTP via 2Factor.in SMS to ${phone}`);
       
       const response = await axios.get<SendOTPResponse>(url, {
         baseURL: TWO_FACTOR_BASE_URL,
@@ -37,7 +39,7 @@ export class TwoFactorService {
       });
 
       if (response.data.Status === 'Success') {
-        logger.info(`OTP sent successfully to ${phone}`);
+        logger.info(`OTP sent successfully via SMS to ${phone}`);
         return true;
       } else {
         logger.error(`Failed to send OTP: ${response.data.Details}`);

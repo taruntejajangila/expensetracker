@@ -638,7 +638,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
 // Connect to database with retry logic
 export const connectDatabase = async (maxRetries: number = 5, retryDelay: number = 10000): Promise<void> => {
   let lastError: any = null;
-  
+    
   // Set up event listeners for the pool (only once)
   if (!pool.listeners('connect').length) {
     pool.on('connect', (client) => {
@@ -665,8 +665,8 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       logger.info(`✅ Database connection established successfully (took ${duration}s)`);
       return; // Success!
-      
-    } catch (error) {
+
+  } catch (error) {
       lastError = error;
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn(`⚠️ Database connection attempt ${attempt} failed: ${errorMessage}`);

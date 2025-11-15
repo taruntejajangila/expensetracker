@@ -472,8 +472,11 @@ router.post('/request-otp',
     try {
       const { phone } = req.body;
 
-      // Format phone number (ensure it starts with +)
-      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      // Normalize phone number: remove spaces, ensure starts with +
+      let formattedPhone = phone.replace(/\s/g, '').trim();
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = `+91${formattedPhone}`;
+      }
 
       logger.info(`OTP request for phone: ${formattedPhone}`);
 
@@ -545,10 +548,18 @@ router.post('/verify-otp',
     try {
       const { phone, otp } = req.body;
 
-      // Format phone number
-      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      // Normalize phone number: remove spaces, ensure starts with +
+      let formattedPhone = phone.replace(/\s/g, '').trim();
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = `+91${formattedPhone}`;
+      }
 
-      // Find valid OTP
+      // Normalize OTP: remove any whitespace, ensure it's exactly 6 digits
+      const normalizedOtp = otp.toString().replace(/\s/g, '').trim();
+
+      logger.info(`OTP verification attempt for phone: ${formattedPhone}, OTP: ${normalizedOtp}`);
+
+      // Find valid OTP - check all recent OTPs for this phone
       const otpRecord = await pool.query(`
         SELECT * FROM otp_verifications 
         WHERE phone = $1 
@@ -557,7 +568,19 @@ router.post('/verify-otp',
           AND used = false
         ORDER BY created_at DESC 
         LIMIT 1
-      `, [formattedPhone, otp]);
+      `, [formattedPhone, normalizedOtp]);
+
+      // Debug: Log all OTPs for this phone (for troubleshooting)
+      const allOtps = await pool.query(`
+        SELECT phone, otp, expires_at, used, created_at 
+        FROM otp_verifications 
+        WHERE phone = $1 
+        ORDER BY created_at DESC 
+        LIMIT 5
+      `, [formattedPhone]);
+
+      logger.info(`Found ${otpRecord.rows.length} valid OTP record(s) for ${formattedPhone}`);
+      logger.info(`Recent OTPs for ${formattedPhone}:`, JSON.stringify(allOtps.rows, null, 2));
 
       if (otpRecord.rows.length === 0) {
         return res.status(401).json({
