@@ -8,7 +8,7 @@ import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 import { TwoFactorService } from '../services/twoFactorService';
 
-// Force Railway rebuild - routes verified - v4 - /auth/me route confirmed - explicit logging added
+// Force Railway rebuild - routes verified - v6 - /auth/me route fixed by moving to top
 
 const router = express.Router();
 
@@ -24,11 +24,11 @@ router.get('/me-test', (req, res) => {
   res.json({ success: true, message: '/me route exists, but requires authentication' });
 });
 
-// GET /api/auth/me - Get current user profile (MOVED TO TOP FOR DEBUGGING)
+// GET /api/auth/me - Get current user profile
 router.get('/me',
   authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
-    logger.info('🔍 /auth/me endpoint hit - TOP VERSION');
+    logger.info('🔍 /auth/me endpoint hit');
     try {
       // User is already authenticated by middleware
       const authUser = req.user;
