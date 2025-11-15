@@ -38,6 +38,12 @@ const CompleteSignupScreen: React.FC = () => {
   const { setUser } = useAuth();
   const { theme } = useTheme();
 
+  const keyboardVerticalOffset = Platform.select({
+    ios: 24,
+    android: (StatusBar.currentHeight ?? 0) + 24,
+    default: 0,
+  });
+
   const handleCompleteSignup = async () => {
     if (!name.trim() || name.trim().length < 2) {
       Alert.alert('Error', 'Please enter your name (at least 2 characters)');
@@ -151,12 +157,12 @@ const CompleteSignupScreen: React.FC = () => {
       flexGrow: 1,
       justifyContent: 'center',
       paddingHorizontal: 24,
-      paddingTop: 60,
+      paddingTop: 40,
       paddingBottom: 40,
     },
     header: {
       alignItems: 'center',
-      marginBottom: 48,
+      marginBottom: 40,
     },
     logoContainer: {
       width: 80,
@@ -195,7 +201,7 @@ const CompleteSignupScreen: React.FC = () => {
       alignSelf: 'center',
     },
     inputContainer: {
-      marginBottom: 20,
+      marginBottom: 16,
     },
     label: {
       fontSize: 12,
@@ -215,9 +221,9 @@ const CompleteSignupScreen: React.FC = () => {
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingVertical: 16,
-      fontSize: 16,
+      fontSize: 14,
       color: '#000000',
-      paddingLeft: 50,
+      paddingRight: 50,
       height: 56,
     },
     inputFocused: {
@@ -231,11 +237,11 @@ const CompleteSignupScreen: React.FC = () => {
     },
     inputIcon: {
       position: 'absolute',
-      left: 16,
+      right: 16,
       top: 16,
       zIndex: 1,
     },
-    button: {
+    registerButton: {
       backgroundColor: '#007AFF',
       borderRadius: 12,
       paddingVertical: 16,
@@ -247,7 +253,7 @@ const CompleteSignupScreen: React.FC = () => {
       shadowRadius: 8,
       elevation: 8,
     },
-    buttonText: {
+    registerButtonText: {
       color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '600',
@@ -276,16 +282,18 @@ const CompleteSignupScreen: React.FC = () => {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          keyboardVerticalOffset={keyboardVerticalOffset}
+          enabled
         >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Text style={styles.logo} allowFontScaling={false}>👤</Text>
+                <Text style={styles.logo} allowFontScaling={false}>💰</Text>
               </View>
               <Text style={styles.title} allowFontScaling={false}>Complete Your Profile</Text>
               <Text style={styles.subtitle} allowFontScaling={false}>
@@ -295,14 +303,8 @@ const CompleteSignupScreen: React.FC = () => {
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label} allowFontScaling={false}>Full Name *</Text>
+                <Text style={styles.label} allowFontScaling={false}>Full Name</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons 
-                    name="person-outline" 
-                    size={20} 
-                    color="#999999" 
-                    style={styles.inputIcon}
-                  />
                   <TextInput
                     style={[
                       styles.input,
@@ -318,18 +320,18 @@ const CompleteSignupScreen: React.FC = () => {
                     autoCorrect={false}
                     allowFontScaling={false}
                   />
-                </View>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label} allowFontScaling={false}>Email Address *</Text>
-                <View style={styles.inputWrapper}>
                   <Ionicons 
-                    name="mail-outline" 
+                    name="person-outline" 
                     size={20} 
                     color="#999999" 
                     style={styles.inputIcon}
                   />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label} allowFontScaling={false}>Email Address</Text>
+                <View style={styles.inputWrapper}>
                   <TextInput
                     style={[
                       styles.input,
@@ -346,18 +348,24 @@ const CompleteSignupScreen: React.FC = () => {
                     autoCorrect={false}
                     allowFontScaling={false}
                   />
+                  <Ionicons 
+                    name="mail-outline" 
+                    size={20} 
+                    color="#999999" 
+                    style={styles.inputIcon}
+                  />
                 </View>
               </View>
 
               <TouchableOpacity
                 style={[
-                  styles.button,
+                  styles.registerButton,
                   (isLoading || !name.trim() || !email.trim()) && styles.buttonDisabled,
                 ]}
                 onPress={handleCompleteSignup}
                 disabled={isLoading || !name.trim() || !email.trim()}
               >
-                <Text style={styles.buttonText} allowFontScaling={false}>
+                <Text style={styles.registerButtonText} allowFontScaling={false}>
                   {isLoading ? 'Completing...' : 'Complete Signup'}
                 </Text>
               </TouchableOpacity>
