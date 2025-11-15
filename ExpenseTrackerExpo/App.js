@@ -530,7 +530,11 @@ function AppNavigator() {
       <NavigationContainer ref={navigationRef}>
         <StatusBar style="auto" />
         <OfflineIndicator />
-        {(user || isOfflineMode) ? <MainStackNavigator /> : <AuthStackNavigator />}
+        {(user || isOfflineMode) ? (
+          <MainStackNavigator key={user?.id || 'main'} />
+        ) : (
+          <AuthStackNavigator key="auth" />
+        )}
         {user && <SimpleDrawer isOpen={drawerOpen} onClose={closeDrawer} />}
         {/* Left edge swipe opener */}
         
