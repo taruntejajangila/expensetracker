@@ -840,4 +840,62 @@ router.post('/complete-signup',
   }
 );
 
+// GET /api/auth/debug/users - Debug endpoint to view all users (for testing)
+// TODO: Remove or restrict this endpoint in production
+router.get('/debug/users',
+  async (req: express.Request, res: express.Response) => {
+    try {
+      // Get all users with their data
+      const usersResult = await pool.query(`
+        SELECT 
+          id,
+          email,
+          phone,
+          first_name,
+          last_name,
+          CONCAT(first_name, ' ', last_name) as name,
+          password IS NOT NULL as has_password,
+          is_active,
+          is_verified,
+          created_at,
+          updated_at,
+          last_login
+        FROM users
+        ORDER BY created_at DESC
+      `);
+
+      const users = usersResult.rows.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        name: user.name || 'User',
+        hasPassword: user.has_password,
+        isActive: user.is_active,
+        isVerified: user.is_verified,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+        lastLogin: user.last_login
+      }));
+
+      logger.info(`Debug: User list requested - ${users.length} users found`);
+
+      res.json({
+        success: true,
+        message: 'User data retrieved successfully',
+        count: users.length,
+        data: users
+      });
+    } catch (error: any) {
+      logger.error('Debug users error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch users',
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      });
+    }
+  }
+);
+
 export default router;
