@@ -191,6 +191,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // API routes
 app.use('/api/auth', authRoutes);
 logger.info('✅ Auth routes registered at /api/auth');
+// Log all registered routes for debugging
+logger.info('🔍 Registered auth routes: GET /test, GET /me-test, GET /me, POST /refresh, POST /logout, POST /request-otp, POST /check-phone, POST /verify-otp, POST /complete-signup');
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);

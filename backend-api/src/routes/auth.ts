@@ -8,7 +8,7 @@ import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 import { TwoFactorService } from '../services/twoFactorService';
 
-// Force Railway rebuild - routes verified - v3 - /auth/me route confirmed
+// Force Railway rebuild - routes verified - v4 - /auth/me route confirmed - explicit logging added
 
 const router = express.Router();
 
