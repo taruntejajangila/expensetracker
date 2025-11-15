@@ -285,15 +285,25 @@ router.get('/users', authenticateToken, requireAnyRole(['admin', 'super_admin'])
       ORDER BY u.created_at DESC
     `);
 
-    const users = usersResult.rows.map((user: any) => ({
-      ...user,
-      status: user.transactionCount > 0 ? 'active' : 'inactive', // Active if they have transactions
-      isVerified: user.is_verified || false,
-      createdAt: user.createdAt.toISOString(),
-      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
-      lastActiveAt: user.lastTransactionAt ? user.lastTransactionAt.toISOString() : null, // Real mobile app activity
-      transactionCount: parseInt(user.transactionCount)
-    }));
+    const users = usersResult.rows.map((user: any) => {
+      // Determine status: Active if user has transactions OR logged in within last 30 days
+      const hasTransactions = parseInt(user.transactionCount) > 0;
+      const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+      const daysSinceLogin = lastLogin ? Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)) : null;
+      const recentlyActive = lastLogin && daysSinceLogin !== null && daysSinceLogin <= 30;
+      
+      const status = hasTransactions || recentlyActive ? 'active' : 'inactive';
+      
+      return {
+        ...user,
+        status,
+        isVerified: user.is_verified || false,
+        createdAt: user.createdAt.toISOString(),
+        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+        lastActiveAt: user.lastTransactionAt ? user.lastTransactionAt.toISOString() : null, // Real mobile app activity
+        transactionCount: parseInt(user.transactionCount)
+      };
+    });
 
     logger.info(`Admin users list requested by user: ${req.user?.id}`);
     res.json({
@@ -456,9 +466,16 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
       console.log('Error fetching budgets:', error);
     }
 
+    // Determine status: Active if user has transactions OR logged in within last 30 days
+    const hasTransactions = parseInt(user.transactionCount) > 0;
+    const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+    const daysSinceLogin = lastLogin ? Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)) : null;
+    const recentlyActive = lastLogin && daysSinceLogin !== null && daysSinceLogin <= 30;
+    const status = hasTransactions || recentlyActive ? 'active' : 'inactive';
+    
     const userDetails = {
       ...user,
-      status: user.transactionCount > 0 ? 'active' : 'inactive',
+      status,
       isVerified: user.is_verified || false,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
