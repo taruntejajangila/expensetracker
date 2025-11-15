@@ -122,17 +122,27 @@ const OTPVerifyScreen: React.FC = () => {
 
       const result = await response.json();
 
+      console.log('🔍 OTP Verification Response:', { 
+        success: result.success, 
+        requiresSignup: result.requiresSignup,
+        hasTempToken: !!result.data?.tempToken,
+        hasAccessToken: !!result.data?.accessToken
+      });
+
       if (result.success) {
         // Check if user needs to complete signup
         if (result.requiresSignup) {
           // New user: Store tempToken and navigate to complete signup screen
+          // DO NOT set user in context yet - wait until signup is complete
           if (result.data.tempToken) {
             await AsyncStorage.setItem('authToken', result.data.tempToken);
             console.log('✅ TempToken stored for new user');
           }
           
           console.log('✅ OTP Verified - New user, navigating to CompleteSignup');
+          console.log('⚠️ NOT setting user in context - will be set after CompleteSignup');
           // Navigate directly to complete signup screen (no Alert blocking)
+          // Do NOT set user in context - that will happen after CompleteSignup
           (navigation as any).navigate('CompleteSignup', { 
             phone: phone,
             tempToken: result.data.tempToken 
