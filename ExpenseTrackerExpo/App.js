@@ -168,7 +168,7 @@ function TabNavigator() {
 // Main Stack Navigator
 function MainStackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="MainTabs">
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="SpentInMonth" component={SpentInMonthScreen} />
       <Stack.Screen name="AllTransaction" component={AllTransactionScreen} />
@@ -214,10 +214,8 @@ function MainStackNavigator() {
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-      {/* OTP Screens - Added for testing from home screen */}
-      <Stack.Screen name="OTPRequest" component={OTPRequestScreen} />
-      <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
-      <Stack.Screen name="CompleteSignup" component={CompleteSignupScreen} />
+      {/* OTP Screens removed from MainStackNavigator - only in AuthStackNavigator */}
+      {/* Users should not access OTP screens when logged in */}
     </Stack.Navigator>
   );
 }
@@ -263,6 +261,26 @@ function AppNavigator() {
   // Debug: Log user state changes
   useEffect(() => {
     console.log('🔍 AppNavigator - User state changed:', { user: user ? 'Logged in' : 'Not logged in', userId: user?.id });
+  }, [user]);
+
+  // Reset navigation when user logs in
+  useEffect(() => {
+    if (user && navigationRef.current) {
+      console.log('🔄 User logged in - Resetting navigation to MainTabs');
+      // Small delay to ensure navigator is mounted
+      setTimeout(() => {
+        if (navigationRef.current) {
+          try {
+            navigationRef.current.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+          } catch (error) {
+            console.log('Navigation reset error (non-fatal):', error);
+          }
+        }
+      }, 100);
+    }
   }, [user]);
 
   // Normalize display size on app start to prevent Android display size scaling
