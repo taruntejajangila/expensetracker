@@ -1975,7 +1975,7 @@ const HomeScreen: React.FC = () => {
         {/* Header with Safe Area - Now Scrollable */}
         <HomeHeader user={user} theme={theme} insets={insets} />
         
-        {/* TEST BUTTON: OTP Login - Remove in production */}
+        {/* TEST BUTTONS: OTP Login & Complete Signup - Remove in production */}
         <TouchableOpacity
           style={styles.testButton}
           onPress={() => navigation.navigate('OTPRequest' as never)}
@@ -1983,6 +1983,36 @@ const HomeScreen: React.FC = () => {
           <Ionicons name="phone-portrait-outline" size={20} color="#FFFFFF" />
           <Text style={styles.testButtonText} allowFontScaling={false}>
             🧪 TEST: Login with Phone (OTP)
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.testButton, { backgroundColor: '#FF6B6B', marginTop: 10 }]}
+          onPress={async () => {
+            // Navigate to CompleteSignup for testing
+            // Get tempToken from AsyncStorage if available (from OTP verification)
+            const tempToken = await AsyncStorage.getItem('authToken');
+            const testPhone = '+917989166224';
+            
+            if (tempToken) {
+              console.log('✅ Using tempToken from AsyncStorage for CompleteSignup test');
+              navigation.navigate('CompleteSignup' as never, { 
+                phone: testPhone,
+                tempToken: tempToken
+              } as never);
+            } else {
+              console.log('⚠️ No tempToken found - CompleteSignup may not work without valid token');
+              // Still navigate for UI testing, but it will fail on submit
+              navigation.navigate('CompleteSignup' as never, { 
+                phone: testPhone,
+                tempToken: 'test-token'
+              } as never);
+            }
+          }}
+        >
+          <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.testButtonText} allowFontScaling={false}>
+            🧪 TEST: Complete Signup Screen
           </Text>
         </TouchableOpacity>
         
