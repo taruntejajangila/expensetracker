@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Data Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 25px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-box .label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        thead {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            color: #212529;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .phone {
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .email {
+            color: #495057;
+        }
+        
+        .date {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 60px;
+            color: #dc3545;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        @media (max-width: 768px) {
+            .header .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .stat-box {
+                width: 100%;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👥 User Data Viewer</h1>
+            <div class="stats" id="stats">
+                <div class="stat-box">
+                    <div class="label">Total Users</div>
+                    <div class="value" id="totalUsers">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">OTP Users</div>
+                    <div class="value" id="otpUsers">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Password Users</div>
+                    <div class="value" id="passwordUsers">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Active Users</div>
+                    <div class="value" id="activeUsers">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div>
+                <strong>API Endpoint:</strong> 
+                <code id="apiUrl">https://expensetracker-production-eb9c.up.railway.app/api/auth/debug/users</code>
+            </div>
+            <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
+        </div>
+        
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <div>Loading user data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://expensetracker-production-eb9c.up.railway.app/api/auth/debug/users';
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Never';
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatPhone(phone) {
+            if (!phone) return '-';
+            return phone;
+        }
+
+        function updateStats(users) {
+            const total = users.length;
+            const otpUsers = users.filter(u => !u.hasPassword).length;
+            const passwordUsers = users.filter(u => u.hasPassword).length;
+            const activeUsers = users.filter(u => u.isActive).length;
+
+            document.getElementById('totalUsers').textContent = total;
+            document.getElementById('otpUsers').textContent = otpUsers;
+            document.getElementById('passwordUsers').textContent = passwordUsers;
+            document.getElementById('activeUsers').textContent = activeUsers;
+        }
+
+        function renderTable(users) {
+            if (users.length === 0) {
+                document.getElementById('content').innerHTML = `
+                    <div class="no-data">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+                        <div>No users found in the database</div>
+                    </div>
+                `;
+                updateStats([]);
+                return;
+            }
+
+            const tableHTML = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Verified</th>
+                                <th>Created At</th>
+                                <th>Last Login</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map(user => `
+                                <tr>
+                                    <td style="font-family: 'Courier New', monospace; font-size: 11px; color: #6c757d;">
+                                        ${user.id.substring(0, 8)}...
+                                    </td>
+                                    <td><strong>${user.name || 'User'}</strong></td>
+                                    <td class="email">${user.email || '-'}</td>
+                                    <td class="phone">${formatPhone(user.phone)}</td>
+                                    <td>
+                                        <span class="badge ${user.hasPassword ? 'badge-info' : 'badge-success'}">
+                                            ${user.hasPassword ? 'Password' : 'OTP'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge ${user.isActive ? 'badge-success' : 'badge-danger'}">
+                                            ${user.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge ${user.isVerified ? 'badge-success' : 'badge-warning'}">
+                                            ${user.isVerified ? 'Verified' : 'Not Verified'}
+                                        </span>
+                                    </td>
+                                    <td class="date">${formatDate(user.createdAt)}</td>
+                                    <td class="date">${formatDate(user.lastLogin)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = tableHTML;
+            updateStats(users);
+        }
+
+        async function loadUsers() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Loading user data...</div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    renderTable(data.data);
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">⚠️</div>
+                            <div><strong>Error:</strong> ${data.message || 'Failed to load users'}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">❌</div>
+                        <div><strong>Network Error:</strong> ${error.message}</div>
+                        <div style="margin-top: 20px; font-size: 12px; color: #6c757d;">
+                            Make sure the API is accessible and CORS is enabled.
+                        </div>
+                    </div>
+                `;
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load users on page load
+        loadUsers();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadUsers, 30000);
+    </script>
+</body>
+</html>
+
