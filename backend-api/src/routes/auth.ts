@@ -8,9 +8,14 @@ import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 import { TwoFactorService } from '../services/twoFactorService';
 
-// Force Railway rebuild - routes verified
+// Force Railway rebuild - routes verified - v2
 
 const router = express.Router();
+
+// Test route to verify router is working
+router.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Auth router is working' });
+});
 
 // DEPRECATED: Password-based registration removed in favor of passwordless OTP authentication
 // POST /api/auth/register - User registration (DISABLED - Use OTP signup instead)
@@ -213,6 +218,7 @@ router.post('/logout',
 router.get('/me',
   authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
+    logger.info('🔍 /auth/me endpoint hit');
     try {
       // User is already authenticated by middleware
       const authUser = req.user;
