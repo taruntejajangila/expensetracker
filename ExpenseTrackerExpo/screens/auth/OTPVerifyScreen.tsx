@@ -123,23 +123,50 @@ const OTPVerifyScreen: React.FC = () => {
       const result = await response.json();
 
       if (result.success) {
-        // Store tokens
-        await AsyncStorage.setItem('authToken', result.data.accessToken);
-        if (result.data.refreshToken) {
-          await AsyncStorage.setItem('refreshToken', result.data.refreshToken);
-        }
-
-        // Update user in context
-        setUser(result.data.user);
-
-        Alert.alert('Success', 'Logged in successfully!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigation will happen automatically via AuthContext
-            }
+        // Check if user needs to complete signup
+        if (result.requiresSignup) {
+          // New user: Store tempToken and navigate to complete signup screen
+          if (result.data.tempToken) {
+            await AsyncStorage.setItem('authToken', result.data.tempToken);
           }
-        ]);
+          
+          // Navigate to complete signup screen (we'll create this)
+          Alert.alert('Success', 'OTP verified! Please complete your profile.', [
+            {
+              text: 'OK',
+              onPress: () => {
+                // TODO: Navigate to CompleteSignupScreen
+                // For now, we'll handle it in the next step
+                navigation.navigate('CompleteSignup' as never, { 
+                  phone: phone,
+                  tempToken: result.data.tempToken 
+                } as never);
+              }
+            }
+          ]);
+        } else {
+          // Existing user: Store tokens and login
+          if (result.data.accessToken) {
+            await AsyncStorage.setItem('authToken', result.data.accessToken);
+          }
+          if (result.data.refreshToken) {
+            await AsyncStorage.setItem('refreshToken', result.data.refreshToken);
+          }
+
+          // Update user in context
+          if (result.data.user) {
+            setUser(result.data.user);
+          }
+
+          Alert.alert('Success', 'Logged in successfully!', [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigation will happen automatically via AuthContext
+              }
+            }
+          ]);
+        }
       } else {
         Alert.alert('Error', result.message || 'Invalid OTP');
         // Clear OTP on error

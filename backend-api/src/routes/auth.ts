@@ -733,7 +733,7 @@ router.post('/complete-signup',
   authenticateToken,
   [
     body('name').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
-    body('email').optional().isEmail().normalizeEmail().withMessage('Valid email required')
+    body('email').isEmail().normalizeEmail().withMessage('Valid email required')
   ],
   validateRequest,
   async (req: express.Request, res: express.Response) => {
@@ -776,34 +776,27 @@ router.post('/complete-signup',
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Update user with name and optional email
-      const updateFields: string[] = ['first_name = $1', 'last_name = $2', 'updated_at = NOW()'];
-      const updateValues: any[] = [firstName, lastName];
-      let paramIndex = 3;
+      // Email is required - check if email is already taken
+      const emailCheck = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email.trim(), authUser.id]
+      );
 
-      if (email && email.trim()) {
-        // Check if email is already taken
-        const emailCheck = await pool.query(
-          'SELECT id FROM users WHERE email = $1 AND id != $2',
-          [email.trim(), authUser.id]
-        );
-
-        if (emailCheck.rows.length > 0) {
-          return res.status(409).json({
-            success: false,
-            message: 'Email already in use'
-          });
-        }
-
-        updateFields.push(`email = $${paramIndex}`);
-        updateValues.push(email.trim());
-        paramIndex++;
+      if (emailCheck.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already in use'
+        });
       }
+
+      // Update user with name and email (both required)
+      const updateFields: string[] = ['first_name = $1', 'last_name = $2', 'email = $3', 'updated_at = NOW()'];
+      const updateValues: any[] = [firstName, lastName, email.trim()];
 
       const updateQuery = `
         UPDATE users 
         SET ${updateFields.join(', ')}
-        WHERE id = $${paramIndex}
+        WHERE id = $4
         RETURNING id, phone, email, first_name, last_name, created_at
       `;
       updateValues.push(authUser.id);

@@ -78,6 +78,7 @@ import TermsConditionsScreen from './screens/TermsConditionsScreen';
 // import RegisterScreen from './screens/auth/RegisterScreen';
 import OTPRequestScreen from './screens/auth/OTPRequestScreen';
 import OTPVerifyScreen from './screens/auth/OTPVerifyScreen';
+import CompleteSignupScreen from './screens/auth/CompleteSignupScreen';
 
 // Import onboarding screen
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -216,6 +217,7 @@ function MainStackNavigator() {
       {/* OTP Screens - Added for testing from home screen */}
       <Stack.Screen name="OTPRequest" component={OTPRequestScreen} />
       <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
+      <Stack.Screen name="CompleteSignup" component={CompleteSignupScreen} />
     </Stack.Navigator>
   );
 }
@@ -229,6 +231,7 @@ function AuthStackNavigator() {
       {/* <Stack.Screen name="Register" component={RegisterScreen} /> */}
       <Stack.Screen name="OTPRequest" component={OTPRequestScreen} />
       <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
+      <Stack.Screen name="CompleteSignup" component={CompleteSignupScreen} />
     </Stack.Navigator>
   );
 }
