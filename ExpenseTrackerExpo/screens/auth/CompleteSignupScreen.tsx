@@ -90,19 +90,42 @@ const CompleteSignupScreen: React.FC = () => {
           await AsyncStorage.setItem('refreshToken', result.data.refreshToken);
         }
 
-        // Update user in context
+        // Update user in context - format user object to match AuthContext User interface
         if (result.data.user) {
-          setUser(result.data.user);
-        }
-
-        Alert.alert('Success', 'Profile completed successfully!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigation will happen automatically via AuthContext
+          const userData = {
+            id: result.data.user.id,
+            email: result.data.user.email || '',
+            name: result.data.user.name || `${result.data.user.first_name || ''} ${result.data.user.last_name || ''}`.trim() || 'User',
+            phone: result.data.user.phone,
+            createdAt: result.data.user.created_at || result.data.user.createdAt
+          };
+          setUser(userData);
+        } else {
+          // If user data not in response, fetch it
+          const token = await AsyncStorage.getItem('authToken');
+          if (token) {
+            try {
+              const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.data) {
+                setUser({
+                  id: userResult.data.id,
+                  email: userResult.data.email || '',
+                  name: userResult.data.name || 'User',
+                  phone: userResult.data.phone,
+                  createdAt: userResult.data.createdAt
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching user data:', error);
             }
           }
-        ]);
+        }
+        // Navigation will happen automatically via AuthContext when user is set
       } else {
         Alert.alert('Error', result.message || 'Failed to complete signup');
       }

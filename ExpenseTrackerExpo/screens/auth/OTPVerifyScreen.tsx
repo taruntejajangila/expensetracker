@@ -130,20 +130,11 @@ const OTPVerifyScreen: React.FC = () => {
             await AsyncStorage.setItem('authToken', result.data.tempToken);
           }
           
-          // Navigate to complete signup screen (we'll create this)
-          Alert.alert('Success', 'OTP verified! Please complete your profile.', [
-            {
-              text: 'OK',
-              onPress: () => {
-                // TODO: Navigate to CompleteSignupScreen
-                // For now, we'll handle it in the next step
-                navigation.navigate('CompleteSignup' as never, { 
-                  phone: phone,
-                  tempToken: result.data.tempToken 
-                } as never);
-              }
-            }
-          ]);
+          // Navigate directly to complete signup screen (no Alert blocking)
+          navigation.navigate('CompleteSignup' as never, { 
+            phone: phone,
+            tempToken: result.data.tempToken 
+          } as never);
         } else {
           // Existing user: Store tokens and login
           if (result.data.accessToken) {
@@ -153,19 +144,43 @@ const OTPVerifyScreen: React.FC = () => {
             await AsyncStorage.setItem('refreshToken', result.data.refreshToken);
           }
 
-          // Update user in context
+          // Update user in context - this will trigger navigation to MainStackNavigator
           if (result.data.user) {
-            setUser(result.data.user);
-          }
-
-          Alert.alert('Success', 'Logged in successfully!', [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigation will happen automatically via AuthContext
+            // Format user object to match AuthContext User interface
+            const userData = {
+              id: result.data.user.id,
+              email: result.data.user.email || '',
+              name: result.data.user.name || `${result.data.user.first_name || ''} ${result.data.user.last_name || ''}`.trim() || 'User',
+              phone: result.data.user.phone,
+              createdAt: result.data.user.created_at
+            };
+            setUser(userData);
+          } else {
+            // If user data not in response, fetch it
+            const token = await AsyncStorage.getItem('authToken');
+            if (token) {
+              try {
+                const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                const userResult = await userResponse.json();
+                if (userResult.success && userResult.data) {
+                  setUser({
+                    id: userResult.data.id,
+                    email: userResult.data.email || '',
+                    name: userResult.data.name || 'User',
+                    phone: userResult.data.phone,
+                    createdAt: userResult.data.createdAt
+                  });
+                }
+              } catch (error) {
+                console.error('Error fetching user data:', error);
               }
             }
-          ]);
+          }
+          // Navigation will happen automatically via AuthContext when user is set
         }
       } else {
         Alert.alert('Error', result.message || 'Invalid OTP');
