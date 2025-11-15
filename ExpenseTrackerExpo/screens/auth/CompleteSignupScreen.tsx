@@ -188,6 +188,10 @@ const CompleteSignupScreen: React.FC = () => {
             createdAt: result.data.user.created_at || result.data.user.createdAt
           };
           console.log('✅ CompleteSignup - Setting user in context:', userData);
+          
+          // Cache user data for offline mode and app reload persistence
+          await AsyncStorage.setItem('cachedUserData', JSON.stringify(userData));
+          
           setUser(userData);
           console.log('✅ User set in context, navigation should happen automatically');
         } else {
@@ -202,13 +206,16 @@ const CompleteSignupScreen: React.FC = () => {
               });
               const userResult = await userResponse.json();
               if (userResult.success && userResult.data) {
-                setUser({
+                const userData = {
                   id: userResult.data.id,
                   email: userResult.data.email || '',
                   name: userResult.data.name || 'User',
                   phone: userResult.data.phone,
                   createdAt: userResult.data.createdAt
-                });
+                };
+                // Cache user data for offline mode and app reload persistence
+                await AsyncStorage.setItem('cachedUserData', JSON.stringify(userData));
+                setUser(userData);
               }
             } catch (error) {
               console.error('Error fetching user data:', error);
