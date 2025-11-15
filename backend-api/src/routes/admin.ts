@@ -459,6 +459,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     const userDetails = {
       ...user,
       status: user.transactionCount > 0 ? 'active' : 'inactive',
+      isVerified: user.is_verified || false,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       lastActiveAt: user.lastTransactionAt ? user.lastTransactionAt.toISOString() : null,
