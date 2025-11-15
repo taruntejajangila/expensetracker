@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { BarChart, LineChart, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, CartesianGrid, XAxis, YAxis, Bar, Line, AreaChart, Area } from 'recharts'
-import { Activity, AlertTriangle, BarChart3, Calendar, CheckCircle, Clock, CreditCard, DollarSign, Download, Eye, Filter, Layers, PieChart as PieChartIcon, RefreshCw, Search, Server, ShoppingBag, Smartphone, Target, TrendingDown, TrendingUp, Users, Zap } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Calendar, CheckCircle, Clock, CreditCard, DollarSign, Download, Eye, Filter, Gauge, Layers, PieChart as PieChartIcon, RefreshCw, Search, Server, ShoppingBag, Smartphone, Target, TrendingDown, TrendingUp, Users, Zap } from 'lucide-react'
 import adminAPI, { AnalyticsResponse, PeriodOption } from '../services/api'
 import { formatNumber } from '@/utils/numberFormatter'
 
