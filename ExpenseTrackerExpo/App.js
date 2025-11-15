@@ -260,6 +260,11 @@ function AppNavigator() {
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [forceStopLoading, setForceStopLoading] = useState(false);
 
+  // Debug: Log user state changes
+  useEffect(() => {
+    console.log('🔍 AppNavigator - User state changed:', { user: user ? 'Logged in' : 'Not logged in', userId: user?.id });
+  }, [user]);
+
   // Normalize display size on app start to prevent Android display size scaling
   useEffect(() => {
     normalizeDisplaySize();
@@ -515,6 +520,10 @@ function AppNavigator() {
       />
     );
   }
+
+  // Debug: Log which navigator is being used
+  const currentNavigator = (user || isOfflineMode) ? 'MainStackNavigator' : 'AuthStackNavigator';
+  console.log('🔍 AppNavigator - Rendering:', { currentNavigator, hasUser: !!user, userId: user?.id });
 
   return (
     <>

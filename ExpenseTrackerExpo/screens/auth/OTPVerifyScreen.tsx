@@ -128,13 +128,15 @@ const OTPVerifyScreen: React.FC = () => {
           // New user: Store tempToken and navigate to complete signup screen
           if (result.data.tempToken) {
             await AsyncStorage.setItem('authToken', result.data.tempToken);
+            console.log('✅ TempToken stored for new user');
           }
           
+          console.log('✅ OTP Verified - New user, navigating to CompleteSignup');
           // Navigate directly to complete signup screen (no Alert blocking)
-          navigation.navigate('CompleteSignup' as never, { 
+          (navigation as any).navigate('CompleteSignup', { 
             phone: phone,
             tempToken: result.data.tempToken 
-          } as never);
+          });
         } else {
           // Existing user: Store tokens and login
           if (result.data.accessToken) {
@@ -154,7 +156,9 @@ const OTPVerifyScreen: React.FC = () => {
               phone: result.data.user.phone,
               createdAt: result.data.user.created_at
             };
+            console.log('✅ OTP Verified - Setting user in context:', userData);
             setUser(userData);
+            console.log('✅ User set in context, navigation should happen automatically');
           } else {
             // If user data not in response, fetch it
             const token = await AsyncStorage.getItem('authToken');
@@ -368,7 +372,7 @@ const OTPVerifyScreen: React.FC = () => {
                 {otp.map((digit, index) => (
                   <TextInput
                     key={index}
-                    ref={(ref) => (otpInputRefs.current[index] = ref)}
+                    ref={(ref) => { otpInputRefs.current[index] = ref; }}
                     style={[
                       styles.otpInput,
                       digit && styles.otpInputFocused,
