@@ -604,11 +604,14 @@ router.post('/verify-otp',
 
       if (user.rows.length === 0) {
         // Create new user with phone number
+        // Use phone number as email placeholder (email is required in schema)
+        const placeholderEmail = `${formattedPhone.replace(/\+/g, '')}@phone.otp`;
+        
         const newUser = await pool.query(`
-          INSERT INTO users (phone, first_name, last_name, is_active, created_at)
-          VALUES ($1, $2, $3, true, NOW())
+          INSERT INTO users (phone, email, first_name, last_name, is_active, created_at)
+          VALUES ($1, $2, $3, $4, true, NOW())
           RETURNING id, phone, first_name, last_name, email, created_at
-        `, [formattedPhone, 'User', '']);
+        `, [formattedPhone, placeholderEmail, 'User', '']);
         
         user = newUser;
       }
