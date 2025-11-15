@@ -309,18 +309,7 @@ const OTPRequestScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText} allowFontScaling={false}>
-                Already have an account?{' '}
-                <Text 
-                  style={styles.footerLink}
-                  onPress={() => navigation.navigate('Login' as never)}
-                  allowFontScaling={false}
-                >
-                  Login with Email
-                </Text>
-              </Text>
-            </View>
+            {/* Footer removed - app is now fully passwordless with OTP */}
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>

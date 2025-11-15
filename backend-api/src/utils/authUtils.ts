@@ -32,10 +32,11 @@ export const generateRefreshToken = (userId: string): string => {
     throw new Error('JWT_REFRESH_SECRET not configured');
   }
 
+  // Long-lived refresh token for passwordless OTP login (90 days)
   return jwt.sign(
     { userId, type: 'refresh' },
     secret,
-    { expiresIn: '7d' }
+    { expiresIn: '90d' }
   );
 };
 

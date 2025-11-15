@@ -444,24 +444,8 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Account Security Card */}
-        <View style={styles.infoCard}>
-          <TouchableOpacity 
-            style={styles.settingItem} 
-            onPress={() => navigation.navigate('ChangePassword' as never)}
-          >
-            <View style={styles.settingLeft}>
-              <View style={styles.settingIcon}>
-                <Ionicons name="lock-closed-outline" size={20} color="#007AFF" />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel} allowFontScaling={false}>Security</Text>
-                <Text style={styles.settingText} allowFontScaling={false}>Change Password</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999999" />
-          </TouchableOpacity>
-        </View>
+        {/* Account Security Card - REMOVED: App is now fully passwordless with OTP */}
+        {/* Change Password option removed - authentication is via OTP only */}
 
         {/* Help & Support Card */}
         <View style={styles.infoCard}>

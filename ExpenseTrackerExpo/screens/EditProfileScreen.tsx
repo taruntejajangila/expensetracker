@@ -365,15 +365,7 @@ const EditProfileScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.changePasswordButton}
-            onPress={() => navigation.navigate('ChangePassword' as never)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.changePasswordText} allowFontScaling={false}>
-              Change Password
-            </Text>
-          </TouchableOpacity>
+          {/* Change Password button removed - app is now fully passwordless with OTP */}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

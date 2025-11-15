@@ -17,8 +17,9 @@ interface User {
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  // DEPRECATED: Email/password login removed - use OTP authentication instead
+  // login: (email: string, password: string) => Promise<void>;
+  // register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   clearAllUserData: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
@@ -181,65 +182,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // DEPRECATED: Email/password login removed - app is now fully passwordless
+  // Use OTP authentication flow instead (OTPRequestScreen -> OTPVerifyScreen)
+  /*
   const login = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Check if we're offline
-      if (!isOnline) {
-        throw new Error('No internet connection. Please check your network and try again.');
-      }
-      
-      const apiClient = ApiClient.getInstance();
-      
-      // Call the backend login API with retry logic
-      const result = await apiClient.post(`${API_BASE_URL}/auth/login`, {
-        email: email,
-        password: password,
-      });
-
-
-      if (result.success && result.data) {
-        const { user: userData, accessToken, refreshToken } = result.data;
-        
-        // Clear any existing local data first
-        await clearAllUserData();
-        
-        // Create user object (no local storage)
-        const user: User = {
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          phone: userData.phone,
-          avatar: undefined,
-          createdAt: userData.createdAt,
-        };
-        
-        
-        // Store auth tokens temporarily in memory only
-        // These will be cleared on logout
-        await AsyncStorage.setItem('authToken', accessToken);
-        if (refreshToken) {
-          await AsyncStorage.setItem('refreshToken', refreshToken);
-        }
-        
-        setUser(user);
-        
-        // Cache user data for offline mode
-        await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
-        
-        // Auto-register for push notifications after login
-        await registerForPushNotifications();
-      } else {
-        throw new Error(result.message || 'Login failed');
-      }
-    } catch (error) {
-      console.error('❌ AuthContext: Login failed:', error);
-      throw new Error(error instanceof Error ? error.message : 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
+    throw new Error('Email/password login is no longer supported. Please use OTP authentication.');
   };
+  */
 
   const refreshToken = async (): Promise<boolean> => {
     try {
@@ -277,73 +226,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // DEPRECATED: Email/password registration removed - app is now fully passwordless
+  // Use OTP signup flow instead (OTPRequestScreen -> OTPVerifyScreen -> CompleteSignupScreen)
+  /*
   const register = async (name: string, email: string, password: string, phone?: string) => {
-    try {
-      setIsLoading(true);
-      console.log('🔍 AuthContext: Starting registration process...');
-      
-      // Check if we're offline
-      if (!isOnline) {
-        throw new Error('No internet connection. Please check your network and try again.');
-      }
-      
-      const apiClient = ApiClient.getInstance();
-      
-      // Call the backend registration API with retry logic
-      const registerData: any = {
-        name: name,
-        email: email,
-        password: password
-      };
-      
-      if (phone) {
-        registerData.phone = phone;
-      }
-      
-      const result = await apiClient.post(`${API_BASE_URL}/auth/register`, registerData);
-
-      console.log('🔍 AuthContext: Registration API success:', result);
-
-      if (result.success && result.data) {
-        const { user: userData, accessToken, refreshToken } = result.data;
-        
-        // Clear any existing local data first
-        await clearAllUserData();
-        
-        // Create user object (no local storage)
-        const newUser: User = {
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          phone: userData.phone,
-          avatar: undefined,
-          createdAt: userData.createdAt,
-        };
-        
-        console.log('🔍 AuthContext: Creating user (no local storage):', newUser);
-        
-        // Store auth tokens temporarily in memory only
-        // These will be cleared on logout
-        await AsyncStorage.setItem('authToken', accessToken);
-        if (refreshToken) {
-          await AsyncStorage.setItem('refreshToken', refreshToken);
-        }
-        
-        setUser(newUser);
-        console.log('✅ AuthContext: Registration successful - cloud data only');
-        
-        // Auto-register for push notifications after registration
-        await registerForPushNotifications();
-      } else {
-        throw new Error(result.message || 'Registration failed');
-      }
-    } catch (error) {
-      console.error('❌ AuthContext: Registration failed:', error);
-      throw new Error(error instanceof Error ? error.message : 'Registration failed');
-    } finally {
-      setIsLoading(false);
-    }
+    throw new Error('Email/password registration is no longer supported. Please use OTP signup.');
   };
+  */
 
 
   const logout = async () => {
@@ -447,8 +336,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     setUser,
-    login,
-    register,
+    // login, // Removed - use OTP authentication
+    // register, // Removed - use OTP signup
     logout,
     clearAllUserData,
     refreshToken,

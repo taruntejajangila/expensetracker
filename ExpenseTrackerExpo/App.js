@@ -32,7 +32,8 @@ import HomeScreen from './screens/HomeScreen';
 import OfflineIndicator from './components/common/OfflineIndicator';
 import ProfileScreen from './screens/ProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
-import ChangePasswordScreen from './screens/ChangePasswordScreen';
+// DEPRECATED: ChangePasswordScreen removed - app is now fully passwordless
+// import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import NotificationScreen from './screens/NotificationScreen';
 import SpentInMonthScreen from './screens/SpentInMonthScreen';
@@ -71,9 +72,10 @@ import TicketDetailScreen from './screens/TicketDetailScreen';
 import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
 import TermsConditionsScreen from './screens/TermsConditionsScreen';
 
-// Import auth screens
-import LoginScreen from './screens/auth/LoginScreen';
-import RegisterScreen from './screens/auth/RegisterScreen';
+// Import auth screens (passwordless OTP only)
+// DEPRECATED: LoginScreen and RegisterScreen removed - app is now fully passwordless
+// import LoginScreen from './screens/auth/LoginScreen';
+// import RegisterScreen from './screens/auth/RegisterScreen';
 import OTPRequestScreen from './screens/auth/OTPRequestScreen';
 import OTPVerifyScreen from './screens/auth/OTPVerifyScreen';
 
@@ -204,7 +206,8 @@ function MainStackNavigator() {
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      {/* DEPRECATED: ChangePassword screen removed - app is now fully passwordless */}
+      {/* <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} /> */}
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
       <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
@@ -217,12 +220,13 @@ function MainStackNavigator() {
   );
 }
 
-// Auth Stack Navigator
+// Auth Stack Navigator (Passwordless OTP only)
 function AuthStackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="OTPRequest">
+      {/* DEPRECATED: Login and Register screens removed - app is now fully passwordless */}
+      {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
+      {/* <Stack.Screen name="Register" component={RegisterScreen} /> */}
       <Stack.Screen name="OTPRequest" component={OTPRequestScreen} />
       <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
     </Stack.Navigator>

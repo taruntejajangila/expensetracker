@@ -12,7 +12,9 @@ import { TwoFactorService } from '../services/twoFactorService';
 
 const router = express.Router();
 
-// POST /api/auth/register - User registration
+// DEPRECATED: Password-based registration removed in favor of passwordless OTP authentication
+// POST /api/auth/register - User registration (DISABLED - Use OTP signup instead)
+/*
 router.post('/register',
   [
     body('name').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
@@ -77,8 +79,11 @@ router.post('/register',
     }
   }
 );
+*/
 
-// POST /api/auth/login - User login
+// DEPRECATED: Password-based login removed in favor of passwordless OTP authentication
+// POST /api/auth/login - User login (DISABLED - Use OTP login instead)
+/*
 router.post('/login',
   [
     body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
@@ -355,8 +360,11 @@ router.patch('/profile',
     }
   }
 );
+*/
 
-// POST /api/auth/change-password - Change user password
+// DEPRECATED: Password change removed - app is now fully passwordless
+// POST /api/auth/change-password - Change user password (DISABLED)
+/*
 router.post('/change-password',
   authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
@@ -461,6 +469,7 @@ router.post('/change-password',
     }
   }
 );
+*/
 
 // POST /api/auth/request-otp - Request OTP via SMS
 router.post('/request-otp',
@@ -537,7 +546,55 @@ router.post('/request-otp',
   }
 );
 
-// POST /api/auth/verify-otp - Verify OTP and login/register
+// POST /api/auth/check-phone - Pre-check if user exists (for signup/login flow)
+router.post('/check-phone',
+  [
+    body('phone').isMobilePhone('any').withMessage('Valid phone number required')
+  ],
+  validateRequest,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { phone } = req.body;
+
+      // Normalize phone number
+      let formattedPhone = phone.replace(/\s/g, '').trim();
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = `+91${formattedPhone}`;
+      }
+
+      logger.info(`Phone check for: ${formattedPhone}`);
+
+      // Check if user exists
+      const user = await pool.query(
+        'SELECT id, phone, email, first_name, last_name FROM users WHERE phone = $1',
+        [formattedPhone]
+      );
+
+      const exists = user.rows.length > 0;
+      const userData = exists ? user.rows[0] : null;
+
+      return res.json({
+        success: true,
+        exists,
+        data: exists ? {
+          id: userData.id,
+          phone: userData.phone,
+          email: userData.email,
+          name: `${userData.first_name} ${userData.last_name}`.trim() || 'User'
+        } : null
+      });
+
+    } catch (error) {
+      logger.error('Phone check error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check phone number'
+      });
+    }
+  }
+);
+
+// POST /api/auth/verify-otp - Verify OTP (for both login and signup)
 router.post('/verify-otp',
   [
     body('phone').isMobilePhone('any').withMessage('Valid phone number required'),
@@ -559,7 +616,7 @@ router.post('/verify-otp',
 
       logger.info(`OTP verification attempt for phone: ${formattedPhone}, OTP: ${normalizedOtp}`);
 
-      // Find valid OTP - check all recent OTPs for this phone
+      // Find valid OTP
       const otpRecord = await pool.query(`
         SELECT * FROM otp_verifications 
         WHERE phone = $1 
@@ -569,18 +626,6 @@ router.post('/verify-otp',
         ORDER BY created_at DESC 
         LIMIT 1
       `, [formattedPhone, normalizedOtp]);
-
-      // Debug: Log all OTPs for this phone (for troubleshooting)
-      const allOtps = await pool.query(`
-        SELECT phone, otp, expires_at, used, created_at 
-        FROM otp_verifications 
-        WHERE phone = $1 
-        ORDER BY created_at DESC 
-        LIMIT 5
-      `, [formattedPhone]);
-
-      logger.info(`Found ${otpRecord.rows.length} valid OTP record(s) for ${formattedPhone}`);
-      logger.info(`Recent OTPs for ${formattedPhone}:`, JSON.stringify(allOtps.rows, null, 2));
 
       if (otpRecord.rows.length === 0) {
         return res.status(401).json({
@@ -596,48 +641,192 @@ router.post('/verify-otp',
         WHERE id = $1
       `, [otpRecord.rows[0].id]);
 
-      // Find or create user
-      let user = await pool.query(
+      // Check if user exists
+      const user = await pool.query(
         'SELECT id, email, first_name, last_name, phone, created_at FROM users WHERE phone = $1',
         [formattedPhone]
       );
 
-      if (user.rows.length === 0) {
-        // Create new user with phone number
-        // Use phone number as email placeholder (email is required in schema)
+      const isNewUser = user.rows.length === 0;
+
+      if (isNewUser) {
+        // For new users: create temporary user account (will be completed in complete-signup)
         const placeholderEmail = `${formattedPhone.replace(/\+/g, '')}@phone.otp`;
         
         const newUser = await pool.query(`
-          INSERT INTO users (phone, email, first_name, last_name, is_active, created_at)
-          VALUES ($1, $2, $3, $4, true, NOW())
+          INSERT INTO users (phone, email, first_name, last_name, password, is_active, created_at)
+          VALUES ($1, $2, $3, $4, NULL, true, NOW())
           RETURNING id, phone, first_name, last_name, email, created_at
         `, [formattedPhone, placeholderEmail, 'User', '']);
         
-        user = newUser;
+        const userData = newUser.rows[0];
+
+        // Generate temporary tokens (user needs to complete signup)
+        const tempToken = generateAccessToken(
+          userData.id,
+          userData.email || formattedPhone,
+          'user'
+        );
+
+        logger.info(`New user created via OTP (pending signup completion): ${userData.id}`);
+
+        return res.json({
+          success: true,
+          message: 'OTP verified successfully',
+          requiresSignup: true,
+          data: {
+            tempToken,
+            user: {
+              id: userData.id,
+              phone: userData.phone
+            }
+          }
+        });
+      } else {
+        // Existing user: login immediately
+        const userData = user.rows[0];
+
+        // Generate JWT tokens
+        const accessToken = generateAccessToken(
+          userData.id,
+          userData.email || formattedPhone,
+          'user'
+        );
+        const refreshToken = generateRefreshToken(userData.id);
+
+        logger.info(`User logged in via OTP: ${userData.id}`);
+
+        return res.json({
+          success: true,
+          message: 'OTP verified successfully',
+          requiresSignup: false,
+          data: {
+            user: {
+              id: userData.id,
+              phone: userData.phone,
+              name: `${userData.first_name} ${userData.last_name}`.trim() || 'User',
+              email: userData.email,
+              createdAt: userData.created_at
+            },
+            accessToken,
+            refreshToken
+          }
+        });
+      }
+
+    } catch (error) {
+      logger.error('OTP verification error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to verify OTP'
+      });
+    }
+  }
+);
+
+// POST /api/auth/complete-signup - Complete signup after OTP verification (for new users)
+router.post('/complete-signup',
+  authenticateToken,
+  [
+    body('name').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
+    body('email').optional().isEmail().normalizeEmail().withMessage('Valid email required')
+  ],
+  validateRequest,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const authUser = req.user;
+      if (!authUser) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const { name, email } = req.body;
+
+      // Get user from database
+      const user = await pool.query(
+        'SELECT id, phone, email, first_name, last_name FROM users WHERE id = $1',
+        [authUser.id]
+      );
+
+      if (user.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
       }
 
       const userData = user.rows[0];
 
-      // Generate JWT tokens
+      // Check if user already completed signup (has real name, not "User")
+      if (userData.first_name !== 'User' || userData.last_name !== '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Signup already completed'
+        });
+      }
+
+      // Split name into first_name and last_name
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Update user with name and optional email
+      const updateFields: string[] = ['first_name = $1', 'last_name = $2', 'updated_at = NOW()'];
+      const updateValues: any[] = [firstName, lastName];
+      let paramIndex = 3;
+
+      if (email && email.trim()) {
+        // Check if email is already taken
+        const emailCheck = await pool.query(
+          'SELECT id FROM users WHERE email = $1 AND id != $2',
+          [email.trim(), authUser.id]
+        );
+
+        if (emailCheck.rows.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email already in use'
+          });
+        }
+
+        updateFields.push(`email = $${paramIndex}`);
+        updateValues.push(email.trim());
+        paramIndex++;
+      }
+
+      const updateQuery = `
+        UPDATE users 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING id, phone, email, first_name, last_name, created_at
+      `;
+      updateValues.push(authUser.id);
+
+      const updatedUser = await pool.query(updateQuery, updateValues);
+      const finalUser = updatedUser.rows[0];
+
+      // Generate final tokens
       const accessToken = generateAccessToken(
-        userData.id,
-        userData.email || formattedPhone,
+        finalUser.id,
+        finalUser.email || userData.phone,
         'user'
       );
-      const refreshToken = generateRefreshToken(userData.id);
+      const refreshToken = generateRefreshToken(finalUser.id);
 
-      logger.info(`User logged in via OTP: ${userData.id}`);
+      logger.info(`User signup completed: ${finalUser.id}`);
 
       return res.json({
         success: true,
-        message: 'OTP verified successfully',
+        message: 'Signup completed successfully',
         data: {
           user: {
-            id: userData.id,
-            phone: userData.phone,
-            name: `${userData.first_name} ${userData.last_name}`.trim() || 'User',
-            email: userData.email,
-            createdAt: userData.created_at
+            id: finalUser.id,
+            phone: finalUser.phone,
+            name: `${finalUser.first_name} ${finalUser.last_name}`.trim(),
+            email: finalUser.email,
+            createdAt: finalUser.created_at
           },
           accessToken,
           refreshToken
@@ -645,10 +834,10 @@ router.post('/verify-otp',
       });
 
     } catch (error) {
-      logger.error('OTP verification error:', error);
+      logger.error('Complete signup error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to verify OTP'
+        message: 'Failed to complete signup'
       });
     }
   }
