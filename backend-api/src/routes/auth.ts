@@ -24,6 +24,56 @@ router.get('/me-test', (req, res) => {
   res.json({ success: true, message: '/me route exists, but requires authentication' });
 });
 
+// GET /api/auth/me - Get current user profile (MOVED TO TOP FOR DEBUGGING)
+router.get('/me',
+  authenticateToken,
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    logger.info('🔍 /auth/me endpoint hit - TOP VERSION');
+    try {
+      // User is already authenticated by middleware
+      const authUser = req.user;
+      if (!authUser) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+        return;
+      }
+
+      logger.info(`Get profile request for user: ${authUser.id}`);
+      
+      // Fetch complete user data from database
+      const user = await getUserById(authUser.id);
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+      
+      res.json({
+        success: true,
+        message: 'Profile retrieved successfully',
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          createdAt: user.created_at
+        }
+      });
+    } catch (error) {
+      logger.error('Get profile error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get profile'
+      });
+    }
+  }
+);
+
 // DEPRECATED: Password-based registration removed in favor of passwordless OTP authentication
 // POST /api/auth/register - User registration (DISABLED - Use OTP signup instead)
 /*
@@ -221,57 +271,7 @@ router.post('/logout',
   }
 );
 
-// GET /api/auth/me - Get current user profile
-router.get('/me',
-  authenticateToken,
-  async (req: express.Request, res: express.Response): Promise<void> => {
-    logger.info('🔍 /auth/me endpoint hit');
-    try {
-      // User is already authenticated by middleware
-      const authUser = req.user;
-      if (!authUser) {
-        res.status(401).json({
-          success: false,
-          message: 'User not authenticated'
-        });
-        return;
-      }
-
-      logger.info(`Get profile request for user: ${authUser.id}`);
-      
-      // Fetch complete user data from database
-      const user = await getUserById(authUser.id);
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-        return;
-      }
-      
-      res.json({
-        success: true,
-        message: 'Profile retrieved successfully',
-        data: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          createdAt: user.created_at
-        }
-      });
-    } catch (error) {
-      logger.error('Get profile error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get profile'
-      });
-    }
-  }
-);
-
-// PATCH /api/auth/profile - Update user profile
+// PATCH /api/auth/profile - Update user profile (DEPRECATED - commented out)
 router.patch('/profile',
   authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
