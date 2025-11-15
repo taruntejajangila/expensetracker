@@ -267,7 +267,7 @@ const OTPRequestScreen: React.FC = () => {
                     style={styles.inputIcon}
                   />
                   <View style={styles.countryCodeContainer}>
-                    <Text style={styles.countryCode}>+91</Text>
+                    <Text style={styles.countryCode} allowFontScaling={false}>+91</Text>
                   </View>
                   <TextInput
                     style={[
