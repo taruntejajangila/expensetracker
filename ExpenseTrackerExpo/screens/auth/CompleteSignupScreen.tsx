@@ -33,6 +33,8 @@ const CompleteSignupScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   
   const navigation = useNavigation();
   const { setUser } = useAuth();
@@ -44,21 +46,101 @@ const CompleteSignupScreen: React.FC = () => {
     default: 0,
   });
 
+  // Filter name input to only allow alphabets and spaces
+  const handleNameChange = (text: string) => {
+    // Remove all characters that are not letters or spaces
+    const filteredText = text.replace(/[^a-zA-Z\s]/g, '');
+    setName(filteredText);
+    
+    // Real-time validation
+    const trimmed = filteredText.trim();
+    if (trimmed.length === 0) {
+      setNameError(null);
+    } else if (trimmed.length < 2) {
+      setNameError('Name must be at least 2 characters');
+    } else if (trimmed.length > 50) {
+      setNameError('Name must not exceed 50 characters');
+    } else if (!/^[a-zA-Z\s]+$/.test(trimmed)) {
+      setNameError('Only alphabets and spaces allowed');
+    } else {
+      setNameError(null);
+    }
+  };
+
+  // Filter email input to only allow valid email characters
+  const handleEmailChange = (text: string) => {
+    // Allow letters, numbers, dots, hyphens, underscores, and @ symbol
+    // Email format: user@domain.com
+    const filteredText = text.replace(/[^a-zA-Z0-9.@_-]/g, '');
+    setEmail(filteredText);
+    
+    // Real-time validation
+    const trimmed = filteredText.trim();
+    if (trimmed.length === 0) {
+      setEmailError(null);
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmed)) {
+        setEmailError('Invalid email format');
+      } else {
+        const allowedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+        const emailDomain = trimmed.split('@')[1]?.toLowerCase();
+        if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+          setEmailError('Use Gmail, Outlook, Hotmail, or Yahoo');
+        } else {
+          setEmailError(null);
+        }
+      }
+    }
+  };
+
+  // Check if email format is valid and domain is allowed
+  const isEmailValid = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return false;
+    }
+    
+    // Only allow specific email domains
+    const allowedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+    const emailDomain = email.trim().split('@')[1]?.toLowerCase();
+    return allowedDomains.includes(emailDomain);
+  };
+
   const handleCompleteSignup = async () => {
-    if (!name.trim() || name.trim().length < 2) {
-      Alert.alert('Error', 'Please enter your name (at least 2 characters)');
+    // Name Validation
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      Alert.alert('Error', 'Full name must be at least 2 characters long');
+      return;
+    }
+    if (trimmedName.length > 50) {
+      Alert.alert('Error', 'Full name must not exceed 50 characters');
+      return;
+    }
+    // Allow only alphabets (letters) and spaces - no numbers or symbols
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      Alert.alert('Error', 'Full name can only contain alphabets and spaces. No numbers or symbols allowed');
       return;
     }
 
+    // Email Validation
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    
+    // Check if email domain is allowed
+    const allowedDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+    const emailDomain = email.trim().split('@')[1]?.toLowerCase();
+    if (!allowedDomains.includes(emailDomain)) {
+      Alert.alert('Error', 'Please use Gmail, Outlook, Hotmail, or Yahoo email address');
       return;
     }
 
@@ -235,6 +317,10 @@ const CompleteSignupScreen: React.FC = () => {
       shadowRadius: 4,
       elevation: 2,
     },
+    inputError: {
+      borderColor: '#FF6B6B',
+      backgroundColor: '#FFF5F5',
+    },
     inputIcon: {
       position: 'absolute',
       right: 16,
@@ -262,6 +348,12 @@ const CompleteSignupScreen: React.FC = () => {
       backgroundColor: '#CCCCCC',
       shadowOpacity: 0,
       elevation: 0,
+    },
+    errorText: {
+      fontSize: 12,
+      color: '#FF6B6B',
+      marginTop: 6,
+      marginLeft: 4,
     },
     infoText: {
       fontSize: 12,
@@ -309,11 +401,12 @@ const CompleteSignupScreen: React.FC = () => {
                     style={[
                       styles.input,
                       focusedInput === 'name' && styles.inputFocused,
+                      nameError && styles.inputError,
                     ]}
                     placeholder="Enter your full name"
                     placeholderTextColor="#999999"
                     value={name}
-                    onChangeText={setName}
+                    onChangeText={handleNameChange}
                     onFocus={() => setFocusedInput('name')}
                     onBlur={() => setFocusedInput(null)}
                     autoCapitalize="words"
@@ -327,6 +420,11 @@ const CompleteSignupScreen: React.FC = () => {
                     style={styles.inputIcon}
                   />
                 </View>
+                {nameError && (
+                  <Text style={styles.errorText} allowFontScaling={false}>
+                    {nameError}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.inputContainer}>
@@ -336,11 +434,12 @@ const CompleteSignupScreen: React.FC = () => {
                     style={[
                       styles.input,
                       focusedInput === 'email' && styles.inputFocused,
+                      emailError && styles.inputError,
                     ]}
-                    placeholder="your@email.com"
+                    placeholder="Enter Gmail, Outlook, Hotmail, or Yahoo email"
                     placeholderTextColor="#999999"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={handleEmailChange}
                     onFocus={() => setFocusedInput('email')}
                     onBlur={() => setFocusedInput(null)}
                     keyboardType="email-address"
@@ -355,15 +454,20 @@ const CompleteSignupScreen: React.FC = () => {
                     style={styles.inputIcon}
                   />
                 </View>
+                {emailError && (
+                  <Text style={styles.errorText} allowFontScaling={false}>
+                    {emailError}
+                  </Text>
+                )}
               </View>
 
               <TouchableOpacity
                 style={[
                   styles.registerButton,
-                  (isLoading || !name.trim() || !email.trim()) && styles.buttonDisabled,
+                  (isLoading || !name.trim() || !email.trim() || nameError || emailError) && styles.buttonDisabled,
                 ]}
                 onPress={handleCompleteSignup}
-                disabled={isLoading || !name.trim() || !email.trim()}
+                disabled={isLoading || !name.trim() || !email.trim() || !!nameError || !!emailError}
               >
                 <Text style={styles.registerButtonText} allowFontScaling={false}>
                   {isLoading ? 'Completing...' : 'Complete Signup'}
