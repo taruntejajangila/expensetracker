@@ -99,7 +99,9 @@ const CompleteSignupScreen: React.FC = () => {
             phone: result.data.user.phone,
             createdAt: result.data.user.created_at || result.data.user.createdAt
           };
+          console.log('✅ CompleteSignup - Setting user in context:', userData);
           setUser(userData);
+          console.log('✅ User set in context, navigation should happen automatically');
         } else {
           // If user data not in response, fetch it
           const token = await AsyncStorage.getItem('authToken');
