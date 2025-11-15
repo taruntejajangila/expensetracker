@@ -272,6 +272,8 @@ router.get('/users', authenticateToken, requireAnyRole(['admin', 'super_admin'])
         u.id,
         CONCAT(u.first_name, ' ', u.last_name) as name,
         u.email,
+        u.phone,
+        u.is_verified,
         'user' as role,
         u.created_at as "createdAt",
         u.last_login as "lastLoginAt",
@@ -279,13 +281,14 @@ router.get('/users', authenticateToken, requireAnyRole(['admin', 'super_admin'])
         MAX(t.created_at) as "lastTransactionAt"
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at, u.last_login
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.is_verified, u.created_at, u.last_login
       ORDER BY u.created_at DESC
     `);
 
     const users = usersResult.rows.map((user: any) => ({
       ...user,
       status: user.transactionCount > 0 ? 'active' : 'inactive', // Active if they have transactions
+      isVerified: user.is_verified || false,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       lastActiveAt: user.lastTransactionAt ? user.lastTransactionAt.toISOString() : null, // Real mobile app activity
@@ -315,7 +318,12 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     // Get basic user info
     const userResult = await pool.query(`
       SELECT 
-        u.id, CONCAT(u.first_name, ' ', u.last_name) as name, u.email, 'user' as role,
+        u.id, 
+        CONCAT(u.first_name, ' ', u.last_name) as name, 
+        u.email, 
+        u.phone,
+        u.is_verified,
+        'user' as role,
         u.created_at as "createdAt",
         u.last_login as "lastLoginAt",
         COUNT(t.id) as "transactionCount",
@@ -323,7 +331,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
       FROM users u
       LEFT JOIN transactions t ON u.id = t.user_id
       WHERE u.id = $1 
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.created_at, u.last_login
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.is_verified, u.created_at, u.last_login
     `, [id]);
 
     if (userResult.rows.length === 0) {

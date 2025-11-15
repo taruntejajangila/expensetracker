@@ -658,8 +658,8 @@ router.post('/verify-otp',
         const placeholderEmail = `${formattedPhone.replace(/\+/g, '')}@phone.otp`;
         
         const newUser = await pool.query(`
-          INSERT INTO users (phone, email, first_name, last_name, password, is_active, created_at)
-          VALUES ($1, $2, $3, $4, NULL, true, NOW())
+          INSERT INTO users (phone, email, first_name, last_name, password, is_active, is_verified, created_at)
+          VALUES ($1, $2, $3, $4, NULL, true, true, NOW())
           RETURNING id, phone, first_name, last_name, email, created_at
         `, [formattedPhone, placeholderEmail, 'User', '']);
         
@@ -689,6 +689,16 @@ router.post('/verify-otp',
       } else {
         // Existing user: login immediately
         const userData = user.rows[0];
+
+        // Update last_login and is_verified (phone verified via OTP)
+        await pool.query(
+          `UPDATE users 
+           SET last_login = NOW(), 
+               is_verified = true,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [userData.id]
+        );
 
         // Generate JWT tokens
         const accessToken = generateAccessToken(
@@ -790,7 +800,8 @@ router.post('/complete-signup',
       }
 
       // Update user with name and email (both required)
-      const updateFields: string[] = ['first_name = $1', 'last_name = $2', 'email = $3', 'updated_at = NOW()'];
+      // Also set last_login and ensure is_verified is true (phone already verified via OTP)
+      const updateFields: string[] = ['first_name = $1', 'last_name = $2', 'email = $3', 'last_login = NOW()', 'is_verified = true', 'updated_at = NOW()'];
       const updateValues: any[] = [firstName, lastName, email.trim()];
 
       const updateQuery = `
