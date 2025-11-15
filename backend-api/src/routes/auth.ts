@@ -8,13 +8,20 @@ import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 import { TwoFactorService } from '../services/twoFactorService';
 
-// Force Railway rebuild - routes verified - v2
+// Force Railway rebuild - routes verified - v3 - /auth/me route confirmed
 
 const router = express.Router();
 
 // Test route to verify router is working
 router.get('/test', (req, res) => {
+  logger.info('🔍 /auth/test endpoint hit');
   res.json({ success: true, message: 'Auth router is working' });
+});
+
+// Test route for /me without auth to verify route exists
+router.get('/me-test', (req, res) => {
+  logger.info('🔍 /auth/me-test endpoint hit (no auth)');
+  res.json({ success: true, message: '/me route exists, but requires authentication' });
 });
 
 // DEPRECATED: Password-based registration removed in favor of passwordless OTP authentication
