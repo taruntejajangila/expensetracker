@@ -364,7 +364,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     // Get user transactions with category name
     let transactionsResult = { rows: [] };
     try {
-      transactionsResult = await pool.query(`
+      const result = await pool.query(`
         SELECT 
           t.id, 
           t.description, 
@@ -378,6 +378,13 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
         ORDER BY t.created_at DESC 
         LIMIT 50
       `, [id]);
+      
+      // Normalize transaction data: ensure amount is always positive and add 'type' alias
+      transactionsResult.rows = result.rows.map((row: any) => ({
+        ...row,
+        type: row.transaction_type, // Add 'type' alias for frontend compatibility
+        amount: Math.abs(parseFloat(row.amount) || 0) // Ensure amount is always positive
+      }));
     } catch (error) {
       console.log('Error fetching transactions:', error);
     }

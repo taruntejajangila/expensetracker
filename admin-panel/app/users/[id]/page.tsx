@@ -332,17 +332,17 @@ export default function UserDetailsPage() {
                         <td className="py-2 px-4 text-sm text-gray-900">{transaction.description}</td>
                                                  <td className="py-2 px-4 text-sm text-gray-600">{transaction.category_name || 'Uncategorized'}</td>
                         <td className="py-2 px-4 text-sm text-gray-900">
-                          <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                            {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount}
+                          <span className={(transaction.transaction_type || transaction.type) === 'income' ? 'text-green-600' : 'text-red-600'}>
+                            {(transaction.transaction_type || transaction.type) === 'income' ? '+' : '-'}₹{Math.abs(parseFloat(transaction.amount) || 0).toFixed(2)}
                           </span>
                         </td>
                         <td className="py-2 px-4">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            transaction.type === 'income' 
+                            (transaction.transaction_type || transaction.type) === 'income' 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-red-100 text-red-800'
                           }`}>
-                            {transaction.type}
+                            {transaction.transaction_type || transaction.type}
                           </span>
                         </td>
                       </tr>

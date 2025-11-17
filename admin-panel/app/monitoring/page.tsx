@@ -223,7 +223,7 @@ export default function MonitoringPage() {
                               transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(parseFloat(transaction.amount) || 0))}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -277,7 +277,7 @@ export default function MonitoringPage() {
                               transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
-                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(parseFloat(transaction.amount) || 0))}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
