@@ -73,18 +73,18 @@ router.post('/fix-account-type-constraint', async (req: express.Request, res: ex
     
     logger.info('✅ Dropped old constraint');
 
-    // Add new constraint that allows salary
+    // Add new constraint that allows salary, current, and wallet (matching backend validation)
     await pool.query(`
       ALTER TABLE bank_accounts 
       ADD CONSTRAINT bank_accounts_account_type_check 
-      CHECK (account_type IN ('checking', 'savings', 'investment', 'salary'));
+      CHECK (account_type IN ('savings', 'current', 'salary', 'wallet', 'checking', 'investment'));
     `);
     
-    logger.info('✅ Added new constraint with salary support');
+    logger.info('✅ Added new constraint with salary, current, and wallet support');
 
     return res.json({
       success: true,
-      message: 'Account type constraint updated successfully - now supports salary'
+      message: 'Account type constraint updated successfully - now supports savings, current, salary, wallet, checking, and investment'
     });
 
   } catch (error: any) {
