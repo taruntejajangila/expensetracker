@@ -282,7 +282,7 @@ router.post('/logout',
       }
       
       await blacklistToken(token, authUser.id, expiresAt, 'logout');
-      
+
       // SECURITY: Audit log logout
       await auditLog({
         userId: authUser.id,

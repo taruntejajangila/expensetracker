@@ -11,7 +11,7 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { formatNumber } from '../utils/currencyFormatter';
-
+ 
 const MAX_LOAN_AMOUNT = 1000000000; // ₹1,000,000,000 (1 Billion)
 const MAX_INTEREST_RATE = 50; // Maximum 50%
 
@@ -374,8 +374,8 @@ const AddLoanScreen: React.FC = () => {
             } else {
                 // Standard EMI calculation
                 monthlyPayment = monthlyRate > 0 
-                    ? (principalAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1)
-                    : principalAmount / tenureMonths;
+                ? (principalAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1)
+                : principalAmount / tenureMonths;
             }
             
             const loanData = {
