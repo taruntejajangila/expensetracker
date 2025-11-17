@@ -203,7 +203,7 @@ router.post('/login',
   }
 );
 
-// POST /api/auth/refresh - Refresh access token
+// POST /api/auth/refresh - Refresh access token (v2 - force Railway rebuild)
 router.post('/refresh',
   [
     body('refreshToken').notEmpty().withMessage('Refresh token required')
