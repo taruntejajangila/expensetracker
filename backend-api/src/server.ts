@@ -171,17 +171,17 @@ app.get('/health', async (req, res) => {
   } catch (error) {
     // Even on error, return 200 to indicate server is running
     res.status(200).json({
-      success: true,
+    success: true,
       status: 'healthy',
-      message: 'Expense Tracker API is running',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
+    message: 'Expense Tracker API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
       version: '1.0.0',
       database: {
         status: 'unknown',
         error: 'Health check error'
       }
-    });
+  });
   }
 });
 
@@ -270,7 +270,7 @@ const startServer = async () => {
         logger.error('❌ Database connection failed (server will continue running):', error);
         logger.warn('⚠️  Server is running but database is not connected. Some features may not work.');
         // Don't exit - allow server to run even without database for healthcheck
-      });
+    });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);
     process.exit(1);

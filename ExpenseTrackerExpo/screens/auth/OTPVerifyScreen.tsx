@@ -10,12 +10,12 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api.config';
@@ -224,55 +224,75 @@ const OTPVerifyScreen: React.FC = () => {
     },
     gradient: {
       flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       flexGrow: 1,
-      justifyContent: 'center',
-      paddingHorizontal: 24,
-      paddingTop: 60,
-      paddingBottom: 40,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 20,
     },
     header: {
       alignItems: 'center',
-      marginBottom: 48,
+      marginBottom: 20,
+      paddingHorizontal: 4,
     },
     logoContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: '#007AFF',
-      justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 24,
-      shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      justifyContent: 'center',
+      marginBottom: 8,
     },
     logo: {
-      fontSize: 32,
-      color: '#FFFFFF',
+      width: 120,
+      height: 120,
+      resizeMode: 'contain',
     },
     title: {
       fontSize: 24,
       fontWeight: '700',
       color: '#000000',
       textAlign: 'center',
-      marginBottom: 8,
+      marginTop: 12,
+      marginBottom: 4,
     },
     subtitle: {
       fontSize: 14,
       color: '#666666',
       textAlign: 'center',
       lineHeight: 20,
-      marginBottom: 8,
+      marginTop: 4,
+      marginBottom: 4,
     },
     phoneNumber: {
       fontSize: 16,
       fontWeight: '600',
       color: '#007AFF',
       textAlign: 'center',
+      marginBottom: 8,
+    },
+    instructionText: {
+      fontSize: 12,
+      color: '#999999',
+      textAlign: 'center',
+      lineHeight: 16,
+      marginBottom: 24,
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 24,
+      padding: 24,
+      marginTop: 10,
+      marginHorizontal: 4,
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
+      shadowColor: '#007AFF',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+      elevation: 6,
     },
     form: {
       width: '100%',
@@ -282,7 +302,7 @@ const OTPVerifyScreen: React.FC = () => {
     otpContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 32,
+      marginBottom: 0,
     },
     otpInput: {
       width: 45,
@@ -306,21 +326,22 @@ const OTPVerifyScreen: React.FC = () => {
       elevation: 2,
     },
     button: {
-      backgroundColor: '#007AFF',
-      borderRadius: 12,
-      paddingVertical: 16,
+      borderRadius: 20,
+      paddingVertical: 20,
       alignItems: 'center',
       marginTop: 24,
+      backgroundColor: '#007AFF',
       shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
+      shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.3,
-      shadowRadius: 8,
+      shadowRadius: 10,
       elevation: 8,
     },
     buttonText: {
       color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 1.5,
     },
     buttonDisabled: {
       backgroundColor: '#CCCCCC',
@@ -344,11 +365,13 @@ const OTPVerifyScreen: React.FC = () => {
     },
     footer: {
       alignItems: 'center',
-      marginTop: 32,
+      paddingBottom: 20,
+      paddingTop: 10,
     },
     footerText: {
       fontSize: 12,
-      color: '#666666',
+      color: '#999999',
+      textAlign: 'center',
     },
     footerLink: {
       color: '#007AFF',
@@ -359,10 +382,7 @@ const OTPVerifyScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <LinearGradient
-        colors={['#F8F9FA', '#FFFFFF']}
-        style={styles.gradient}
-      >
+      <View style={styles.gradient}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -375,7 +395,11 @@ const OTPVerifyScreen: React.FC = () => {
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Text style={styles.logo} allowFontScaling={false}>🔐</Text>
+                <Image 
+                  source={require('../../assets/images/logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title} allowFontScaling={false}>Enter OTP</Text>
               <Text style={styles.subtitle} allowFontScaling={false}>
@@ -384,7 +408,10 @@ const OTPVerifyScreen: React.FC = () => {
               <Text style={styles.phoneNumber} allowFontScaling={false}>{phone}</Text>
             </View>
 
-            <View style={styles.form}>
+            <View style={styles.card}>
+              <Text style={styles.instructionText} allowFontScaling={false}>
+                Enter the OTP which is sent to your registered mobile number to complete verification
+              </Text>
               <View style={styles.otpContainer}>
                 {otp.map((digit, index) => (
                   <TextInput
@@ -437,22 +464,15 @@ const OTPVerifyScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText} allowFontScaling={false}>
-                Wrong number?{' '}
-                <Text 
-                  style={styles.footerLink}
-                  onPress={() => navigation.navigate('OTPRequest' as never)}
-                  allowFontScaling={false}
-                >
-                  Change Number
-                </Text>
-              </Text>
-            </View>
           </ScrollView>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText} allowFontScaling={false}>
+              Made with ❤️ in India
+            </Text>
+          </View>
         </KeyboardAvoidingView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };

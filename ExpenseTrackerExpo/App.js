@@ -214,9 +214,10 @@ function MainStackNavigator() {
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-      {/* TEST: CompleteSignup added for testing from home screen - Remove in production */}
+      {/* OTP Screens - Added for navigation from home screen */}
+      <Stack.Screen name="OTPRequest" component={OTPRequestScreen} />
+      <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
       <Stack.Screen name="CompleteSignup" component={CompleteSignupScreen} />
-      {/* OTP Screens removed from MainStackNavigator - only in AuthStackNavigator */}
       {/* Users should not access OTP screens when logged in */}
     </Stack.Navigator>
   );

@@ -189,33 +189,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (isUnauthorized) {
             console.log('🔐 AuthContext: 401 Unauthorized - token invalid, trying refresh...');
             if (refreshTokenValue) {
-              const refreshOk = await refreshToken();
-              if (refreshOk) {
-                const newToken = await AsyncStorage.getItem('authToken');
-                if (newToken) {
-                  try {
-                    const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
-                      'Authorization': `Bearer ${newToken}`,
-                    });
-                    if (retryData.success && retryData.data) {
+            const refreshOk = await refreshToken();
+            if (refreshOk) {
+              const newToken = await AsyncStorage.getItem('authToken');
+              if (newToken) {
+                try {
+                  const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
+                    'Authorization': `Bearer ${newToken}`,
+                  });
+                  if (retryData.success && retryData.data) {
                       console.log('✅ AuthContext: User profile loaded after refresh');
-                      const retryUser: User = {
-                        id: retryData.data.id,
-                        email: retryData.data.email,
-                        name: retryData.data.name,
-                        phone: retryData.data.phone,
-                        avatar: undefined,
-                        createdAt: retryData.data.createdAt,
-                      };
-                      setUser(retryUser);
+                    const retryUser: User = {
+                      id: retryData.data.id,
+                      email: retryData.data.email,
+                      name: retryData.data.name,
+                      phone: retryData.data.phone,
+                      avatar: undefined,
+                      createdAt: retryData.data.createdAt,
+                    };
+                    setUser(retryUser);
                       await AsyncStorage.setItem('cachedUserData', JSON.stringify(retryUser));
                       setIsLoading(false);
-                      return;
-                    }
+                    return;
+                  }
                   } catch (retryError) {
                     console.log('⚠️ AuthContext: Retry after refresh failed:', retryError);
                   }
-                }
+              }
               } else {
                 console.log('❌ AuthContext: Token refresh failed');
               }
@@ -268,7 +268,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(user);
         } catch {}
       } else {
-        setUser(null);
+      setUser(null);
       }
     } finally {
       setIsLoading(false);
@@ -293,7 +293,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const refreshUrl = `${API_BASE_URL}/auth/refresh`;
+      console.log('🔄 AuthContext: Refresh URL:', refreshUrl);
+      
+      const response = await fetch(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -302,19 +305,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (!response.ok) {
-        console.log('🔄 AuthContext: Token refresh failed');
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.message || JSON.stringify(errorData);
+        } catch {
+          errorDetails = response.statusText;
+        }
+        
+        console.log(`🔄 AuthContext: Token refresh failed: ${response.status} - ${errorDetails}`);
+        
+        // If 404, the endpoint might not exist on backend
+        if (response.status === 404) {
+          console.warn('⚠️ AuthContext: Refresh endpoint returned 404. Backend route may not be deployed.');
+        }
+        
         return false;
       }
 
       const data = await response.json();
-      console.log('🔄 AuthContext: Token refreshed successfully');
+      
+      if (!data.success || !data.data?.accessToken) {
+        console.log('🔄 AuthContext: Invalid refresh response:', data);
+        return false;
+      }
+      
+      console.log('✅ AuthContext: Token refreshed successfully');
       
       // Store new access token
       await AsyncStorage.setItem('authToken', data.data.accessToken);
       
+      // Update refresh token if provided
+      if (data.data.refreshToken) {
+        await AsyncStorage.setItem('refreshToken', data.data.refreshToken);
+      }
+      
       return true;
     } catch (error) {
       console.error('🔄 AuthContext: Token refresh error:', error);
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('🔄 AuthContext: Network error - check API_BASE_URL:', API_BASE_URL);
+      }
       return false;
     }
   };

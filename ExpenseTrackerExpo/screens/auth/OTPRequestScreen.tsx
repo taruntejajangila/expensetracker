@@ -10,11 +10,11 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../../config/api.config';
 
@@ -81,161 +81,160 @@ const OTPRequestScreen: React.FC = () => {
     },
     gradient: {
       flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       flexGrow: 1,
-      justifyContent: 'center',
-      paddingHorizontal: 24,
-      paddingTop: 60,
-      paddingBottom: 40,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 20,
     },
     header: {
       alignItems: 'center',
-      marginBottom: 48,
+      marginBottom: 20,
+      paddingHorizontal: 4,
     },
     logoContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: '#007AFF',
-      justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 24,
-      shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      justifyContent: 'center',
+      marginBottom: 8,
     },
     logo: {
-      fontSize: 32,
-      color: '#FFFFFF',
+      width: 120,
+      height: 120,
+      resizeMode: 'contain',
     },
-    title: {
+    appName: {
       fontSize: 24,
       fontWeight: '700',
-      color: '#000000',
-      textAlign: 'center',
+      color: '#007AFF',
+      marginTop: 12,
+      marginBottom: 4,
+      letterSpacing: 0.5,
+    },
+    tagline: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: '#666666',
+      marginTop: 4,
       marginBottom: 8,
     },
-    subtitle: {
-      fontSize: 14,
-      color: '#666666',
-      textAlign: 'center',
-      lineHeight: 20,
+    greeting: {
+      fontSize: 36,
+      fontWeight: '700',
+      color: '#000000',
+      marginBottom: 4,
     },
-    form: {
-      width: '100%',
-      maxWidth: 320,
-      alignSelf: 'center',
+    title: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: '#000000',
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 24,
+      padding: 24,
+      marginTop: 10,
+      marginHorizontal: 4,
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
+      shadowColor: '#007AFF',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+      elevation: 6,
     },
     inputContainer: {
-      marginBottom: 20,
+      marginBottom: 0,
     },
     label: {
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: '600',
-      color: '#000000',
-      marginBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      color: '#007AFF',
+      marginBottom: 16,
     },
     inputWrapper: {
       position: 'relative',
+      paddingBottom: 8,
     },
     input: {
-      backgroundColor: '#F8F9FA',
-      borderWidth: 1,
-      borderColor: '#E9ECEF',
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      fontSize: 16,
+      fontSize: 17,
       color: '#000000',
-      paddingLeft: 90,
-      height: 56,
-      textAlignVertical: 'center',
+      paddingVertical: 14,
+      paddingLeft: 50,
+      paddingRight: 50,
+      borderBottomWidth: 1.5,
+      borderBottomColor: '#E0E0E0',
+      backgroundColor: 'transparent',
     },
     inputFocused: {
-      borderColor: '#007AFF',
-      backgroundColor: '#FFFFFF',
-      shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      borderBottomColor: '#007AFF',
     },
     inputIcon: {
       position: 'absolute',
-      left: 16,
-      top: 16,
+      right: 0,
+      top: 14,
       zIndex: 1,
     },
     countryCodeContainer: {
       position: 'absolute',
-      left: 50,
-      top: 0,
-      bottom: 0,
+      left: 0,
+      top: 14,
       zIndex: 2,
-      justifyContent: 'center',
-      paddingRight: 8,
     },
     countryCode: {
-      fontSize: 16,
-      color: '#666666',
+      fontSize: 17,
+      color: '#000000',
       fontWeight: '400',
-      lineHeight: 20,
     },
     button: {
-      backgroundColor: '#007AFF',
-      borderRadius: 12,
-      paddingVertical: 16,
+      borderRadius: 20,
+      paddingVertical: 20,
       alignItems: 'center',
       marginTop: 24,
+      backgroundColor: '#007AFF',
       shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
+      shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.3,
-      shadowRadius: 8,
+      shadowRadius: 10,
       elevation: 8,
     },
     buttonText: {
       color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 1.5,
     },
     buttonDisabled: {
-      backgroundColor: '#CCCCCC',
-      shadowOpacity: 0,
-      elevation: 0,
-    },
-    footer: {
-      alignItems: 'center',
-      marginTop: 32,
-    },
-    footerText: {
-      fontSize: 12,
-      color: '#666666',
-    },
-    footerLink: {
-      color: '#007AFF',
-      fontWeight: '600',
+      opacity: 0.5,
     },
     infoText: {
       fontSize: 12,
-      color: '#666666',
+      color: '#999999',
+      marginTop: 12,
+      lineHeight: 16,
+    },
+    footer: {
+      alignItems: 'center',
+      paddingBottom: 20,
+      paddingTop: 10,
+    },
+    footerText: {
+      fontSize: 12,
+      color: '#999999',
       textAlign: 'center',
-      marginTop: 16,
-      lineHeight: 18,
     },
   });
 
+  const isValidPhone = phone.replace('+91', '').length === 10;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <LinearGradient
-        colors={['#F8F9FA', '#FFFFFF']}
-        style={styles.gradient}
-      >
+      <View style={styles.gradient}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -245,27 +244,24 @@ const OTPRequestScreen: React.FC = () => {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            style={styles.scrollView}
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Text style={styles.logo} allowFontScaling={false}>📱</Text>
+                <Image 
+                  source={require('../../assets/images/logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+                <Text style={styles.appName} allowFontScaling={false}>PaysaGo</Text>
+                <Text style={styles.tagline} allowFontScaling={false}>Finance Manager</Text>
               </View>
-              <Text style={styles.title} allowFontScaling={false}>Phone Verification</Text>
-              <Text style={styles.subtitle} allowFontScaling={false}>
-                Enter your phone number to receive OTP
-              </Text>
             </View>
 
-            <View style={styles.form}>
+            <View style={styles.card}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label} allowFontScaling={false}>Phone Number</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons 
-                    name="call-outline" 
-                    size={20} 
-                    color="#999999" 
-                    style={styles.inputIcon}
-                  />
                   <View style={styles.countryCodeContainer}>
                     <Text style={styles.countryCode} allowFontScaling={false}>+91</Text>
                   </View>
@@ -289,30 +285,42 @@ const OTPRequestScreen: React.FC = () => {
                     autoCorrect={false}
                     allowFontScaling={false}
                   />
+                  {isValidPhone && (
+                    <Ionicons 
+                      name="checkmark-circle" 
+                      size={26} 
+                      color="#34C759" 
+                      style={styles.inputIcon}
+                    />
+                  )}
                 </View>
                 <Text style={styles.infoText} allowFontScaling={false}>
-                  We'll send a 6-digit OTP to this number (India: +91)
+                  We'll send a 6-digit OTP to this number
                 </Text>
               </View>
 
               <TouchableOpacity
                 style={[
                   styles.button,
-                  isLoading && styles.buttonDisabled,
+                  (isLoading || !isValidPhone) && styles.buttonDisabled,
                 ]}
                 onPress={handleRequestOTP}
-                disabled={isLoading}
+                disabled={isLoading || !isValidPhone}
               >
                 <Text style={styles.buttonText} allowFontScaling={false}>
-                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                  {isLoading ? 'Sending OTP...' : 'SEND OTP'}
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {/* Footer removed - app is now fully passwordless with OTP */}
           </ScrollView>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText} allowFontScaling={false}>
+              Made with ❤️ in India
+            </Text>
+          </View>
         </KeyboardAvoidingView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };

@@ -936,9 +936,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'expense' && styles.toggleButtonExpense
                        ]}
-                      onPress={() => {
-                        setType('expense');
-                      }}
+                       onPress={() => {
+                         setType('expense');
+                       }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 
@@ -960,9 +960,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'income' && styles.toggleButtonActive
                        ]}
-                      onPress={() => {
-                        setType('income');
-                      }}
+                       onPress={() => {
+                         setType('income');
+                       }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 
@@ -984,9 +984,9 @@ useEffect(() => {
                          styles.toggleButton,
                          type === 'transfer' && styles.toggleButtonTransfer
                        ]}
-                      onPress={() => {
-                        setType('transfer');
-                      }}
+                       onPress={() => {
+                         setType('transfer');
+                       }}
                      >
                        <View style={styles.toggleButtonContent}>
                          <Ionicons 

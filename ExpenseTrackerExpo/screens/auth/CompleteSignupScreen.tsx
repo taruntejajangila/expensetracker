@@ -10,12 +10,12 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config/api.config';
@@ -41,8 +41,8 @@ const CompleteSignupScreen: React.FC = () => {
   const { theme } = useTheme();
 
   const keyboardVerticalOffset = Platform.select({
-    ios: 24,
-    android: (StatusBar.currentHeight ?? 0) + 24,
+    ios: 0,
+    android: 20,
     default: 0,
   });
 
@@ -239,117 +239,120 @@ const CompleteSignupScreen: React.FC = () => {
       flex: 1,
       backgroundColor: '#FFFFFF',
     },
+    scrollView: {
+      flex: 1,
+    },
     gradient: {
       flex: 1,
+      backgroundColor: '#FFFFFF',
     },
     content: {
       flexGrow: 1,
-      justifyContent: 'center',
-      paddingHorizontal: 24,
-      paddingTop: 40,
-      paddingBottom: 40,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 20,
     },
     header: {
       alignItems: 'center',
-      marginBottom: 40,
+      marginBottom: 20,
+      paddingHorizontal: 4,
     },
     logoContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: '#007AFF',
-      justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 24,
-      shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      justifyContent: 'center',
+      marginBottom: 8,
     },
     logo: {
-      fontSize: 32,
-      color: '#FFFFFF',
+      width: 120,
+      height: 120,
+      resizeMode: 'contain',
     },
     title: {
       fontSize: 24,
       fontWeight: '700',
       color: '#000000',
       textAlign: 'center',
-      marginBottom: 8,
+      marginTop: 12,
+      marginBottom: 4,
     },
     subtitle: {
       fontSize: 14,
       color: '#666666',
       textAlign: 'center',
       lineHeight: 20,
+      marginTop: 4,
+      marginBottom: 8,
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 24,
+      padding: 24,
+      marginTop: 10,
+      marginHorizontal: 4,
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
+      shadowColor: '#007AFF',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+      elevation: 6,
     },
     form: {
       width: '100%',
-      maxWidth: 320,
-      alignSelf: 'center',
     },
     inputContainer: {
-      marginBottom: 16,
+      marginBottom: 32,
     },
     label: {
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: '600',
-      color: '#000000',
-      marginBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      color: '#007AFF',
+      marginBottom: 16,
     },
     inputWrapper: {
       position: 'relative',
+      paddingBottom: 8,
     },
     input: {
-      backgroundColor: '#F8F9FA',
-      borderWidth: 1,
-      borderColor: '#E9ECEF',
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      fontSize: 14,
+      fontSize: 17,
       color: '#000000',
+      paddingVertical: 14,
+      paddingLeft: 16,
       paddingRight: 50,
-      height: 56,
+      borderBottomWidth: 1.5,
+      borderBottomColor: '#E0E0E0',
+      backgroundColor: 'transparent',
     },
     inputFocused: {
-      borderColor: '#007AFF',
-      backgroundColor: '#FFFFFF',
-      shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      borderBottomColor: '#007AFF',
     },
     inputError: {
-      borderColor: '#FF6B6B',
+      borderBottomColor: '#FF6B6B',
       backgroundColor: '#FFF5F5',
     },
     inputIcon: {
       position: 'absolute',
-      right: 16,
-      top: 16,
+      right: 0,
+      top: 14,
       zIndex: 1,
     },
     registerButton: {
-      backgroundColor: '#007AFF',
-      borderRadius: 12,
-      paddingVertical: 16,
+      borderRadius: 20,
+      paddingVertical: 20,
       alignItems: 'center',
       marginTop: 24,
+      backgroundColor: '#007AFF',
       shadowColor: '#007AFF',
-      shadowOffset: { width: 0, height: 4 },
+      shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.3,
-      shadowRadius: 8,
+      shadowRadius: 10,
       elevation: 8,
     },
     registerButtonText: {
       color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 1.5,
     },
     buttonDisabled: {
       backgroundColor: '#CCCCCC',
@@ -362,37 +365,40 @@ const CompleteSignupScreen: React.FC = () => {
       marginTop: 6,
       marginLeft: 4,
     },
-    infoText: {
+    footer: {
+      alignItems: 'center',
+      paddingBottom: 20,
+      paddingTop: 10,
+    },
+    footerText: {
       fontSize: 12,
-      color: '#666666',
+      color: '#999999',
       textAlign: 'center',
-      marginTop: 16,
-      lineHeight: 18,
     },
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <LinearGradient
-        colors={['#F8F9FA', '#FFFFFF']}
-        style={styles.gradient}
-      >
+      <View style={styles.gradient}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
           keyboardVerticalOffset={keyboardVerticalOffset}
-          enabled
         >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
+            style={styles.scrollView}
           >
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Text style={styles.logo} allowFontScaling={false}>💰</Text>
+                <Image 
+                  source={require('../../assets/images/logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title} allowFontScaling={false}>Complete Your Profile</Text>
               <Text style={styles.subtitle} allowFontScaling={false}>
@@ -400,7 +406,8 @@ const CompleteSignupScreen: React.FC = () => {
               </Text>
             </View>
 
-            <View style={styles.form}>
+            <View style={styles.card}>
+              <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label} allowFontScaling={false}>Full Name</Text>
                 <View style={styles.inputWrapper}>
@@ -480,10 +487,17 @@ const CompleteSignupScreen: React.FC = () => {
                   {isLoading ? 'Completing...' : 'Complete Signup'}
                 </Text>
               </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText} allowFontScaling={false}>
+              Made with ❤️ in India
+            </Text>
+          </View>
         </KeyboardAvoidingView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };

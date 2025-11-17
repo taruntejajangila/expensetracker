@@ -11,19 +11,21 @@
         "buildType": "apk"
       },
       "env": {
-        "ANDROID_HOME": "/home/taruntejajangila/android-sdk"
+        "ANDROID_HOME": "/home/tarun/Android/Sdk"
       }
     },
     "preview": {
+      "developmentClient": false,
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
       "env": {
-        "ANDROID_HOME": "/home/taruntejajangila/android-sdk"
+        "ANDROID_HOME": "/home/tarun/Android/Sdk"
       }
     },
     "production": {
+      "developmentClient": false,
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"

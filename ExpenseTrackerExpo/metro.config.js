@@ -39,4 +39,29 @@ config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 // Suppress package warnings
 config.resolver.unstable_enablePackageExports = false;
 
+// Block problematic .bin directories from being resolved
+config.resolver.blockList = [
+  /node_modules\/\.bin\/.*/,
+  /.*\.bin\/\..*/,
+];
+
+// Configure watcher to ignore problematic paths
+config.watchFolders = [__dirname];
+config.resolver.sourceExts = config.resolver.sourceExts || [];
+config.resolver.assetExts = config.resolver.assetExts || [];
+
+// Use a more permissive watcher configuration
+if (!config.watcher) {
+  config.watcher = {};
+}
+// Ignore node_modules in watcher (should be default, but being explicit)
+config.watcher.watchman = config.watcher.watchman || {};
+config.watcher.watchman.ignore_dirs = [
+  'node_modules',
+  '.git',
+  '.expo',
+  'android',
+  'ios',
+];
+
 module.exports = config;

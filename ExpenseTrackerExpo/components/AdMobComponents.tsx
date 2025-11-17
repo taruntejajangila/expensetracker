@@ -85,8 +85,8 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
       <View style={styles.bannerWrapper}>
         <BannerAd
           unitId={Platform.OS === 'ios' 
-            ? 'ca-app-pub-3940256099942544/2934735716' // Test Banner Ad (iOS)
-            : 'ca-app-pub-3940256099942544/6300978111'} // Test Banner Ad (Android)
+            ? 'ca-app-pub-3940256099942544/2934735716' // Test Banner Ad (iOS) - Keep test ID for now
+            : 'ca-app-pub-4113490348002307/5694070602'} // Real Banner Ad (Android) - MyPaisa
           size={adSize}
           requestOptions={{
             requestNonPersonalizedAdsOnly: false,
@@ -103,7 +103,7 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
           if (errorCode === 'error-code-invalid-request' || errorMessage.includes('invalid')) {
             // Only log once per refresh cycle to reduce noise
             if (retryCount === 0) {
-              console.warn('⚠️ Banner ad unit ID may be invalid or not configured in AdMob. Check ad unit ID: ' + (Platform.OS === 'ios' ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-3940256099942544/6300978111'));
+              console.warn('⚠️ Banner ad unit ID may be invalid or not configured in AdMob. Check ad unit ID: ' + (Platform.OS === 'ios' ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-4113490348002307/5694070602'));
             }
             // Don't retry for invalid requests - they won't succeed
             setRetryCount(0);

@@ -121,8 +121,10 @@ class ApiClient {
         return null;
       }
 
+      const refreshUrl = `${API_BASE_URL}/auth/refresh`;
+      console.log('🔄 ApiClient: Attempting token refresh at:', refreshUrl);
       
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +133,22 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        console.log('❌ ApiClient: Token refresh failed:', response.status);
+        // Try to get error details
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.message || JSON.stringify(errorData);
+        } catch {
+          errorDetails = response.statusText;
+        }
+        
+        console.log(`❌ ApiClient: Token refresh failed: ${response.status} - ${errorDetails}`);
+        
+        // If endpoint doesn't exist (404), log warning
+        if (response.status === 404) {
+          console.warn('⚠️ ApiClient: Refresh endpoint not found (404). Check if backend route is properly deployed.');
+        }
+        
         return null;
       }
 
@@ -153,6 +170,10 @@ class ApiClient {
       }
     } catch (error) {
       console.error('❌ ApiClient: Token refresh error:', error);
+      // Log more details about network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('❌ ApiClient: Network error - check API_BASE_URL:', API_BASE_URL);
+      }
       handleNetworkError(error);
       return null;
     }
