@@ -85,13 +85,18 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
     { icon: 'analytics-outline', label: 'Debt Plans', screen: 'DebtPlans' },
     { icon: 'calculator-outline', label: 'Loan Calculator', screen: 'LoanCalculator' },
   ];
-  const supportItems = [
+  const supportItems: Array<{ icon: string; label: string; screen: string; isLogout?: boolean }> = [
     { icon: 'help-circle-outline', label: 'Help & Support', screen: 'HelpSupport' },
     { icon: 'person-outline', label: 'Profile', screen: 'Profile' },
+    { icon: 'log-out-outline', label: 'Logout', screen: 'LOGOUT', isLogout: true },
   ];
 
-  const handleNavigation = (screen: string) => {
+  const handleNavigation = (screen: string, isLogout?: boolean) => {
     onClose();
+    if (isLogout) {
+      handleLogout();
+      return;
+    }
     // Route Dashboard to the Home tab explicitly
     if (screen === 'MainTabs') {
       // @ts-ignore
@@ -214,9 +219,26 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
           <View style={styles.sectionDivider} />
           {/* Support */}
           {supportItems.map((item, index) => (
-            <TouchableOpacity key={`support-${index}`} activeOpacity={0.85} style={styles.menuItem} onPress={() => handleNavigation(item.screen)}>
-              <Ionicons name={item.icon as any} size={18} color={theme.colors.text} />
-              <Text style={[styles.menuItemText, { color: theme.colors.text }]} allowFontScaling={false}>{item.label}</Text>
+            <TouchableOpacity 
+              key={`support-${index}`} 
+              activeOpacity={0.85} 
+              style={[styles.menuItem, item.isLogout && styles.logoutMenuItem]} 
+              onPress={() => handleNavigation(item.screen, item.isLogout)}
+            >
+              <Ionicons 
+                name={item.icon as any} 
+                size={18} 
+                color={item.isLogout ? '#FF4444' : theme.colors.text} 
+              />
+              <Text 
+                style={[
+                  styles.menuItemText, 
+                  { color: item.isLogout ? '#FF4444' : theme.colors.text }
+                ]} 
+                allowFontScaling={false}
+              >
+                {item.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -230,10 +252,6 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
               '—'
             }
           </Text>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#FF4444" />
-            <Text style={styles.logoutText} allowFontScaling={false}>Logout</Text>
-          </TouchableOpacity>
         </View>
       </Animated.View>
     </>
@@ -370,18 +388,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  logoutText: {
-    marginLeft: 15,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF4444',
+  logoutMenuItem: {
+    marginTop: 8,
+    marginBottom: 12,
   },
 });
 
