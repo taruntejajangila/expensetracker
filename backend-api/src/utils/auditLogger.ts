@@ -7,7 +7,7 @@ import { logger } from './logger';
  */
 
 export interface AuditLog {
-  userId: string;
+  userId?: string; // Make optional to handle cases where user doesn't exist
   action: string;
   resource: string;
   resourceId?: string;
@@ -19,10 +19,34 @@ export interface AuditLog {
 
 /**
  * Create audit log entry
+ * Validates user exists before inserting to avoid foreign key constraint violations
  */
 export const auditLog = async (logData: AuditLog): Promise<void> => {
   try {
     const pool = getPool();
+    
+    // If userId is provided, validate it exists in the database
+    let validUserId: string | null = null;
+    if (logData.userId) {
+      try {
+        const userCheck = await pool.query(
+          'SELECT id FROM users WHERE id = $1',
+          [logData.userId]
+        );
+        
+        if (userCheck.rows.length > 0) {
+          validUserId = logData.userId;
+        } else {
+          // User doesn't exist - log warning and set to NULL
+          logger.warn(`Audit log: User ID ${logData.userId} not found in database, setting user_id to NULL`);
+          validUserId = null;
+        }
+      } catch (checkError) {
+        // If check fails, set to NULL to avoid foreign key violation
+        logger.warn(`Audit log: Error checking user existence for ${logData.userId}, setting user_id to NULL:`, checkError);
+        validUserId = null;
+      }
+    }
     
     await pool.query(
       `INSERT INTO audit_logs (
@@ -30,7 +54,7 @@ export const auditLog = async (logData: AuditLog): Promise<void> => {
         ip_address, user_agent, details, status, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
       [
-        logData.userId,
+        validUserId,
         logData.action,
         logData.resource,
         logData.resourceId || null,
@@ -42,7 +66,8 @@ export const auditLog = async (logData: AuditLog): Promise<void> => {
     );
     
     // Also log to application logger
-    logger.info(`AUDIT: ${logData.action} on ${logData.resource} by ${logData.userId} - ${logData.status}`);
+    const userIdLabel = validUserId || 'unknown';
+    logger.info(`AUDIT: ${logData.action} on ${logData.resource} by ${userIdLabel} - ${logData.status}`);
   } catch (error) {
     // Don't throw - audit logging failure shouldn't break operations
     logger.error('Error creating audit log:', error);
