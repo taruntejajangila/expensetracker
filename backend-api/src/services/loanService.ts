@@ -133,10 +133,7 @@ class LoanService {
     let totalInterest = 0;
     const schedule: LoanAmortizationSchedule[] = [];
     
-    // For interest-only loans, principal doesn't reduce
-    const isInterestOnly = loanType === 'Gold Loan' || 
-                          loanType === 'Private Money Lending' || 
-                          loanType === 'other';
+    // For interest-only loans, principal doesn't reduce (isInterestOnly already declared above)
     
     for (let i = 1; i <= termMonths; i++) {
       const interestPaid = remainingBalance * monthlyRate;
