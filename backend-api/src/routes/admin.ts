@@ -86,10 +86,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate access token
+    // Generate access token - SECURITY: Fail if JWT_SECRET is not configured
+    if (!process.env.JWT_SECRET) {
+      logger.error('JWT_SECRET not configured - cannot generate admin token');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error'
+      });
+    }
+    
     const accessToken = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 

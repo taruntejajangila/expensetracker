@@ -71,27 +71,45 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration - Allow all origins (for development/testing)
+// CORS configuration - SECURITY: Restrict origins in production
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins: string[] | boolean = isProduction
+  ? [
+      process.env.FRONTEND_URL,
+      process.env.ADMIN_PANEL_URL,
+      process.env.MOBILE_APP_URL
+    ].filter((url): url is string => Boolean(url)) // Remove undefined values and type guard
+  : true; // Allow all origins in development
+
 app.use(cors({
-  origin: true, // Allow all origins
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
-// Rate limiting - More generous for development
+if (isProduction && allowedOrigins === true) {
+  logger.warn('⚠️  SECURITY WARNING: CORS is allowing all origins in production! Set FRONTEND_URL, ADMIN_PANEL_URL, or MOBILE_APP_URL environment variables.');
+}
+
+// Rate limiting - SECURITY: Stricter limits in production
+const defaultRateLimit = isProduction ? 100 : 500; // Stricter in production
+
 app.use('/api/', rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '500'), // Increased from 100 to 500 for development
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || String(defaultRateLimit)),
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for localhost in development
+  // Skip rate limiting for localhost in development only
   skip: (req): boolean => {
+    if (isProduction) {
+      return false; // Never skip in production
+    }
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || (req.ip && req.ip.startsWith('192.168.')) || false;
     const isDevelopment = (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) || false;
     return Boolean(isLocalhost && isDevelopment);

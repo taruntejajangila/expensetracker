@@ -34,20 +34,34 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Debug: Log token details for troubleshooting
     logger.debug(`Token received: ${token.substring(0, 20)}... (length: ${token.length})`);
 
-    // Handle test tokens for development
-    if (token.includes('test-dev-') || token.includes('expo-go-mock-') || token === 'test-token') {
-      logger.info(`Test token detected: ${token.substring(0, 20)}... - Bypassing JWT validation`);
-      
-      // Create a mock user for test tokens
-      req.user = {
-        id: '0041a7fa-a4cf-408a-a106-4bc3e3744fbb', // Use a valid UUID format
-        email: 'test@example.com',
-        role: 'user',
-        name: 'Test User'
-      };
-      
-      next();
-      return;
+    // Handle test tokens ONLY in development - SECURITY: Reject in production
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const isTestToken = token.includes('test-dev-') || token.includes('expo-go-mock-') || token === 'test-token';
+    
+    if (isTestToken) {
+      if (isDevelopment) {
+        // Only allow test tokens in development
+        logger.info(`Test token detected: ${token.substring(0, 20)}... - Bypassing JWT validation (DEV ONLY)`);
+        
+        // Create a mock user for test tokens
+        req.user = {
+          id: '0041a7fa-a4cf-408a-a106-4bc3e3744fbb', // Use a valid UUID format
+          email: 'test@example.com',
+          role: 'user',
+          name: 'Test User'
+        };
+        
+        next();
+        return;
+      } else {
+        // In production, reject test tokens immediately
+        logger.warn(`SECURITY: Test token rejected in production: ${token.substring(0, 20)}...`);
+        res.status(401).json({
+          success: false,
+          message: 'Invalid or expired access token'
+        });
+        return;
+      }
     }
 
     // Verify token
@@ -85,10 +99,21 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         return;
       }
     } catch (dbError: any) {
-      // Database connection error - use JWT token data as fallback
-      logger.warn('Database unavailable for user lookup, using JWT token data:', dbError.message);
+      // SECURITY: In production, fail securely if database is unavailable
+      // In development, allow graceful degradation for testing
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('Database unavailable in production - rejecting authentication:', dbError.message);
+        res.status(503).json({
+          success: false,
+          message: 'Service temporarily unavailable. Please try again later.'
+        });
+        return;
+      }
       
-      // Use decoded token data as fallback (graceful degradation)
+      // Development only: Database connection error - use JWT token data as fallback
+      logger.warn('Database unavailable for user lookup, using JWT token data (DEV ONLY):', dbError.message);
+      
+      // Use decoded token data as fallback (graceful degradation - DEV ONLY)
       // Note: JWT only contains userId, email, role (not name)
       req.user = {
         id: decoded.userId,
@@ -97,7 +122,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         name: 'User' // Default name since not in JWT
       };
       
-      logger.debug(`User authenticated via JWT (DB unavailable): ${decoded.userId}`);
+      logger.debug(`User authenticated via JWT (DB unavailable - DEV ONLY): ${decoded.userId}`);
       next();
       return;
     }
