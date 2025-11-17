@@ -11,7 +11,9 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { formatNumber } from '../utils/currencyFormatter';
- 
+
+const MAX_LOAN_AMOUNT = 1000000000; // ₹1,000,000,000 (1 Billion)
+const MAX_INTEREST_RATE = 50; // Maximum 50%
 
 const AddLoanScreen: React.FC = () => {
     const { theme } = useTheme();
@@ -343,11 +345,38 @@ const AddLoanScreen: React.FC = () => {
             const principalAmount = Number(principal);
             const rate = Number(interestRate);
             
-            // Calculate EMI
+            // Validate loan amount limit
+            if (principalAmount > MAX_LOAN_AMOUNT) {
+                Alert.alert(
+                    'Limit Exceeded',
+                    'Principal amount cannot exceed ₹1,000,000,000 (1 Billion).'
+                );
+                return;
+            }
+            
+            // Validate interest rate limit
+            if (rate > MAX_INTEREST_RATE) {
+                Alert.alert(
+                    'Limit Exceeded',
+                    `Interest rate cannot exceed ${MAX_INTEREST_RATE}%.`
+                );
+                return;
+            }
+            
+            // Calculate monthly payment (EMI for regular loans, interest-only for Gold/Private Money Lending)
+            const isInterestOnlyLoan = type === 'Gold Loan' || type === 'Private Money Lending';
             const monthlyRate = rate / (12 * 100);
-            const emi = monthlyRate > 0 
-                ? (principalAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1)
-                : principalAmount / tenureMonths;
+            let monthlyPayment: number;
+            
+            if (isInterestOnlyLoan) {
+                // Interest-only: just the monthly interest
+                monthlyPayment = principalAmount * monthlyRate;
+            } else {
+                // Standard EMI calculation
+                monthlyPayment = monthlyRate > 0 
+                    ? (principalAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1)
+                    : principalAmount / tenureMonths;
+            }
             
             const loanData = {
                 name: name.trim(),
@@ -356,7 +385,7 @@ const AddLoanScreen: React.FC = () => {
                 principal: principalAmount,
                 interestRate: rate,
                 tenureMonths: tenureMonths,
-                monthlyPayment: emi,
+                monthlyPayment: monthlyPayment,
                 remainingBalance: principalAmount,
                 emiStartDate: emiStartDate,
                 endDate: new Date(new Date(emiStartDate).getTime() + tenureMonths * 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -552,11 +581,30 @@ const AddLoanScreen: React.FC = () => {
                     if (!isValid) return;
                     const annualRate = Number(interestRate);
                     const tenureNum = Number(termYears);
+                    const P = Number(principal);
+                    
+                    // Validate loan amount limit
+                    if (P > MAX_LOAN_AMOUNT) {
+                        Alert.alert(
+                            'Limit Exceeded',
+                            'Principal amount cannot exceed ₹1,000,000,000 (1 Billion).'
+                        );
+                        return;
+                    }
+                    
+                    // Validate interest rate limit
+                    if (annualRate > MAX_INTEREST_RATE) {
+                        Alert.alert(
+                            'Limit Exceeded',
+                            `Interest rate cannot exceed ${MAX_INTEREST_RATE}%.`
+                        );
+                        return;
+                    }
+                    
                     const isInterestOnly = type === 'Gold Loan' || type === 'Private Money Lending';
                     const r = (annualRate / 12) / 100;
                     const n = tenureUnit === 'Years' ? Math.round(tenureNum * 12) : Math.round(tenureNum);
                     let monthlyPayment = 0;
-                    const P = Number(principal);
                     if (isInterestOnly) {
                         monthlyPayment = P * r;
                     } else if (n > 0) {

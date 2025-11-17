@@ -636,34 +636,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
-  // Auto-fill Button Styles
-  autoFillContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  autoFillButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6C5CE7',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  autoFillButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
   previewCard: {
     margin: 20,
     borderRadius: 20,

@@ -600,56 +600,6 @@ const AddAccountScreen: React.FC = () => {
 
   const selectedAccountType = accountTypes.find(type => type.id === formData.accountType);
 
-  // Auto-fill test data for all account types
-  const [autoFillIndex, setAutoFillIndex] = useState(0);
-  
-  const handleAutoFill = () => {
-    const testData = [
-      {
-        accountType: 'wallet',
-        nickname: 'Test Wallet',
-        bankName: 'Paytm Payments Bank',
-        accountHolderName: 'John Doe',
-        accountNumber: '1234',
-      },
-      {
-        accountType: 'savings',
-        nickname: 'Test Savings Account',
-        bankName: 'HDFC Bank',
-        accountHolderName: 'John Doe',
-        accountNumber: '5678',
-      },
-      {
-        accountType: 'salary',
-        nickname: 'Test Salary Account',
-        bankName: 'ICICI Bank',
-        accountHolderName: 'John Doe',
-        accountNumber: '9012',
-      },
-      {
-        accountType: 'current',
-        nickname: 'Test Current Account',
-        bankName: 'State Bank of India',
-        accountHolderName: 'John Doe',
-        accountNumber: '3456',
-      },
-    ];
-
-    const currentData = testData[autoFillIndex];
-    setFormData({
-      nickname: currentData.nickname,
-      bankName: currentData.bankName,
-      accountHolderName: currentData.accountHolderName,
-      accountNumber: currentData.accountNumber,
-      accountType: currentData.accountType,
-    });
-    setErrors({});
-    setBankSuggestion(null);
-    
-    // Cycle to next account type
-    setAutoFillIndex((prev) => (prev + 1) % testData.length);
-  };
-
   // Header Component
   const ScreenHeader: React.FC<{ theme: any; insets: any }> = ({ theme, insets }) => {
     const headerPaddingTop = Platform.OS === 'android' ? insets.top + 5 : insets.top + 10;
@@ -860,23 +810,6 @@ const AddAccountScreen: React.FC = () => {
               </View>
             )}
             {errors.accountType && <Text style={styles.errorText} allowFontScaling={false}>{errors.accountType}</Text>}
-          </View>
-
-          {/* Auto Fill Button for Testing */}
-          <View style={styles.inputGroup}>
-            <TouchableOpacity
-              style={styles.autoFillButton}
-              onPress={handleAutoFill}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="flash" size={18} color="#FFFFFF" style={styles.autoFillIcon} />
-              <Text style={styles.autoFillButtonText} allowFontScaling={false}>
-                Auto Fill Test Data ({accountTypes[autoFillIndex].name})
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.autoFillHint} allowFontScaling={false}>
-              Tap to fill test data for {accountTypes[autoFillIndex].name} account. Tap again to cycle through all types.
-            </Text>
           </View>
 
           {/* Banner Ad */}
@@ -1189,38 +1122,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   saveButtonIcon: {
     marginRight: 6,
-  },
-  autoFillButton: {
-    backgroundColor: '#667eea',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  autoFillIcon: {
-    marginRight: 8,
-  },
-  autoFillButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  autoFillHint: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginTop: 6,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
 });
 

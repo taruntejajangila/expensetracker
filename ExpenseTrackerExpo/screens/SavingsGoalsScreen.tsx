@@ -356,7 +356,7 @@ const SavingsGoalsScreen: React.FC = () => {
                   onPress={() => handleUpdateProgress(goal)}
                   activeOpacity={0.8}
                 >
-                  {/* Header with Icon and Status */}
+                  {/* Header with Icon and Edit Button */}
                   <View style={styles.goalHeader}>
                     <View style={[styles.goalIconContainer, { backgroundColor: goal.color || '#007AFF' }]}>
                       <Text style={styles.goalIconText} allowFontScaling={false}>{goal.icon}</Text>
@@ -370,11 +370,12 @@ const SavingsGoalsScreen: React.FC = () => {
                         }
                       </Text>
                     </View>
-                    <View style={styles.goalStatusBadge}>
-                      <Text style={[styles.goalStatusText, { color: statusColor }]} allowFontScaling={false}>
-                        {isCompleted ? '🎉' : getStatusEmoji(goal.currentAmount, goal.targetAmount)}
-                      </Text>
-                    </View>
+                    <TouchableOpacity 
+                      style={[styles.editButtonHeader]}
+                      onPress={() => handleEditGoal(goal)}
+                    >
+                      <Text style={styles.editButtonHeaderText} allowFontScaling={false}>Edit Goal</Text>
+                    </TouchableOpacity>
                   </View>
 
                   {/* Progress Section */}
@@ -457,22 +458,12 @@ const SavingsGoalsScreen: React.FC = () => {
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.goalActionButtons}>
-                      <TouchableOpacity 
-                        style={[styles.actionButton, styles.editButton]}
-                        onPress={() => handleEditGoal(goal)}
-                      >
-                        <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
-                        <Text style={styles.actionButtonText} allowFontScaling={false}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.actionButton, styles.updateButton]}
-                        onPress={() => handleUpdateProgress(goal)}
-                      >
-                        <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
-                        <Text style={[styles.actionButtonText, styles.updateButtonText]} allowFontScaling={false}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.updateButton]}
+                      onPress={() => handleUpdateProgress(goal)}
+                    >
+                      <Text style={[styles.actionButtonText, styles.updateButtonText]} allowFontScaling={false}>Add/Withdraw amount</Text>
+                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -834,16 +825,21 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 2,
   },
-  goalStatusBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  editButtonHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '15',
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+    gap: 6,
   },
-  goalStatusText: {
-    fontSize: 14,
+  editButtonHeaderText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   goalProgressSection: {
     marginBottom: 12,
@@ -957,10 +953,6 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     fontSize: 9,
     color: theme.colors.textSecondary,
     fontWeight: '500',
-  },
-  goalActionButtons: {
-    flexDirection: 'row',
-    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',

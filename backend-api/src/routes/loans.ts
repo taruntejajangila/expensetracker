@@ -82,8 +82,8 @@ router.get('/:id', async (req, res) => {
 router.post('/', [
   body('name').notEmpty().withMessage('Loan name is required'),
   body('loanType').isIn(['Personal Loan', 'Home Loan', 'Car Loan', 'Business Loan', 'Gold Loan', 'Education Loan', 'Private Money Lending', 'Other']).withMessage('Invalid loan type'),
-  body('amount').isFloat({ min: 0.01 }).withMessage('Principal amount must be greater than 0'),
-  body('interestRate').isFloat({ min: 0, max: 100 }).withMessage('Interest rate must be between 0 and 100 (percentage)'),
+  body('amount').isFloat({ min: 0.01, max: 1000000000 }).withMessage('Principal amount must be between ₹0.01 and ₹1,000,000,000 (1 Billion)'),
+  body('interestRate').isFloat({ min: 0, max: 50 }).withMessage('Interest rate must be between 0 and 50 (percentage)'),
   body('termMonths').isInt({ min: 1 }).withMessage('Loan term must be at least 1 month'),
   body('startDate').isISO8601().withMessage('Start date must be a valid date'),
   body('lender').optional().isString().withMessage('Lender name must be a string'),
@@ -136,8 +136,8 @@ router.post('/', [
 router.put('/:id', [
   body('name').optional().notEmpty().withMessage('Loan name cannot be empty'),
   body('loanType').optional().isIn(['Personal Loan', 'Home Loan', 'Car Loan', 'Business Loan', 'Gold Loan', 'Education Loan', 'Private Money Lending', 'Other']).withMessage('Invalid loan type'),
-  body('amount').optional().isFloat({ min: 0.01 }).withMessage('Principal amount must be greater than 0'),
-  body('interestRate').optional().isFloat({ min: 0, max: 100 }).withMessage('Interest rate must be between 0 and 100 (percentage)'),
+  body('amount').optional().isFloat({ min: 0.01, max: 1000000000 }).withMessage('Principal amount must be between ₹0.01 and ₹1,000,000,000 (1 Billion)'),
+  body('interestRate').optional().isFloat({ min: 0, max: 50 }).withMessage('Interest rate must be between 0 and 50 (percentage)'),
   body('termMonths').optional().isInt({ min: 1 }).withMessage('Loan term must be at least 1 month'),
   body('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
   body('status').optional().isIn(['active', 'paid_off', 'defaulted', 'refinanced']).withMessage('Invalid status'),

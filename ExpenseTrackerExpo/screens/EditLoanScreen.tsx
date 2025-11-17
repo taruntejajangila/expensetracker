@@ -9,6 +9,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { formatNumber } from '../utils/currencyFormatter';
 
+const MAX_LOAN_AMOUNT = 1000000000; // ₹1,000,000,000 (1 Billion)
+const MAX_INTEREST_RATE = 50; // Maximum 50%
+
 interface RouteParams {
   loanId: string;
   loanData?: StoredLoan;
@@ -306,12 +309,33 @@ const EditLoanScreen: React.FC = () => {
     const handleSubmit = async () => {
         if (isValid && loan) {
             try {
+                const principalAmount = Number(principal);
+                const rate = Number(interestRate);
+                
+                // Validate loan amount limit
+                if (principalAmount > MAX_LOAN_AMOUNT) {
+                    Alert.alert(
+                        'Limit Exceeded',
+                        'Principal amount cannot exceed ₹1,000,000,000 (1 Billion).'
+                    );
+                    return;
+                }
+                
+                // Validate interest rate limit
+                if (rate > MAX_INTEREST_RATE) {
+                    Alert.alert(
+                        'Limit Exceeded',
+                        `Interest rate cannot exceed ${MAX_INTEREST_RATE}%.`
+                    );
+                    return;
+                }
+                
                 const updateData = {
                     name: name.trim(),
                     type: type.trim(),
                     lender: lender.trim(),
-                    principal: Number(principal),
-                    interestRate: Number(interestRate),
+                    principal: principalAmount,
+                    interestRate: rate,
                     tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
                     emiStartDate: emiStartDate,
                     monthlyPayment: monthlyAmount || 0,
@@ -404,16 +428,37 @@ const EditLoanScreen: React.FC = () => {
         if (!isValid) return;
 
         try {
+            const principalAmount = Number(principal);
+            const rate = Number(interestRate);
+            
+            // Validate loan amount limit
+            if (principalAmount > MAX_LOAN_AMOUNT) {
+                Alert.alert(
+                    'Limit Exceeded',
+                    'Principal amount cannot exceed ₹1,000,000,000 (1 Billion).'
+                );
+                return;
+            }
+            
+            // Validate interest rate limit
+            if (rate > MAX_INTEREST_RATE) {
+                Alert.alert(
+                    'Limit Exceeded',
+                    `Interest rate cannot exceed ${MAX_INTEREST_RATE}%.`
+                );
+                return;
+            }
+            
             const updateData = {
                 name: name.trim(),
                 type: type,
                 lender: lender.trim(),
-                principal: Number(principal),
-                interestRate: Number(interestRate),
+                principal: principalAmount,
+                interestRate: rate,
                 tenureMonths: tenureUnit === 'Years' ? Number(termYears) * 12 : Number(termYears),
                 emiStartDate: emiStartDate,
                 monthlyPayment: monthlyAmount || 0,
-                remainingBalance: Number(principal), // Map currentBalance to remainingBalance
+                remainingBalance: principalAmount, // Map currentBalance to remainingBalance
             };
 
             await LoanService.updateLoan(loanId, updateData);

@@ -101,7 +101,8 @@ class LoanService {
   private calculateAmortization(
     principal: number,
     annualRate: number,
-    termMonths: number
+    termMonths: number,
+    loanType?: string
   ): {
     monthlyPayment: number;
     totalInterest: number;
@@ -110,11 +111,21 @@ class LoanService {
   } {
     const monthlyRate = annualRate / 100 / 12; // Backend receives percentage (13.5), convert to decimal then divide by 12
     
+    // Check if this is an interest-only loan (Gold Loan or Private Money Lending)
+    // Note: loanType can be either display name ('Gold Loan', 'Private Money Lending') or mapped code ('other')
+    const isInterestOnly = loanType === 'Gold Loan' || 
+                          loanType === 'Private Money Lending' || 
+                          loanType === 'other'; // 'other' is mapped from Gold/Private in frontend
+    
     // Handle zero interest rate case
     let monthlyPayment: number;
-    if (monthlyRate === 0) {
+    if (isInterestOnly) {
+      // Interest-only loans: monthly payment is just the interest
+      monthlyPayment = principal * monthlyRate;
+    } else if (monthlyRate === 0) {
       monthlyPayment = principal / termMonths;
     } else {
+      // Standard EMI calculation
       monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
     }
     
@@ -122,10 +133,24 @@ class LoanService {
     let totalInterest = 0;
     const schedule: LoanAmortizationSchedule[] = [];
     
+    // For interest-only loans, principal doesn't reduce
+    const isInterestOnly = loanType === 'Gold Loan' || 
+                          loanType === 'Private Money Lending' || 
+                          loanType === 'other';
+    
     for (let i = 1; i <= termMonths; i++) {
       const interestPaid = remainingBalance * monthlyRate;
-      const principalPaid = monthlyPayment - interestPaid;
-      remainingBalance -= principalPaid;
+      let principalPaid: number;
+      
+      if (isInterestOnly) {
+        // Interest-only: no principal reduction
+        principalPaid = 0;
+        // remainingBalance stays the same
+      } else {
+        principalPaid = monthlyPayment - interestPaid;
+        remainingBalance -= principalPaid;
+      }
+      
       totalInterest += interestPaid;
       
       schedule.push({
@@ -291,7 +316,8 @@ class LoanService {
       const amortization = this.calculateAmortization(
         loanData.amount,
         loanData.interestRate,
-        loanData.termMonths
+        loanData.termMonths,
+        loanData.loanType
       );
       
       // Calculate end date
@@ -408,8 +434,9 @@ class LoanService {
         const principal = updateData.amount || currentLoan.amount;
         const rate = updateData.interestRate || currentLoan.interestRate;
         const term = updateData.termMonths || currentLoan.termMonths;
+        const loanType = updateData.loanType || currentLoan.loanType;
         
-        amortization = this.calculateAmortization(principal, rate, term);
+        amortization = this.calculateAmortization(principal, rate, term, loanType);
         
         const startDate = updateData.startDate || currentLoan.startDate;
         endDate = new Date(startDate);

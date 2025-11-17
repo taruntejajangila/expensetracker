@@ -42,7 +42,8 @@ interface AmortizationEntry {
   balance: number;
 }
 
-const MAX_LOAN_AMOUNT = 10000000; // ₹1,00,00,000 (1 crore)
+const MAX_LOAN_AMOUNT = 1000000000; // ₹1,000,000,000 (1 Billion)
+const MAX_INTEREST_RATE = 50; // Maximum 50%
 
 const LoanCalculatorScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -79,7 +80,15 @@ const LoanCalculatorScreen: React.FC = () => {
     if (amount > MAX_LOAN_AMOUNT) {
       Alert.alert(
         'Limit Exceeded',
-        'We currently support loan calculations up to ₹1,00,00,000 (1 crore).'
+        'We currently support loan calculations up to ₹1,000,000,000 (1 Billion).'
+      );
+      return;
+    }
+
+    if (rate > MAX_INTEREST_RATE) {
+      Alert.alert(
+        'Limit Exceeded',
+        `Interest rate cannot exceed ${MAX_INTEREST_RATE}%.`
       );
       return;
     }

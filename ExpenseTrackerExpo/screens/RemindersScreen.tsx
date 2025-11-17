@@ -122,6 +122,7 @@ const RemindersScreen: React.FC = () => {
 
   useEffect(() => {
     loadReminders();
+    loadPaidItems();
     requestNotificationPermissions();
     
     // Clean up expired paid items on component load
@@ -133,6 +134,7 @@ const RemindersScreen: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       loadReminders();
+      loadPaidItems();
       cleanupExpiredPaidItems();
     }, [])
   );
@@ -214,6 +216,48 @@ const RemindersScreen: React.FC = () => {
     }
   };
 
+  // Load paid items from AsyncStorage
+  const loadPaidItems = async () => {
+    try {
+      const userId = (user as any)?.email || (user as any)?.uid || 'default';
+      const key = `paid_items_${userId}`;
+      const stored = await AsyncStorage.getItem(key);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Convert paidAt strings back to Date objects
+        const paidItemsWithDates: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } } = {};
+        Object.keys(parsed).forEach(id => {
+          paidItemsWithDates[id] = {
+            ...parsed[id],
+            paidAt: new Date(parsed[id].paidAt)
+          };
+        });
+        setPaidItems(paidItemsWithDates);
+      }
+    } catch (error) {
+      console.error('Error loading paid items:', error);
+    }
+  };
+
+  // Save paid items to AsyncStorage
+  const savePaidItems = async (items: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } }) => {
+    try {
+      const userId = (user as any)?.email || (user as any)?.uid || 'default';
+      const key = `paid_items_${userId}`;
+      // Convert Date objects to ISO strings for storage
+      const itemsToStore: any = {};
+      Object.keys(items).forEach(id => {
+        itemsToStore[id] = {
+          ...items[id],
+          paidAt: items[id].paidAt.toISOString()
+        };
+      });
+      await AsyncStorage.setItem(key, JSON.stringify(itemsToStore));
+    } catch (error) {
+      console.error('Error saving paid items:', error);
+    }
+  };
+
   const loadReminders = async () => {
     try {
       setLoading(true);
@@ -268,16 +312,24 @@ const RemindersScreen: React.FC = () => {
     setShowConfirmModal(true);
   };
 
-  const confirmMarkAsPaid = (reminder: any, type: 'loan' | 'smart' | 'custom') => {
-    // Mark item as paid
-    setPaidItems(prev => ({
-      ...prev,
-      [reminder.id]: {
-        type,
-        reminder,
-        paidAt: new Date()
-      }
-    }));
+  const confirmMarkAsPaid = async (reminder: any, type: 'loan' | 'smart' | 'custom') => {
+    // Mark item as paid using functional update to ensure we have latest state
+    let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
+    
+    setPaidItems(prev => {
+      newPaidItems = {
+        ...prev,
+        [reminder.id]: {
+          type,
+          reminder,
+          paidAt: new Date()
+        }
+      };
+      return newPaidItems;
+    });
+    
+    // Save to AsyncStorage
+    await savePaidItems(newPaidItems!);
     
     const successMessage = type === 'loan' ? 'Loan EMI' : type === 'smart' ? 'Payment' : 'Custom reminder';
     Alert.alert('Success', `${successMessage} marked as paid successfully.`);
@@ -287,12 +339,18 @@ const RemindersScreen: React.FC = () => {
     setConfirmModalData(null);
   };
 
-  const revertPayment = (reminderId: string) => {
+  const revertPayment = async (reminderId: string) => {
+    // Remove item from paid items using functional update to ensure we have latest state
+    let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
+    
     setPaidItems(prev => {
-      const newPaidItems = { ...prev };
+      newPaidItems = { ...prev };
       delete newPaidItems[reminderId];
       return newPaidItems;
     });
+    
+    // Save to AsyncStorage
+    await savePaidItems(newPaidItems!);
     
     Alert.alert('Success', 'Payment reverted successfully.');
   };
@@ -341,7 +399,7 @@ const RemindersScreen: React.FC = () => {
     );
   };
 
-  const cleanupExpiredPaidItems = () => {
+  const cleanupExpiredPaidItems = async () => {
     const now = new Date();
     const twoDaysInMs = 2 * 24 * 60 * 60 * 1000; // 2 days in milliseconds
     
@@ -359,7 +417,12 @@ const RemindersScreen: React.FC = () => {
         }
       });
       
-      // Cleaned up expired paid reminders
+      // Save cleaned up paid items to AsyncStorage
+      if (removedCount > 0) {
+        savePaidItems(updatedPaidItems).catch(error => {
+          console.error('Error saving cleaned up paid items:', error);
+        });
+      }
       
       return updatedPaidItems;
     });
