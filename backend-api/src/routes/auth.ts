@@ -1,5 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
+import jwt from 'jsonwebtoken';
 import { createUser, authenticateUser, getUserById } from '../utils/userUtils';
 import { generateAccessToken, generateRefreshToken, hashPassword, comparePassword } from '../utils/authUtils';
 import { validateRequest } from '../middleware/validation';
@@ -7,6 +8,8 @@ import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import pool from '../config/database';
 import { TwoFactorService } from '../services/twoFactorService';
+import { blacklistToken } from '../utils/tokenBlacklist';
+import { auditLog } from '../utils/auditLogger';
 
 // Force Railway rebuild - routes verified - v6 - /auth/me route fixed by moving to top
 
@@ -93,6 +96,17 @@ router.post('/refresh', [
     }
     const newAccessToken = generateAccessToken(decoded.userId, decoded.email || '', decoded.role || 'user');
     logger.info(`Token refreshed successfully for user: ${decoded.userId}`);
+    
+    // SECURITY: Audit log token refresh
+    auditLog({
+      userId: decoded.userId,
+      action: 'token_refresh',
+      resource: 'authentication',
+      ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+      status: 'success'
+    }).catch(err => logger.error('Audit log error:', err));
+    
     res.json({
       success: true,
       message: 'Token refreshed successfully',
@@ -240,11 +254,46 @@ router.post('/login',
 
 // POST /api/auth/logout - User logout
 router.post('/logout',
+  authenticateToken,
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      // In a real implementation, you might want to blacklist the token
-      // For now, we'll just return success
-      logger.info('User logout');
+      const authUser = req.user;
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.substring(7); // Remove 'Bearer ' prefix
+      
+      if (!authUser || !token) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+        return;
+      }
+
+      // SECURITY: Blacklist the token to prevent reuse
+      // Decode token to get expiration
+      let expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Default: 24h from now
+      try {
+        const decoded: any = jwt.decode(token);
+        if (decoded && decoded.exp) {
+          expiresAt = new Date(decoded.exp * 1000);
+        }
+      } catch (e) {
+        // Use default expiration if decode fails
+      }
+      
+      await blacklistToken(token, authUser.id, expiresAt, 'logout');
+      
+      // SECURITY: Audit log logout
+      await auditLog({
+        userId: authUser.id,
+        action: 'logout',
+        resource: 'authentication',
+        ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        status: 'success'
+      });
+      
+      logger.info(`User logged out successfully: ${authUser.id} (${authUser.email})`);
       
       res.json({
         success: true,

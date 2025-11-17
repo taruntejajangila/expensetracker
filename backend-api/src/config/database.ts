@@ -425,6 +425,47 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // Token blacklist table - SECURITY: Store revoked tokens
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS token_blacklist (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      token_hash VARCHAR(64) NOT NULL UNIQUE,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      reason VARCHAR(20) DEFAULT 'logout' CHECK (reason IN ('logout', 'revoked', 'security')),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+  
+  // Create indexes for token blacklist
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS idx_token_blacklist_hash ON token_blacklist(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+  `);
+
+  // Audit logs table - SECURITY: Track sensitive operations
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      action VARCHAR(100) NOT NULL,
+      resource VARCHAR(100) NOT NULL,
+      resource_id VARCHAR(255),
+      ip_address VARCHAR(45),
+      user_agent TEXT,
+      details JSONB,
+      status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'failure', 'error')),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+  
+  // Create indexes for audit logs
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+  `);
+
   // Support tickets table
   await client.query(`
     CREATE TABLE IF NOT EXISTS support_tickets (

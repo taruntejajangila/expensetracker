@@ -37,6 +37,8 @@ import { logger } from './utils/logger';
 
 // Import database connection
 import { connectDatabase, getPool } from './config/database';
+// Import security utilities
+import { cleanupExpiredBlacklist } from './utils/tokenBlacklist';
 
 // Debug: Log environment variables loading
 logger.info('🔍 Server Environment Variables Debug:');
@@ -54,11 +56,30 @@ const PORT = process.env.PORT || 5000;
 // Trust proxy - Required for Railway deployment
 app.set('trust proxy', 1);
 
+// HTTPS enforcement in production - SECURITY: Force HTTPS
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Check if request is already HTTPS or forwarded as HTTPS
+    const isSecure = req.secure || 
+                     req.headers['x-forwarded-proto'] === 'https' ||
+                     req.headers['x-forwarded-ssl'] === 'on';
+    
+    if (!isSecure && req.method !== 'GET') {
+      // For non-GET requests, redirect to HTTPS
+      const httpsUrl = `https://${req.headers.host}${req.url}`;
+      return res.redirect(301, httpsUrl);
+    }
+    next();
+  });
+}
+
 // Serve static files (for uploaded images) - BEFORE security middleware
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Security middleware
+// Security middleware - Enhanced with HSTS and additional headers
 const serverUrl = process.env.SERVER_URL || 'http://localhost:5000';
+const isProduction = process.env.NODE_ENV === 'production';
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -69,10 +90,18 @@ app.use(helmet({
       connectSrc: ["'self'", serverUrl, "http://localhost:5000", "http://127.0.0.1:5000"],
     },
   },
+  hsts: isProduction ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  } : false, // Disable HSTS in development
+  frameguard: { action: 'deny' }, // Prevent clickjacking
+  noSniff: true, // Prevent MIME type sniffing
+  xssFilter: true, // Enable XSS filter
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
 // CORS configuration - SECURITY: Restrict origins in production
-const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins: string[] | boolean = isProduction
   ? [
       process.env.FRONTEND_URL,
@@ -283,6 +312,23 @@ const startServer = async () => {
         // Set up database pool in app.locals for routes to use
         app.locals.db = getPool();
         logger.info('✅ Database pool set in app.locals');
+        
+        // SECURITY: Start periodic cleanup of expired blacklist entries (every 6 hours)
+        setInterval(async () => {
+          try {
+            const deleted = await cleanupExpiredBlacklist();
+            if (deleted > 0) {
+              logger.info(`🧹 Cleaned up ${deleted} expired blacklist entries`);
+            }
+          } catch (error) {
+            logger.error('Error during blacklist cleanup:', error);
+          }
+        }, 6 * 60 * 60 * 1000); // 6 hours
+        
+        // Run cleanup immediately on startup
+        cleanupExpiredBlacklist().catch(err => 
+          logger.error('Error during initial blacklist cleanup:', err)
+        );
       })
       .catch((error) => {
         logger.error('❌ Database connection failed (server will continue running):', error);

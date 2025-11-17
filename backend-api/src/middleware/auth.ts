@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, extractTokenFromHeader, hasRole } from '../utils/authUtils';
 import { getUserById } from '../utils/userUtils';
 import { logger } from '../utils/logger';
+import { isTokenBlacklisted } from '../utils/tokenBlacklist';
+import { auditLog } from '../utils/auditLogger';
 
 // Extend Express Request interface to include user
 declare global {
@@ -64,6 +66,17 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       }
     }
 
+    // SECURITY: Check if token is blacklisted (revoked)
+    const isBlacklisted = await isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      logger.warn(`SECURITY: Blacklisted token attempted: ${token.substring(0, 20)}...`);
+      res.status(401).json({
+        success: false,
+        message: 'Token has been revoked'
+      });
+      return;
+    }
+
     // Verify token
     const decoded = verifyAccessToken(token);
     if (!decoded) {
@@ -88,6 +101,17 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
           name: user.name
         };
         logger.debug(`User authenticated: ${user.id} (${user.email})`);
+        
+        // SECURITY: Audit log authentication (async, don't block)
+        auditLog({
+          userId: user.id,
+          action: 'authenticate',
+          resource: 'api_access',
+          ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          status: 'success'
+        }).catch(err => logger.error('Audit log error:', err));
+        
         next();
         return;
       } else {
