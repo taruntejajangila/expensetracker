@@ -362,7 +362,7 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     const user = userResult.rows[0];
 
     // Get user transactions with category name
-    let transactionsResult = { rows: [] };
+    let transactionsResult: { rows: any[] } = { rows: [] };
     try {
       const result = await pool.query(`
         SELECT 
