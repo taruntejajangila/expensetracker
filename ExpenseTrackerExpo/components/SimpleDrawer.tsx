@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Easing } from 'react-native';
-import Constants from 'expo-constants';
 // Removed quick stats (circular graphs)
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -242,17 +241,6 @@ export const SimpleDrawer: React.FC<SimpleDrawerProps> = ({ isOpen, onClose }) =
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.versionText} allowFontScaling={false}>
-            Version {
-              (Constants?.expoConfig as any)?.version ||
-              (Constants as any)?.manifest?.version ||
-              '—'
-            }
-          </Text>
-        </View>
       </Animated.View>
     </>
   );
@@ -363,17 +351,6 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   // menuIconPill removed (icons shown directly)
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  versionText: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-    fontSize: 11,
-    color: '#777777',
-  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
