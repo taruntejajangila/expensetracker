@@ -203,15 +203,13 @@ router.post('/login',
   }
 );
 
-// POST /api/auth/refresh - Refresh access token (v2 - force Railway rebuild)
-// Add middleware to log all requests to this route
-router.post('/refresh', (req, res, next) => {
-  logger.info('🔄 /api/auth/refresh route middleware HIT - request received');
-  logger.info(`🔄 Request method: ${req.method}, path: ${req.path}, originalUrl: ${req.originalUrl}`);
-  next();
-}, [
-  body('refreshToken').notEmpty().withMessage('Refresh token required')
-], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
+// POST /api/auth/refresh - Refresh access token
+router.post('/refresh',
+  [
+    body('refreshToken').notEmpty().withMessage('Refresh token required')
+  ],
+  validateRequest,
+  async (req: express.Request, res: express.Response): Promise<void> => {
     try {
       logger.info('🔄 /api/auth/refresh endpoint HIT - processing request');
       const { refreshToken } = req.body;
@@ -219,7 +217,6 @@ router.post('/refresh', (req, res, next) => {
       logger.info('Token refresh attempt');
 
       // Verify refresh token and generate new access token
-      // This is a simplified implementation - in production, you'd want to validate the refresh token
       const decoded = require('jsonwebtoken').verify(refreshToken, process.env.JWT_REFRESH_SECRET);
       
       if (!decoded || !decoded.userId) {
