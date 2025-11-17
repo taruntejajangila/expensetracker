@@ -153,7 +153,7 @@ afterEvaluate {
     tasks.findAll { task ->
         task.name.contains("lint") || task.name.contains("Lint")
     }.each { task ->
-        task.enabled = false
+            task.enabled = false
         task.onlyIf { false }
         task.actions.clear()
         task.outputs.upToDateWhen { true }

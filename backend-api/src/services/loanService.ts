@@ -145,7 +145,7 @@ class LoanService {
         // remainingBalance stays the same
       } else {
         principalPaid = monthlyPayment - interestPaid;
-        remainingBalance -= principalPaid;
+      remainingBalance -= principalPaid;
       }
       
       totalInterest += interestPaid;
