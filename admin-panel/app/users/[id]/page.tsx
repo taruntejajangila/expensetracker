@@ -24,6 +24,12 @@ interface UserDetails {
   loans?: any[]
   creditCards?: any[]
   budgets?: any[]
+  financialSummary?: {
+    totalIncome: number
+    totalExpense: number
+    currentBalance: number
+    totalAccountBalance: number
+  }
 }
 
 export default function UserDetailsPage() {
@@ -275,34 +281,84 @@ export default function UserDetailsPage() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Account Overview</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{user.transactionCount}</div>
-                <div className="text-sm text-blue-600">Total Transactions</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {user.categories?.length || 0}
+            
+            {/* Financial Summary - Similar to mobile app */}
+            {user.financialSummary && (
+              <div className="mb-6">
+                <h4 className="text-md font-semibold text-gray-700 mb-4">Financial Summary</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-green-700">Total Income</span>
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-green-700">
+                      {formatCurrency(user.financialSummary.totalIncome)}
+                    </div>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-red-700">Total Expense</span>
+                      <TrendingUp className="h-5 w-5 text-red-600 rotate-180" />
+                    </div>
+                    <div className="text-2xl font-bold text-red-700">
+                      {formatCurrency(user.financialSummary.totalExpense)}
+                    </div>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-blue-700">Current Balance</span>
+                      <DollarSign className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className={`text-2xl font-bold ${user.financialSummary.currentBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                      {formatCurrency(user.financialSummary.currentBalance)}
+                    </div>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-purple-700">Account Balance</span>
+                      <CreditCard className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="text-2xl font-bold text-purple-700">
+                      {formatCurrency(user.financialSummary.totalAccountBalance)}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-green-600">Categories</div>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {user.accounts?.length || 0}
+            )}
+            
+            {/* Account Statistics */}
+            <div>
+              <h4 className="text-md font-semibold text-gray-700 mb-4">Account Statistics</h4>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{user.transactionCount}</div>
+                  <div className="text-sm text-blue-600">Total Transactions</div>
                 </div>
-                <div className="text-sm text-purple-600">Accounts</div>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {user.goals?.length || 0}
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {user.categories?.length || 0}
+                  </div>
+                  <div className="text-sm text-green-600">Categories</div>
                 </div>
-                <div className="text-sm text-yellow-600">Goals</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
-                  {user.budgets?.length || 0}
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {user.accounts?.length || 0}
+                  </div>
+                  <div className="text-sm text-purple-600">Accounts</div>
                 </div>
-                <div className="text-sm text-orange-600">Budgets</div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {user.goals?.length || 0}
+                  </div>
+                  <div className="text-sm text-yellow-600">Goals</div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {user.budgets?.length || 0}
+                  </div>
+                  <div className="text-sm text-orange-600">Budgets</div>
+                </div>
               </div>
             </div>
           </div>

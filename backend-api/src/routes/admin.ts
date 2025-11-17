@@ -481,6 +481,43 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
       console.log('Error fetching budgets:', error);
     }
 
+    // Calculate financial summary: Total Income, Total Expense, Current Balance
+    let financialSummary = {
+      totalIncome: 0,
+      totalExpense: 0,
+      currentBalance: 0,
+      totalAccountBalance: 0
+    };
+    try {
+      // Calculate total income and expense from transactions
+      const financialResult = await pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+          COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as total_expense
+        FROM transactions
+        WHERE user_id = $1
+      `, [id]);
+      
+      if (financialResult.rows.length > 0) {
+        financialSummary.totalIncome = parseFloat(financialResult.rows[0].total_income) || 0;
+        financialSummary.totalExpense = parseFloat(financialResult.rows[0].total_expense) || 0;
+        financialSummary.currentBalance = financialSummary.totalIncome - financialSummary.totalExpense;
+      }
+      
+      // Calculate total balance from all bank accounts
+      const accountBalanceResult = await pool.query(`
+        SELECT COALESCE(SUM(balance), 0) as total_balance
+        FROM bank_accounts
+        WHERE user_id = $1 AND is_active = true
+      `, [id]);
+      
+      if (accountBalanceResult.rows.length > 0) {
+        financialSummary.totalAccountBalance = parseFloat(accountBalanceResult.rows[0].total_balance) || 0;
+      }
+    } catch (error) {
+      console.log('Error calculating financial summary:', error);
+    }
+
     // Determine status: Active if user has transactions OR logged in within last 30 days
     const hasTransactions = parseInt(user.transactionCount) > 0;
     const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
@@ -502,7 +539,8 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
       goals: goalsResult.rows,
       loans: loansResult.rows,
       creditCards: creditCardsResult.rows,
-      budgets: budgetsResult.rows
+      budgets: budgetsResult.rows,
+      financialSummary: financialSummary
     };
 
     console.log('User details being sent:', {
