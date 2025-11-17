@@ -28,7 +28,7 @@ import adminAPI, {
   SlowQuery,
   ServerMetrics
 } from '../services/api'
-import { formatNumber } from '@/utils/numberFormatter'
+import { formatNumber, formatCurrency } from '@/utils/numberFormatter'
 
 export default function MonitoringPage() {
   const [realtimeData, setRealtimeData] = useState<RealtimeMonitoring | null>(null)
@@ -67,14 +67,6 @@ export default function MonitoringPage() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString()

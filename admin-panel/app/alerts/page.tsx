@@ -20,6 +20,7 @@ import adminAPI, {
   NotificationSystem,
   EscalationRules
 } from '../services/api'
+import { formatCurrency } from '@/utils/numberFormatter'
 
 export default function AlertsPage() {
   const [alertSystem, setAlertSystem] = useState<AlertSystem | null>(null)
@@ -99,14 +100,6 @@ export default function AlertsPage() {
     return new Date(dateString).toLocaleString()
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
 
   if (isLoading && !alertSystem) {
     return (

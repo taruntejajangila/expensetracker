@@ -18,6 +18,7 @@ import adminAPI, {
   CustomReport,
   ScheduledReport
 } from '../services/api'
+import { formatCurrency } from '@/utils/numberFormatter'
 
 export default function ReportsPage() {
   const [financialReport, setFinancialReport] = useState<FinancialReport | null>(null)
@@ -90,15 +91,6 @@ export default function ReportsPage() {
     }
   }
 
-  const formatCurrency = (amount: number | string) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(numAmount)
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
