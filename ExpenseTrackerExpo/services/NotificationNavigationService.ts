@@ -44,6 +44,27 @@ class NotificationNavigationService {
 
     const notificationData = response.notification.request.content.data;
     
+    // Handle daily reminder notifications (evening and morning)
+    if (notificationData && notificationData.type === 'daily_spending_reminder') {
+      console.log('📝 Daily reminder notification detected');
+      console.log('📝 Reminder type:', notificationData.reminderType);
+      console.log('📝 Action:', notificationData.action);
+      
+      // Navigate to AddTransaction screen with expense type
+      this.navigateToAddTransaction('expense', notificationData.reminderType);
+      return;
+    }
+    
+    // Handle monthly salary reminder notifications
+    if (notificationData && notificationData.type === 'monthly_salary_reminder') {
+      console.log('💰 Monthly salary reminder notification detected');
+      console.log('💰 Action:', notificationData.action);
+      
+      // Navigate to AddTransaction screen with income type
+      this.navigateToAddTransaction('income', 'salary');
+      return;
+    }
+    
     // Handle support ticket reply notifications
     if (notificationData && notificationData.type === 'support_ticket_reply') {
       console.log('🎫 Support ticket reply notification detected');
@@ -229,6 +250,25 @@ class NotificationNavigationService {
       }
     } else {
       console.log('❌ Navigation ref not available');
+    }
+  }
+
+  // Navigate to AddTransaction screen with specified transaction type
+  public navigateToAddTransaction(transactionType: 'expense' | 'income', reminderType?: string) {
+    if (this.navigationRef) {
+      console.log('📝 Navigating to AddTransaction screen with type:', transactionType);
+      console.log('📝 Reminder type:', reminderType || 'none');
+      try {
+        this.navigationRef.navigate('AddTransaction', {
+          defaultType: transactionType,
+          fromReminder: reminderType || true
+        });
+        console.log('✅ AddTransaction navigation completed');
+      } catch (error) {
+        console.error('❌ AddTransaction navigation error:', error);
+      }
+    } else {
+      console.log('❌ Navigation ref not available for AddTransaction');
     }
   }
 

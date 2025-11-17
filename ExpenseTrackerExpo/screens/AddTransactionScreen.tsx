@@ -37,14 +37,22 @@ const AddTransactionScreen = () => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   
-  // Get transaction data if editing
-  const routeParams = route.params as { transaction?: Transaction; isEdit?: boolean } | undefined;
+  // Get transaction data if editing or default type from route params
+  const routeParams = route.params as { 
+    transaction?: Transaction; 
+    isEdit?: boolean;
+    defaultType?: 'expense' | 'income' | 'transfer';
+    fromReminder?: string | boolean;
+  } | undefined;
   const editTransaction = routeParams?.transaction;
   const isEditMode = routeParams?.isEdit || false;
+  const defaultType = routeParams?.defaultType || 'expense';
   
   // Route params for transaction editing
+  // Initialize type: use editTransaction.type if editing, otherwise use defaultType from route params
+  const initialType = isEditMode && editTransaction ? editTransaction.type : defaultType;
   
-  const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
+  const [type, setType] = useState<'expense' | 'income' | 'transfer'>(initialType);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
