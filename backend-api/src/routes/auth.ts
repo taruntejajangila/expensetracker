@@ -74,6 +74,41 @@ router.get('/me',
   }
 );
 
+// POST /api/auth/refresh - Refresh access token
+router.post('/refresh', [
+  body('refreshToken').notEmpty().withMessage('Refresh token required')
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    logger.info('🔄 /api/auth/refresh endpoint HIT - processing request');
+    const { refreshToken } = req.body;
+    logger.info('Token refresh attempt');
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    if (!decoded || !decoded.userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
+      });
+      return;
+    }
+    const newAccessToken = generateAccessToken(decoded.userId, decoded.email || '', decoded.role || 'user');
+    logger.info(`Token refreshed successfully for user: ${decoded.userId}`);
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        accessToken: newAccessToken
+      }
+    });
+  } catch (error) {
+    logger.error('Token refresh error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid refresh token'
+    });
+  }
+});
+
 // DEPRECATED: Password-based registration removed in favor of passwordless OTP authentication
 // POST /api/auth/register - User registration (DISABLED - Use OTP signup instead)
 /*
@@ -198,52 +233,6 @@ router.post('/login',
         success: false,
         message: 'Failed to login',
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Internal server error') : 'Internal server error'
-      });
-    }
-  }
-);
-
-// POST /api/auth/refresh - Refresh access token
-router.post('/refresh',
-  [
-    body('refreshToken').notEmpty().withMessage('Refresh token required')
-  ],
-  validateRequest,
-  async (req: express.Request, res: express.Response): Promise<void> => {
-    try {
-      logger.info('🔄 /api/auth/refresh endpoint HIT - processing request');
-      const { refreshToken } = req.body;
-
-      logger.info('Token refresh attempt');
-
-      // Verify refresh token and generate new access token
-      const decoded = require('jsonwebtoken').verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      
-      if (!decoded || !decoded.userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid refresh token'
-        });
-        return;
-      }
-
-      // Generate new access token
-      const newAccessToken = generateAccessToken(decoded.userId, decoded.email || '', decoded.role || 'user');
-
-      logger.info(`Token refreshed successfully for user: ${decoded.userId}`);
-
-      res.json({
-        success: true,
-        message: 'Token refreshed successfully',
-        data: {
-          accessToken: newAccessToken
-        }
-      });
-    } catch (error) {
-      logger.error('Token refresh error:', error);
-      res.status(401).json({
-        success: false,
-        message: 'Invalid refresh token'
       });
     }
   }
