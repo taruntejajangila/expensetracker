@@ -123,6 +123,83 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       // Don't throw - allow app to start even if migrations fail
     }
 
+    // SECURITY: Ensure token_blacklist table exists (runs on every startup)
+    try {
+      logger.info('🔄 Ensuring token_blacklist table exists...');
+      const blacklistCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'token_blacklist'
+        );
+      `);
+      
+      if (!blacklistCheck.rows[0].exists) {
+        logger.info('➕ Creating token_blacklist table...');
+        await client.query(`
+          CREATE TABLE token_blacklist (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            token_hash VARCHAR(64) NOT NULL UNIQUE,
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            reason VARCHAR(20) DEFAULT 'logout' CHECK (reason IN ('logout', 'revoked', 'security')),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_token_blacklist_hash ON token_blacklist(token_hash);
+          CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+        `);
+        logger.info('✅ token_blacklist table created successfully');
+      } else {
+        logger.info('✅ token_blacklist table already exists');
+      }
+    } catch (blacklistError: any) {
+      logger.error('❌ Error ensuring token_blacklist table (non-fatal):', blacklistError.message);
+      // Don't throw - allow app to start
+    }
+
+    // SECURITY: Ensure audit_logs table exists (runs on every startup)
+    try {
+      logger.info('🔄 Ensuring audit_logs table exists...');
+      const auditCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'audit_logs'
+        );
+      `);
+      
+      if (!auditCheck.rows[0].exists) {
+        logger.info('➕ Creating audit_logs table...');
+        await client.query(`
+          CREATE TABLE audit_logs (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            action VARCHAR(100) NOT NULL,
+            resource VARCHAR(100) NOT NULL,
+            resource_id VARCHAR(255),
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            details JSONB,
+            status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'failure', 'error')),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+        `);
+        logger.info('✅ audit_logs table created successfully');
+      } else {
+        logger.info('✅ audit_logs table already exists');
+      }
+    } catch (auditError: any) {
+      logger.error('❌ Error ensuring audit_logs table (non-fatal):', auditError.message);
+      // Don't throw - allow app to start
+    }
+
     // Ensure Balance Transfer category exists (runs on every startup)
     try {
       logger.info('🔄 Ensuring Balance Transfer category exists...');
