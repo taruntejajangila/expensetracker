@@ -1,23 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '../config/api.config';
-
-// Helper function to get auth token
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      console.log('🔍 GoalService: Retrieved auth token: Token found');
-      return token;
-    } else {
-      console.log('🔍 GoalService: No auth token found');
-      return null;
-    }
-  } catch (error) {
-    console.error('🔍 GoalService: Error getting auth token:', error);
-    return null;
-  }
-};
+import { authenticatedFetch } from './authenticatedRequest';
 
 export interface Goal {
   id: string;
@@ -38,19 +20,8 @@ export default {
   async getGoals(): Promise<Goal[]> {
     try {
       console.log('🔍 GoalService: Fetching goals from cloud database...');
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, falling back to mock data');
-        return this.getMockGoals();
-      }
-
-      const response = await fetch(`${API_BASE_URL}/goals`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 GoalService: Response status:', response.status);
@@ -99,13 +70,7 @@ export default {
   async addGoal(goal: Partial<Goal>): Promise<{ success: boolean; id?: string }> {
     try {
       console.log('🔍 GoalService: Adding goal to cloud database...');
-      const token = await getAuthToken();
       
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true, id: Date.now().toString() };
-      }
-
       const goalData = {
         name: goal.name,
         description: goal.description,
@@ -121,11 +86,10 @@ export default {
       console.log('🔍 GoalService: Original goal.goalType:', goal.goalType);
       console.log('🔍 GoalService: Final goalType being sent:', goalData.goalType);
 
-      const response = await fetch(`${API_BASE_URL}/goals`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(goalData),
       });
@@ -149,12 +113,6 @@ export default {
     try {
       console.log('🔍 GoalService: Updating goal in cloud database...');
       console.log('🔍 GoalService: Goal data to update:', goal);
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true };
-      }
 
       const updateData = {
         name: goal.name,
@@ -169,11 +127,10 @@ export default {
       
       console.log('🔍 GoalService: Sending update data:', updateData);
 
-      const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(updateData),
       });
@@ -195,18 +152,11 @@ export default {
   async updateGoalProgress(id: string, currentAmount: number): Promise<{ success: boolean }> {
     try {
       console.log('🔍 GoalService: Updating goal progress in cloud database...');
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true };
-      }
 
-      const response = await fetch(`${API_BASE_URL}/goals/${id}/progress`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals/${id}/progress`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount: currentAmount,
@@ -231,18 +181,11 @@ export default {
   async addToGoal(id: string, amount: number): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('🔍 GoalService: Adding to goal in cloud database...');
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true };
-      }
 
-      const response = await fetch(`${API_BASE_URL}/goals/${id}/progress`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals/${id}/progress`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount: amount,
@@ -273,18 +216,11 @@ export default {
   async withdrawFromGoal(id: string, amount: number): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('🔍 GoalService: Withdrawing from goal in cloud database...');
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log('🔍 GoalService: No auth token, using mock response');
-        return { success: true };
-      }
 
-      const response = await fetch(`${API_BASE_URL}/goals/${id}/progress`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals/${id}/progress`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount: amount,
@@ -314,18 +250,8 @@ export default {
 
   async deleteGoal(id: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const token = await getAuthToken();
-      
-      if (!token) {
-        return { success: false, message: 'No authentication token' };
-      }
-
-      const response = await fetch(`${API_BASE_URL}/goals/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/goals/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (response.ok) {

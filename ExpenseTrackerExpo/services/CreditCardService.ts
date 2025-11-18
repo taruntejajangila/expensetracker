@@ -1,36 +1,14 @@
 // CreditCardService connected to backend API
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '../config/api.config';
-
-const getAuthToken = async () => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    console.log('🔍 CreditCardService: Retrieved auth token:', token ? 'Token found' : 'No token');
-    if (!token) {
-      console.log('🔍 CreditCardService: No auth token found, using test token');
-      return 'test-token';
-    }
-    return token;
-  } catch (error) {
-    console.log('🔍 CreditCardService: Error getting auth token:', error);
-    return 'test-token';
-  }
-};
+import { authenticatedFetch } from './authenticatedRequest';
 
 export default {
   async getCreditCards() {
     try {
       console.log('🔍 CreditCardService: Fetching credit cards from cloud database...');
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/credit-cards`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 CreditCardService: Response status:', response.status);
@@ -87,14 +65,8 @@ export default {
     try {
       console.log('🔍 CreditCardService: Fetching credit card by ID:', id);
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/credit-cards/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards/${id}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 CreditCardService: Response status:', response.status);
@@ -150,8 +122,6 @@ export default {
 
   async addCreditCard(card: any) {
     try {
-      const token = await getAuthToken();
-      
       // Map mobile app fields to backend API expected format
       const cardData = {
         name: card.cardName || card.name,
@@ -174,11 +144,10 @@ export default {
       
       console.log('🔍 CreditCardService: Sending card data:', cardData);
       
-      const response = await fetch(`${API_BASE_URL}/credit-cards`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(cardData),
       });
@@ -207,13 +176,10 @@ export default {
 
   async updateCreditCard(id: string, card: any) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/credit-cards/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(card),
       });
@@ -237,14 +203,8 @@ export default {
 
   async deleteCreditCard(id: string) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/credit-cards/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {
@@ -266,13 +226,10 @@ export default {
 
   async makePayment(cardId: string, amount: number) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/credit-cards/${cardId}/payment`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards/${cardId}/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ amount }),
       });

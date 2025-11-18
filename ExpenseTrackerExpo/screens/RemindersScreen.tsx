@@ -297,8 +297,55 @@ const RemindersScreen: React.FC = () => {
       const allReminders = [...uniqueLoanReminders, ...uniqueSmartReminders, ...uniqueManualReminders];
       setReminders(allReminders);
       
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load reminders');
+    } catch (error: any) {
+      console.error('❌ RemindersScreen: Error loading reminders:', error);
+      const errorMessage = error?.message || 'Failed to load reminders';
+      
+      // Show more specific error message
+      if (errorMessage.includes('Authentication failed')) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigation to login will be handled by AuthContext
+              }
+            }
+          ]
+        );
+      } else if (errorMessage.includes('Network') || errorMessage.includes('fetch')) {
+        Alert.alert(
+          'Network Error',
+          'Unable to connect to the server. Please check your internet connection and try again.',
+          [
+            {
+              text: 'Retry',
+              onPress: () => loadReminders()
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          errorMessage,
+          [
+            {
+              text: 'Retry',
+              onPress: () => loadReminders()
+            },
+            {
+              text: 'OK',
+              style: 'cancel'
+            }
+          ]
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -426,24 +473,6 @@ const RemindersScreen: React.FC = () => {
       
       return updatedPaidItems;
     });
-  };
-
-  const getTimeRemainingUntilRemoval = (paidAt: Date) => {
-    const now = new Date();
-    const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
-    const timeSincePaid = now.getTime() - paidAt.getTime();
-    const timeRemaining = twoDaysInMs - timeSincePaid;
-    
-    if (timeRemaining <= 0) return null;
-    
-    const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
-    const daysRemaining = Math.floor(hoursRemaining / 24);
-    
-    if (daysRemaining > 0) {
-      return `${daysRemaining} day${daysRemaining > 1 ? 's' : ''} left`;
-    } else {
-      return `${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''} left`;
-    }
   };
 
   const closeConfirmModal = () => {
@@ -1491,9 +1520,6 @@ const RemindersScreen: React.FC = () => {
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
                         <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
-                          {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
-                        </Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: '#34C759' }]}>
                         {formatCurrency(reminder.amount || 0)}
@@ -1589,9 +1615,6 @@ const RemindersScreen: React.FC = () => {
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
                         <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
-                          {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
-                        </Text>
                       </View>
                       <Text style={[styles.reminderAmount, { color: '#34C759' }]}>
                         {formatCurrency(reminder.amount || 0)}
@@ -1659,9 +1682,6 @@ const RemindersScreen: React.FC = () => {
                     <View style={styles.reminderDetails}>
                       <View style={styles.reminderDateTime}>
                         <Text style={styles.reminderDate} allowFontScaling={false}>Paid: {formatDate(paidInfo.paidAt)}</Text>
-                        <Text style={[styles.reminderTime, { color: '#FF9500', fontSize: 12 }]} allowFontScaling={false}>
-                          {getTimeRemainingUntilRemoval(paidInfo.paidAt) || 'Will be removed soon'}
-                        </Text>
                       </View>
                       {reminder.category && (
                         <Text style={styles.reminderCategory} allowFontScaling={false}>{reminder.category}</Text>

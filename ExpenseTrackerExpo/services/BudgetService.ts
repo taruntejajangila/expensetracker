@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '../config/api.config';
+import { authenticatedFetch } from './authenticatedRequest';
 
 export interface Budget {
   id: string;
@@ -17,36 +16,13 @@ export interface Budget {
   updatedAt: string;
 }
 
-// Helper function to get auth token
-const getAuthToken = async (): Promise<string> => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      console.log('🔍 BudgetService: Retrieved auth token: Token found');
-      return token;
-    } else {
-      console.log('🔍 BudgetService: No auth token found');
-      throw new Error('No authentication token available');
-    }
-  } catch (error) {
-    console.error('🔍 BudgetService: Error retrieving auth token:', error);
-    throw error;
-  }
-};
-
 export default {
   async getBudgets(): Promise<Budget[]> {
     try {
       console.log('🔍 BudgetService: Fetching budgets from backend API...');
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/budgets`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/budgets`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 BudgetService: Response status:', response.status);
@@ -75,13 +51,10 @@ export default {
     try {
       console.log('🔍 BudgetService: Creating budget:', budget);
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/budgets`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/budgets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(budget),
       });
@@ -112,13 +85,10 @@ export default {
     try {
       console.log('🔍 BudgetService: Updating budget:', id, budget);
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/budgets/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/budgets/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(budget),
       });
@@ -145,14 +115,8 @@ export default {
     try {
       console.log('🔍 BudgetService: Deleting budget:', id);
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/budgets/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/budgets/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {
@@ -184,14 +148,8 @@ export default {
     try {
       console.log('🔍 BudgetService: Fetching budget analytics for:', budgetId);
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/budgets/${budgetId}/analytics`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/budgets/${budgetId}/analytics`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {

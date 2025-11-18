@@ -1,9 +1,9 @@
 // TransactionService connected to backend API
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { categoryService } from './CategoryService';
 import DailyReminderService from './DailyReminderService';
 
 import { API_BASE_URL } from '../config/api.config';
+import { authenticatedFetch } from './authenticatedRequest';
 
 export interface Transaction {
   id: string;
@@ -40,21 +40,6 @@ export interface Transaction {
 // Helper function to normalize account ID (no longer needed for classification)
 const normalizeAccountId = (accountId: string | undefined | null): string => {
   return accountId || '1';
-};
-
-const getAuthToken = async () => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    console.log('🔍 TransactionService: Retrieved auth token:', token ? `Token found: ${token.substring(0, 20)}...` : 'No token');
-    if (!token) {
-      console.log('🔍 TransactionService: No auth token found, using test token');
-      return 'test-token';
-    }
-    return token;
-  } catch (error) {
-    console.log('🔍 TransactionService: Error getting auth token:', error);
-    return 'test-token';
-  }
 };
 
 // Helper function to enrich transactions with category information
@@ -102,13 +87,8 @@ export default {
     try {
       console.log('🔍 TransactionService: Fetching recent transactions from cloud database...');
       
-      const token = await getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/transactions/recent?limit=${limit}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/transactions/recent?limit=${limit}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 TransactionService: Response status:', response.status);
@@ -211,19 +191,13 @@ export default {
     try {
       console.log('🔍 TransactionService: Fetching all transactions from cloud database...');
       
-      const token = await getAuthToken();
-      
       // Add cache-busting parameter if force refresh is requested
       const url = forceRefresh ? 
         `${API_BASE_URL}/transactions?t=${Date.now()}` : 
         `${API_BASE_URL}/transactions`;
         
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 TransactionService: Response status:', response.status);
@@ -310,15 +284,9 @@ export default {
     try {
       console.log('🔍 TransactionService: Fetching transactions for month from cloud database...', { year, month });
       
-      const token = await getAuthToken();
-      
       // Get all transactions and filter by month
-      const response = await fetch(`${API_BASE_URL}/transactions`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/transactions`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 TransactionService: Response status:', response.status);
@@ -387,12 +355,10 @@ export default {
     try {
       console.log('🔍 TransactionService: Saving transaction to cloud database...');
       
-      const token = await getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/transactions`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(transaction),
       });
@@ -432,12 +398,10 @@ export default {
     try {
       console.log('🔍 TransactionService: Updating transaction in cloud database...');
       
-      const token = await getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/transactions/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(transaction),
       });
@@ -468,13 +432,8 @@ export default {
     try {
       console.log('🔍 TransactionService: Deleting transaction from cloud database...');
       
-      const token = await getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/transactions/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 TransactionService: Delete transaction response status:', response.status);

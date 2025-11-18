@@ -25,6 +25,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Ionicons } from '@expo/vector-icons';
 import { SimpleDrawer } from './components/SimpleDrawer';
 import { DrawerProvider, useDrawer } from './context/DrawerContext';
+import { useTheme } from './context/ThemeContext';
 import SplashScreen from './components/SplashScreen';
 
 // Import all your existing screens
@@ -252,6 +253,7 @@ function LoadingScreen() {
   // App Navigator Component
 function AppNavigator() {
   const { user, isLoading, isOfflineMode } = useAuth();
+  const { isDarkMode, theme } = useTheme();
   const { drawerOpen, closeDrawer } = useDrawer();
   const [appInitialized, setAppInitialized] = useState(false);
   const [adMobInitialized, setAdMobInitialized] = useState(false);
@@ -549,7 +551,10 @@ function AppNavigator() {
   return (
     <>
       <NavigationContainer ref={navigationRef}>
-        <StatusBar style="auto" />
+        <StatusBar 
+          style={isDarkMode ? "light" : "dark"} 
+          backgroundColor={theme.colors.background} 
+        />
         <OfflineIndicator />
         {(user || isOfflineMode) ? (
           <MainStackNavigator key={user?.id || 'main'} />

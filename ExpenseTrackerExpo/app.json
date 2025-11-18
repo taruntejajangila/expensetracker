@@ -26,6 +26,10 @@
       "package": "com.taruntejajangila.mobileapp",
       "versionCode": 2,
       "googleServicesFile": "./google-services.json",
+      "statusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#FFFFFF"
+      },
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",

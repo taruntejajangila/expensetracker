@@ -1,22 +1,6 @@
 // LoanService connected to backend API
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '../config/api.config';
-
-const getAuthToken = async () => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    console.log('🔍 LoanService: Retrieved auth token:', token ? 'Token found' : 'No token');
-    if (!token) {
-      console.log('🔍 LoanService: No auth token found, using test token');
-      return 'test-token';
-    }
-    return token;
-  } catch (error) {
-    console.log('🔍 LoanService: Error getting auth token:', error);
-    return 'test-token';
-  }
-};
+import { authenticatedFetch } from './authenticatedRequest';
 
 export interface StoredLoan {
   id: string;
@@ -43,14 +27,8 @@ export const LoanService = {
     try {
       console.log('🔍 LoanService: Fetching loans from cloud database...');
       
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/loans`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/loans`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 LoanService: Response status:', response.status);
@@ -58,6 +36,10 @@ export const LoanService = {
 
       if (!response.ok) {
         console.error('🔍 LoanService: HTTP error! status:', response.status);
+        // If still 401 after refresh, throw error to be caught by caller
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -109,8 +91,6 @@ export const LoanService = {
 
   async addLoan(loan: Omit<StoredLoan, 'id' | 'createdAt' | 'updatedAt'>) {
     try {
-      const token = await getAuthToken();
-      
       // Map frontend fields to backend API expected format
       const backendLoanData = {
         name: loan.name,
@@ -128,11 +108,10 @@ export const LoanService = {
       console.log('🔍 LoanService: Received loan.type:', loan.type);
       console.log('🔍 LoanService: Sending loan data to backend:', backendLoanData);
       
-      const response = await fetch(`${API_BASE_URL}/loans`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/loans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(backendLoanData),
       });
@@ -161,8 +140,6 @@ export const LoanService = {
 
   async updateLoan(id: string, loan: Partial<StoredLoan>) {
     try {
-      const token = await getAuthToken();
-      
       // Map frontend fields to backend API expected format
       const backendLoanData: any = {};
       
@@ -178,11 +155,10 @@ export const LoanService = {
       
       console.log('🔍 LoanService: Sending update loan data to backend:', backendLoanData);
       
-      const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/loans/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(backendLoanData),
       });
@@ -211,14 +187,8 @@ export const LoanService = {
 
   async deleteLoan(id: string) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/loans/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/loans/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {

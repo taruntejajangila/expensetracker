@@ -1,19 +1,6 @@
 // AccountService connected to backend API
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '../config/api.config';
-
-// For testing - you can get a real token from your backend login
-const getAuthToken = async () => {
-  try {
-    // Try to get token from AsyncStorage or use a test token
-    const token = await AsyncStorage.getItem('authToken');
-    return token || 'test-token'; // Fallback for testing
-  } catch (error) {
-    console.log('No auth token found, using test token');
-    return 'test-token';
-  }
-};
+import { authenticatedFetch } from './authenticatedRequest';
 
 // Flag to prevent multiple simultaneous wallet creation attempts
 let isCreatingWallet = false;
@@ -23,15 +10,10 @@ export default {
     try {
       console.log('🔍 AccountService: Attempting to fetch accounts from authenticated endpoint...');
       
-      const token = await getAuthToken();
-      console.log('🔍 AccountService: Using auth token:', token ? 'Token found' : 'No token');
+      console.log('🔍 AccountService: Using authenticated request for accounts...');
       
-      const response = await fetch(`${API_BASE_URL}/bank-accounts`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       console.log('🔍 AccountService: Response status:', response.status);
@@ -59,20 +41,14 @@ export default {
 
   async checkDuplicate(nickname?: string, accountNumber?: string, bankName?: string, excludeId?: string): Promise<{ isDuplicate: boolean; message: string | null }> {
     try {
-      const token = await getAuthToken();
-      
       const queryParams = new URLSearchParams();
       if (nickname) queryParams.append('nickname', nickname);
       if (accountNumber) queryParams.append('accountNumber', accountNumber);
       if (bankName) queryParams.append('bankName', bankName);
       if (excludeId) queryParams.append('excludeId', excludeId);
       
-      const response = await fetch(`${API_BASE_URL}/bank-accounts/check-duplicate?${queryParams.toString()}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts/check-duplicate?${queryParams.toString()}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {
@@ -109,8 +85,6 @@ export default {
 
   async addAccount(account: any) {
     try {
-      const token = await getAuthToken();
-      
       // Add required fields that backend expects
       const accountData = {
         ...account,
@@ -120,11 +94,10 @@ export default {
       
       console.log('🔍 AccountService: Sending account data:', accountData);
       
-      const response = await fetch(`${API_BASE_URL}/bank-accounts`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(accountData),
       });
@@ -167,13 +140,10 @@ export default {
 
   async updateAccount(id: string, account: any) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/bank-accounts/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(account),
       });
@@ -210,14 +180,8 @@ export default {
 
   async deleteAccount(id: string) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/bank-accounts/${id}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) {
@@ -247,18 +211,12 @@ export default {
 
   async getAccountById(id: string) {
     try {
-      const token = await getAuthToken();
-      
       // Check if this is a credit card ID (prefixed with 'credit-')
       if (id.startsWith('credit-')) {
         // For credit cards, use the credit cards endpoint
         const creditCardId = id.replace('credit-', '');
-        const response = await fetch(`${API_BASE_URL}/credit-cards/${creditCardId}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/credit-cards/${creditCardId}`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
         });
 
         if (!response.ok) {
@@ -293,12 +251,8 @@ export default {
         }
       } else {
         // For regular bank accounts, use the bank accounts endpoint
-        const response = await fetch(`${API_BASE_URL}/bank-accounts/${id}`, {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bank-accounts/${id}`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
         });
 
         if (!response.ok) {
@@ -323,12 +277,6 @@ export default {
     try {
       console.log('🔍 AccountService: Ensuring default cash wallet exists...');
       
-      const token = await getAuthToken();
-      if (!token) {
-        console.log('🔍 AccountService: No auth token, cannot create default wallet');
-        return null;
-      }
-
       // Check if user already has a cash wallet
       const existingAccounts = await this.getAccounts();
       const hasCashWallet = existingAccounts.some(acc => 
