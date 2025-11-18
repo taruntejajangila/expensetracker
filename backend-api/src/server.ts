@@ -123,22 +123,41 @@ if (isProduction && allowedOrigins === true) {
 }
 
 // Rate limiting - SECURITY: Stricter limits in production
-const defaultRateLimit = isProduction ? 100 : 500; // Stricter in production
+// Increased from 100 to 200 to accommodate mobile app usage patterns
+const defaultRateLimit = isProduction ? 200 : 500; // More reasonable for mobile apps
 
 app.use('/api/', rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || String(defaultRateLimit)),
+  // Better IP detection: use X-Forwarded-For if available, fallback to req.ip
+  keyGenerator: (req) => {
+    // Get real client IP from X-Forwarded-For header (when behind proxy)
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      // X-Forwarded-For can contain multiple IPs, take the first one (original client)
+      const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor.split(',')[0].trim();
+      return ips || req.ip || 'unknown';
+    }
+    return req.ip || 'unknown';
+  },
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later.'
+    message: 'Too many requests from this IP. Please wait a few minutes and try again.'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for localhost in development only
+  // Skip rate limiting for health checks and localhost in development
   skip: (req): boolean => {
-    if (isProduction) {
-      return false; // Never skip in production
+    // Always skip health check endpoints
+    if (req.path === '/health' || req.path === '/api/health') {
+      return true;
     }
+    
+    if (isProduction) {
+      return false; // Never skip in production (except health checks)
+    }
+    
+    // Skip for localhost in development
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || (req.ip && req.ip.startsWith('192.168.')) || false;
     const isDevelopment = (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) || false;
     return Boolean(isLocalhost && isDevelopment);
