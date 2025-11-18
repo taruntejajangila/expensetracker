@@ -668,9 +668,10 @@ const RemindersScreen: React.FC = () => {
         };
       } else {
         // One-time notification (repeat === 'none')
-        // If the date is in the past, schedule for tomorrow
+        // If the date is in the past, DON'T schedule it (it already fired)
         if (notificationDate < new Date()) {
-          notificationDate.setDate(notificationDate.getDate() + 1);
+          console.log(`⏭️ Skipping one-time reminder "${reminder.title}" - due date has passed (${notificationDate.toISOString()})`);
+          return null; // Don't schedule past one-time reminders
         }
         trigger = {
           type: 'date',
