@@ -94,7 +94,7 @@ export default {
   },
 
   /**
-   * Create a new reminder via API only -- (cloud-first approach)
+   * Create a new reminder via API only (cloud-first approach)
    */
   async createReminder(reminder: Omit<Reminder, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; id?: string }> {
     try {
