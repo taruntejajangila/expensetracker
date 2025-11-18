@@ -52,9 +52,11 @@ const AddAccountScreen: React.FC = () => {
   const duplicateCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
   const [existingAccounts, setExistingAccounts] = useState<any[]>([]);
+  const [isEditingWallet, setIsEditingWallet] = useState(false);
 
+  // Removed 'wallet' option - users can only create bank accounts
+  // Default cash wallet is created automatically by the system
   const accountTypes = [
-    { id: 'wallet', name: 'Wallet', icon: 'wallet-outline', color: '#FF6B6B' },
     { id: 'savings', name: 'Savings', icon: 'save-outline', color: '#4ECDC4' },
     { id: 'salary', name: 'Salary', icon: 'card-outline', color: '#45B7D1' },
     { id: 'current', name: 'Current', icon: 'business-outline', color: '#96CEB4' },
@@ -200,13 +202,22 @@ const AddAccountScreen: React.FC = () => {
     if (isEdit && editingAccount) {
       const mapAccountType = (t?: string, type?: string) => {
         const lower = (t || '').toLowerCase();
-        if (lower === 'wallet') return 'wallet';
+        // Don't map to wallet - wallet accounts shouldn't be editable through this screen
+        // Only map bank account types
         if (lower === 'savings') return 'savings';
         if (lower === 'salary') return 'salary';
         if (lower === 'current' || lower === 'checking') return 'current';
-        if (type === 'cash') return 'wallet';
+        // If it's a wallet/cash type, return empty string to prevent editing account type
+        if (lower === 'wallet' || type === 'cash') return '';
         return '';
       };
+      
+      // Check if editing a wallet account
+      const isWalletAccount = editingAccount.type === 'cash' || 
+                              editingAccount.accountType === 'wallet' ||
+                              (editingAccount.bankName === 'Cash' && editingAccount.name === 'Cash Wallet');
+      setIsEditingWallet(isWalletAccount);
+      
       // Apply filters to existing data when editing
       const filteredNickname = (editingAccount.name || '').replace(/[^a-zA-Z0-9\s]/g, '');
       const filteredAccountHolderName = (editingAccount.accountHolderName || '').replace(/[^a-zA-Z\s]/g, '');
@@ -217,7 +228,8 @@ const AddAccountScreen: React.FC = () => {
         bankName: editingAccount.bankName || editingAccount.name || '',
         accountHolderName: filteredAccountHolderName,
         accountNumber: filteredAccountNumber,
-        accountType: mapAccountType(editingAccount.accountType, editingAccount.type),
+        // For wallet accounts, set accountType to 'wallet' to display it, but it won't be in the dropdown
+        accountType: isWalletAccount ? 'wallet' : mapAccountType(editingAccount.accountType, editingAccount.type),
       });
       // Clear any existing suggestion when entering edit mode
       setBankSuggestion(null);
@@ -451,7 +463,8 @@ const AddAccountScreen: React.FC = () => {
       newErrors.nickname = 'Nickname can only contain alphabets, numbers, and spaces';
     }
 
-    if (!formData.accountType) {
+    // Skip account type validation for wallet accounts being edited
+    if (!isEditingWallet && !formData.accountType) {
       newErrors.accountType = 'Please select account type';
     }
 
@@ -461,6 +474,17 @@ const AddAccountScreen: React.FC = () => {
 
   const handleSaveAccount = async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    // Prevent wallet account creation - users can only create bank accounts
+    // Wallet accounts are created automatically by the system
+    if (!isEdit && (formData.accountType === 'wallet' || formData.bankName.trim().toLowerCase() === 'cash')) {
+      Alert.alert(
+        'Invalid Account Type',
+        'Wallet accounts cannot be created manually. The default cash wallet is created automatically by the system.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -527,7 +551,8 @@ const AddAccountScreen: React.FC = () => {
           bankName: formData.bankName,
           accountHolderName: formData.accountHolderName,
           accountNumber: formData.accountNumber,
-          accountType: formData.accountType,
+          // For wallet accounts, keep the original account type (wallet)
+          accountType: isEditingWallet ? 'wallet' : formData.accountType,
         };
         
         
@@ -598,7 +623,11 @@ const AddAccountScreen: React.FC = () => {
     handleSaveAccount();
   };
 
-  const selectedAccountType = accountTypes.find(type => type.id === formData.accountType);
+  // For wallet accounts, create a temporary type object for display
+  // Otherwise, find the selected type from available account types
+  const selectedAccountType = formData.accountType === 'wallet' 
+    ? { id: 'wallet', name: 'Wallet', icon: 'wallet-outline', color: '#FF6B6B' }
+    : accountTypes.find(type => type.id === formData.accountType);
 
   // Header Component
   const ScreenHeader: React.FC<{ theme: any; insets: any }> = ({ theme, insets }) => {
@@ -765,49 +794,63 @@ const AddAccountScreen: React.FC = () => {
               <Ionicons name="layers" size={14} color="#667eea" />
               <Text style={styles.inputLabelText} allowFontScaling={false}>Account Type</Text>
             </View>
-            <TouchableOpacity
-              style={[styles.dropdownButton, errors.accountType && styles.inputError]}
-              onPress={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.dropdownContent}>
-                {selectedAccountType ? (
-                  <>
-                    <View style={[styles.selectedTypeIcon, { backgroundColor: selectedAccountType.color }]}>
-                      <Ionicons name={selectedAccountType.icon as any} size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.dropdownText} allowFontScaling={false}>{selectedAccountType.name}</Text>
-                  </>
-                ) : (
-                  <Text style={styles.dropdownPlaceholder} allowFontScaling={false}>Select account type</Text>
+            {isEditingWallet ? (
+              // Show wallet as read-only when editing wallet account
+              <View style={[styles.dropdownButton, { opacity: 0.7 }]}>
+                <View style={styles.dropdownContent}>
+                  <View style={[styles.selectedTypeIcon, { backgroundColor: '#FF6B6B' }]}>
+                    <Ionicons name="wallet-outline" size={18} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.dropdownText} allowFontScaling={false}>Wallet (System Account)</Text>
+                </View>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, errors.accountType && styles.inputError]}
+                  onPress={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.dropdownContent}>
+                    {selectedAccountType ? (
+                      <>
+                        <View style={[styles.selectedTypeIcon, { backgroundColor: selectedAccountType.color }]}>
+                          <Ionicons name={selectedAccountType.icon as any} size={18} color="#FFFFFF" />
+                        </View>
+                        <Text style={styles.dropdownText} allowFontScaling={false}>{selectedAccountType.name}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.dropdownPlaceholder} allowFontScaling={false}>Select account type</Text>
+                    )}
+                  </View>
+                  <Ionicons 
+                    name={showAccountTypeDropdown ? "chevron-up" : "chevron-down"} 
+                    size={18} 
+                    color={theme.colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+                
+                {showAccountTypeDropdown && (
+                  <View style={styles.dropdownList}>
+                    {accountTypes.map((type) => (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          handleInputChange('accountType', type.id);
+                          setShowAccountTypeDropdown(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
+                          <Ionicons name={type.icon as any} size={18} color="#FFFFFF" />
+                        </View>
+                        <Text style={styles.dropdownItemText} allowFontScaling={false}>{type.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 )}
-              </View>
-              <Ionicons 
-                name={showAccountTypeDropdown ? "chevron-up" : "chevron-down"} 
-                size={18} 
-                color={theme.colors.textSecondary} 
-              />
-            </TouchableOpacity>
-            
-            {showAccountTypeDropdown && (
-              <View style={styles.dropdownList}>
-                {accountTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      handleInputChange('accountType', type.id);
-                      setShowAccountTypeDropdown(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
-                      <Ionicons name={type.icon as any} size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.dropdownItemText} allowFontScaling={false}>{type.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              </>
             )}
             {errors.accountType && <Text style={styles.errorText} allowFontScaling={false}>{errors.accountType}</Text>}
           </View>
