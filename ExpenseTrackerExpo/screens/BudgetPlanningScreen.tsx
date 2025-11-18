@@ -228,6 +228,26 @@ const BudgetPlanningScreen: React.FC = () => {
     setIsEditModalVisible(true);
   };
 
+  // Filter budget input to only allow numbers and decimal point (up to 2 decimal places)
+  const handleBudgetInputChange = (text: string) => {
+    // Remove commas first (in case of formatted numbers)
+    const sanitizedInput = text.replace(/,/g, '');
+    // Only allow digits and decimal point
+    const sanitized = sanitizedInput.replace(/[^0-9.]/g, '');
+    // Split by decimal point to handle decimal places
+    const parts = sanitized.split('.');
+    // Allow only one decimal point
+    if (parts.length > 2) {
+      return; // Don't update if more than one decimal point
+    }
+    const integerPart = parts[0];
+    // Limit decimal part to 2 digits
+    const decimalPart = parts[1] ? parts[1].slice(0, 2) : '';
+    // Reconstruct the value
+    const normalized = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+    setBudgetInput(normalized);
+  };
+
   const saveBudgetEdit = async () => {
     if (selectedCategory && currentBudget) {
       const newAmount = parseFloat(budgetInput) || 0;
@@ -604,7 +624,7 @@ const BudgetPlanningScreen: React.FC = () => {
               <Text style={styles.inputLabel} allowFontScaling={false}>Budget Amount</Text>
               <TextInput style={styles.budgetInput}
                 value={budgetInput}
-                onChangeText={setBudgetInput}
+                onChangeText={handleBudgetInputChange}
                 keyboardType="numeric"
                 placeholder="Enter amount"
                 placeholderTextColor="#999" allowFontScaling={false} />

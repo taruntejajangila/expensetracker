@@ -134,6 +134,21 @@ router.post('/', async (req: express.Request, res: express.Response) => {
       });
     }
 
+    // Validate target date is not in the past
+    if (targetDate) {
+      const deadlineDate = new Date(targetDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      deadlineDate.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      
+      if (deadlineDate < today) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Target date cannot be in the past. Please select today or a future date.' 
+        });
+      }
+    }
+
     const db = req.app.locals.db;
     if (!db) {
       logger.error('Database connection not found');
@@ -189,6 +204,21 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
         success: false, 
         message: 'Target amount must be greater than 0' 
       });
+    }
+
+    // Validate target date is not in the past (if provided)
+    if (targetDate) {
+      const deadlineDate = new Date(targetDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      deadlineDate.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      
+      if (deadlineDate < today) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Target date cannot be in the past. Please select today or a future date.' 
+        });
+      }
     }
 
     const db = req.app.locals.db;

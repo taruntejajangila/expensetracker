@@ -100,6 +100,23 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
       return;
     }
 
+    // Validate deadline is not in the past
+    if (deadline) {
+      const deadlineDate = new Date(deadline);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      deadlineDate.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+      
+      if (deadlineDate < today) {
+        Alert.alert(
+          'Invalid Deadline',
+          'The deadline must be today or in the future. Please select a valid deadline.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
     try {
       const updatedGoal = {
         ...goal,

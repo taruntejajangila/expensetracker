@@ -30,6 +30,7 @@ import { useTheme } from '../context/ThemeContext';
 import { categoryService, Category } from '../services/CategoryService';
 import { getIconName } from '../utils/iconUtils';
 import { formatCurrency, formatIndianNumberInput } from '../utils/currencyFormatter';
+import Toast from '../components/Toast';
 
 const AddTransactionScreen = () => {
   const navigation = useNavigation();
@@ -70,6 +71,9 @@ const AddTransactionScreen = () => {
   const [transactionsUntilAd, setTransactionsUntilAd] = useState<number>(5);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // For v1 release, only bank accounts are available (credit cards hidden)
   const getAllAccounts = () => {
@@ -724,10 +728,17 @@ useEffect(() => {
           await TransactionService.updateTransaction(editTransaction.id, transactionData);
           console.log('🔍 AddTransactionScreen: Transaction updated successfully');
           
-          // Navigate back to transaction detail screen to show updated transaction
-          (navigation as any).navigate('TransactionDetail', { 
-            transactionId: editTransaction.id 
+          // Show success toast
+          const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+          setToastMessage(`${typeLabel} updated successfully!`);
+          
+          // Set navigation to execute after toast dismisses
+          setPendingNavigation(() => () => {
+            (navigation as any).navigate('TransactionDetail', { 
+              transactionId: editTransaction.id 
+            });
           });
+          setToastVisible(true);
         } else {
           // Save new transaction
           await TransactionService.saveTransaction(transactionData);
@@ -747,25 +758,37 @@ useEffect(() => {
               console.error('❌ Failed to show interstitial ad:', error);
             }
           }
-        }
 
-        // Clear saved form data after successful save
-        await clearSavedFormData();
+          // Clear saved form data after successful save
+          await clearSavedFormData();
 
-        if (saveAndAddAnother && !isEditMode) {
-          // Clear form for new transaction (only available when adding)
-          setAmount('');
-          setTitle('');
-          setCategory('');
-          setDate(new Date());
-          setNote('');
-          setErrors({}); // Clear errors
-        } else {
-          // Navigate back with refresh flag to trigger data reload
-          (navigation as any).navigate('MainTabs', { 
-            screen: 'Home',
-            params: { refresh: true }
-          });
+          if (saveAndAddAnother && !isEditMode) {
+            // Clear form for new transaction (only available when adding)
+            setAmount('');
+            setTitle('');
+            setCategory('');
+            setDate(new Date());
+            setNote('');
+            setErrors({}); // Clear errors
+            
+            // Show success toast (no navigation needed for save and add another)
+            const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            setToastMessage(`${typeLabel} saved successfully!`);
+            setToastVisible(true);
+          } else {
+            // Show success toast with transaction type
+            const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            setToastMessage(`${typeLabel} saved successfully!`);
+            
+            // Set navigation to execute after toast dismisses
+            setPendingNavigation(() => () => {
+              (navigation as any).navigate('MainTabs', { 
+                screen: 'Home',
+                params: { refresh: true }
+              });
+            });
+            setToastVisible(true);
+          }
         }
       } catch (error) {
         console.error('❌ AddTransactionScreen: Error saving transaction:', error);
@@ -1431,6 +1454,20 @@ useEffect(() => {
           <BannerAdComponent />
         </View>
       </KeyboardAvoidingView>
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onDismiss={() => {
+          setToastVisible(false);
+          // Execute pending navigation after toast dismisses
+          if (pendingNavigation) {
+            pendingNavigation();
+            setPendingNavigation(null);
+          }
+        }}
+        duration={2000}
+        type="success"
+      />
       </SafeAreaView>
   );
 };
