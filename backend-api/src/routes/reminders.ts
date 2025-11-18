@@ -25,6 +25,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         source_type,
         source_id,
         type,
+        paid_at,
         created_at,
         updated_at
       FROM reminders
@@ -133,7 +134,8 @@ router.put('/:id', authenticateToken, [
   body('repeatType').optional().isString(),
   body('amount').optional().isNumeric(),
   body('sourceType').optional().isString(),
-  body('sourceId').optional().isString()
+  body('sourceId').optional().isString(),
+  body('paidAt').optional().isISO8601()
 ], async (req: any, res: any) => {
   try {
     const errors = validationResult(req);
@@ -163,7 +165,8 @@ router.put('/:id', authenticateToken, [
                      key === 'isEnabled' ? 'is_enabled' :
                      key === 'repeatType' ? 'repeat_type' :
                      key === 'sourceType' ? 'source_type' :
-                     key === 'sourceId' ? 'source_id' : key;
+                     key === 'sourceId' ? 'source_id' :
+                     key === 'paidAt' ? 'paid_at' : key;
         updateFields.push(`${dbKey} = $${paramIndex}`);
         values.push(updates[key]);
         paramIndex++;

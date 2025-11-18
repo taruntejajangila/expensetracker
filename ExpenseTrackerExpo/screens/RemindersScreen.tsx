@@ -230,18 +230,40 @@ const RemindersScreen: React.FC = () => {
       const userId = (user as any)?.email || (user as any)?.uid || 'default';
       const key = `paid_items_${userId}`;
       const stored = await AsyncStorage.getItem(key);
+      
+      // Start with local storage
+      const paidItemsWithDates: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } } = {};
+      
       if (stored) {
         const parsed = JSON.parse(stored);
         // Convert paidAt strings back to Date objects
-        const paidItemsWithDates: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } } = {};
         Object.keys(parsed).forEach(id => {
           paidItemsWithDates[id] = {
             ...parsed[id],
             paidAt: new Date(parsed[id].paidAt)
           };
         });
-        setPaidItems(paidItemsWithDates);
       }
+      
+      // Merge with backend data (for custom reminders with paid_at)
+      try {
+        const allReminders = await ReminderService.getReminders();
+        allReminders.forEach((reminder: Reminder) => {
+          if ((reminder as any).paidAt && reminder.id) {
+            // If backend has paid_at, use it (overrides local storage for custom reminders)
+            paidItemsWithDates[reminder.id] = {
+              type: 'custom',
+              reminder,
+              paidAt: (reminder as any).paidAt
+            };
+          }
+        });
+      } catch (error) {
+        console.error('Error loading paid items from backend:', error);
+        // Continue with local storage only
+      }
+      
+      setPaidItems(paidItemsWithDates);
     } catch (error) {
       console.error('Error loading paid items:', error);
     }
@@ -408,57 +430,93 @@ const RemindersScreen: React.FC = () => {
   };
 
   const confirmMarkAsPaid = async (reminder: any, type: 'loan' | 'smart' | 'custom') => {
-    // Mark item as paid using functional update to ensure we have latest state
-    let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
-    
-    setPaidItems(prev => {
-      newPaidItems = {
-        ...prev,
-        [reminder.id]: {
-          type,
-          reminder,
-          paidAt: new Date()
+    try {
+      const paidAt = new Date();
+      
+      // Mark item as paid using functional update to ensure we have latest state
+      let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
+      
+      setPaidItems(prev => {
+        newPaidItems = {
+          ...prev,
+          [reminder.id]: {
+            type,
+            reminder,
+            paidAt
+          }
+        };
+        return newPaidItems;
+      });
+      
+      // Save to AsyncStorage
+      await savePaidItems(newPaidItems!);
+      
+      // Sync to backend if reminder has an ID (custom reminders)
+      if (reminder.id && type === 'custom') {
+        try {
+          await ReminderService.updateReminder(reminder.id, { paidAt } as any);
+          console.log(`✅ Synced paid status to backend for reminder: ${reminder.id}`);
+        } catch (error) {
+          console.error('⚠️ Failed to sync paid status to backend:', error);
+          // Continue anyway - local storage is updated
         }
-      };
-      return newPaidItems;
-    });
-    
-    // Save to AsyncStorage
-    await savePaidItems(newPaidItems!);
-    
-    // Cancel notification for this reminder since it's marked as paid
-    await cancelNotification(reminder.id);
-    console.log(`🔕 Cancelled notification for paid reminder: ${reminder.id}`);
-    
-    const successMessage = type === 'loan' ? 'Loan EMI' : type === 'smart' ? 'Payment' : 'Custom reminder';
-    Alert.alert('Success', `${successMessage} marked as paid successfully.`);
-    
-    // Close confirmation modal
-    setShowConfirmModal(false);
-    setConfirmModalData(null);
+      }
+      
+      // Cancel notification for this reminder since it's marked as paid
+      await cancelNotification(reminder.id);
+      console.log(`🔕 Cancelled notification for paid reminder: ${reminder.id}`);
+      
+      const successMessage = type === 'loan' ? 'Loan EMI' : type === 'smart' ? 'Payment' : 'Custom reminder';
+      Alert.alert('Success', `${successMessage} marked as paid successfully.`);
+      
+      // Close confirmation modal
+      setShowConfirmModal(false);
+      setConfirmModalData(null);
+    } catch (error) {
+      console.error('Error marking reminder as paid:', error);
+      Alert.alert('Error', 'Failed to mark reminder as paid. Please try again.');
+    }
   };
 
   const revertPayment = async (reminderId: string) => {
-    // Remove item from paid items using functional update to ensure we have latest state
-    let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
-    
-    setPaidItems(prev => {
-      newPaidItems = { ...prev };
-      delete newPaidItems[reminderId];
-      return newPaidItems;
-    });
-    
-    // Save to AsyncStorage
-    await savePaidItems(newPaidItems!);
-    
-    // Reschedule notification for this reminder since payment was reverted
-    const reminder = reminders.find(r => r.id === reminderId);
-    if (reminder && reminder.isEnabled) {
-      await scheduleNotification(reminder);
-      console.log(`🔔 Rescheduled notification for reverted reminder: ${reminderId}`);
+    try {
+      // Remove item from paid items using functional update to ensure we have latest state
+      let newPaidItems: { [key: string]: { type: 'loan' | 'smart' | 'custom', reminder: any, paidAt: Date } };
+      
+      const paidItem = paidItems[reminderId];
+      
+      setPaidItems(prev => {
+        newPaidItems = { ...prev };
+        delete newPaidItems[reminderId];
+        return newPaidItems;
+      });
+      
+      // Save to AsyncStorage
+      await savePaidItems(newPaidItems!);
+      
+      // Sync to backend if it was a custom reminder
+      if (paidItem && paidItem.type === 'custom') {
+        try {
+          await ReminderService.updateReminder(reminderId, { paidAt: null } as any);
+          console.log(`✅ Synced reverted paid status to backend for reminder: ${reminderId}`);
+        } catch (error) {
+          console.error('⚠️ Failed to sync reverted paid status to backend:', error);
+          // Continue anyway - local storage is updated
+        }
+      }
+      
+      // Reschedule notification for this reminder since payment was reverted
+      const reminder = reminders.find(r => r.id === reminderId);
+      if (reminder && reminder.isEnabled) {
+        await scheduleNotification(reminder);
+        console.log(`🔔 Rescheduled notification for reverted reminder: ${reminderId}`);
+      }
+      
+      Alert.alert('Success', 'Payment reverted successfully.');
+    } catch (error) {
+      console.error('Error reverting payment:', error);
+      Alert.alert('Error', 'Failed to revert payment. Please try again.');
     }
-    
-    Alert.alert('Success', 'Payment reverted successfully.');
   };
 
   const clearAllReminders = async () => {

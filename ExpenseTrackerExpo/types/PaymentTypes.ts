@@ -17,6 +17,7 @@ export interface Reminder {
   dueDate: Date;                   // Actual due date
   reminderType: 'due' | 'overdue' | 'upcoming'; // Reminder urgency
   originalAmount: number;          // Original payment amount
+  paidAt?: Date;                   // When the reminder was marked as paid
   createdAt: Date;
   updatedAt: Date;
 }

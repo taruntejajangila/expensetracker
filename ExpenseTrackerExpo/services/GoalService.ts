@@ -70,7 +70,7 @@ export default {
   async addGoal(goal: Partial<Goal>): Promise<{ success: boolean; id?: string }> {
     try {
       console.log('🔍 GoalService: Adding goal to cloud database...');
-      
+
       const goalData = {
         name: goal.name,
         description: goal.description,

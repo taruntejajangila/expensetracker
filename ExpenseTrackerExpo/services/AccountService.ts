@@ -276,7 +276,7 @@ export default {
   async ensureDefaultWallet() {
     try {
       console.log('🔍 AccountService: Ensuring default cash wallet exists...');
-      
+
       // Check if user already has a cash wallet
       const existingAccounts = await this.getAccounts();
       const hasCashWallet = existingAccounts.some(acc => 
