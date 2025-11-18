@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiClient from '../utils/ApiClient';
 import { API_BASE_URL } from '../config/api.config';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 interface User {
@@ -51,238 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {};
   };
 
-  const loadUser = async () => {
-    try {
-      console.log('🔄 AuthContext: Loading user from storage...');
-      
-      // Check if there's a stored auth token
-      const token = await AsyncStorage.getItem('authToken');
-      const refreshTokenValue = await AsyncStorage.getItem('refreshToken');
-      
-      console.log('🔄 AuthContext: Token check:', { 
-        hasAuthToken: !!token, 
-        hasRefreshToken: !!refreshTokenValue 
-      });
-      
-      if (token) {
-        const apiClient = ApiClient.getInstance();
-
-        try {
-          console.log('🔄 AuthContext: Attempting to fetch user profile...');
-          const userData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
-            'Authorization': `Bearer ${token}`,
-          });
-
-          if (userData.success && userData.data) {
-            console.log('✅ AuthContext: User profile loaded successfully');
-            const user: User = {
-              id: userData.data.id,
-              email: userData.data.email,
-              name: userData.data.name,
-              phone: userData.data.phone,
-              avatar: undefined,
-              createdAt: userData.data.createdAt,
-            };
-            setUser(user);
-            
-            // Cache user data for offline mode
-            await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
-            setIsLoading(false);
-            return;
-          } else {
-            console.log('⚠️ AuthContext: /auth/me returned unsuccessful, trying refresh...');
-            // Try one refresh before clearing
-            if (refreshTokenValue) {
-              const refreshOk = await refreshToken();
-              if (refreshOk) {
-                const newToken = await AsyncStorage.getItem('authToken');
-                if (newToken) {
-                  const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
-                    'Authorization': `Bearer ${newToken}`,
-                  });
-                  if (retryData.success && retryData.data) {
-                    console.log('✅ AuthContext: User profile loaded after token refresh');
-                    const retryUser: User = {
-                      id: retryData.data.id,
-                      email: retryData.data.email,
-                      name: retryData.data.name,
-                      phone: retryData.data.phone,
-                      avatar: undefined,
-                      createdAt: retryData.data.createdAt,
-                    };
-                    setUser(retryUser);
-                    await AsyncStorage.setItem('cachedUserData', JSON.stringify(retryUser));
-                    setIsLoading(false);
-                    return;
-                  }
-                }
-              }
-            }
-            // If refresh failed, only clear if we got a 401 (unauthorized)
-            console.log('❌ AuthContext: Token refresh failed, checking error type...');
-            // Don't clear tokens yet - might be a temporary network issue
-            // Only clear if we explicitly get a 401
-            const cachedUserData = await AsyncStorage.getItem('cachedUserData');
-            if (cachedUserData) {
-              try {
-                const user: User = JSON.parse(cachedUserData);
-                console.log('⚠️ AuthContext: Using cached user data due to auth failure');
-                setUser(user);
-                setIsLoading(false);
-                return;
-              } catch {}
-            }
-            // Last resort: clear tokens only if we have no cached data
-            console.log('❌ AuthContext: No cached data, clearing tokens');
-            await AsyncStorage.multiRemove(['authToken', 'refreshToken']);
-            setUser(null);
-          }
-        } catch (error: any) {
-          console.log('⚠️ AuthContext: Error fetching user profile:', error?.message || error);
-          
-          // Check if it's a network error (no internet)
-          const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
-          const isTimeoutError = error instanceof Error && (error.message.includes('timeout') || error.message.includes('network'));
-          const isConnectionError = error instanceof Error && (
-            error.message.includes('Network request failed') ||
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('Connection refused')
-          );
-          
-          // Check if it's a 401 (unauthorized) - token is invalid
-          const isUnauthorized = error?.response?.status === 401 || 
-                                 error?.status === 401 ||
-                                 (error?.message && error.message.includes('401'));
-          
-          if (isNetworkError || isTimeoutError || isConnectionError || !isOnline) {
-            console.log('🌐 AuthContext: Network error detected, using offline mode');
-            setIsOfflineMode(true);
-            
-            // Try to get cached user data from AsyncStorage
-            try {
-              const cachedUserData = await AsyncStorage.getItem('cachedUserData');
-              if (cachedUserData) {
-                const user: User = JSON.parse(cachedUserData);
-                console.log('✅ AuthContext: Using cached user data (offline mode)');
-                setUser(user);
-                setIsLoading(false);
-                return;
-              }
-            } catch (cacheError) {
-              console.log('⚠️ AuthContext: Error reading cached user data:', cacheError);
-            }
-            
-            // If no cached data but we have tokens, keep them and show offline user
-            // Don't clear tokens on network errors - they might still be valid
-            console.log('⚠️ AuthContext: No cached data, but keeping tokens for offline mode');
-            setUser({ 
-              id: 'offline-user', 
-              email: 'offline@user.com', 
-              name: 'Offline User',
-              createdAt: new Date().toISOString()
-            } as User);
-            setIsLoading(false);
-            return;
-          }
-          
-          // If it's a 401 (unauthorized), the token is invalid - try refresh
-          if (isUnauthorized) {
-            console.log('🔐 AuthContext: 401 Unauthorized - token invalid, trying refresh...');
-            if (refreshTokenValue) {
-            const refreshOk = await refreshToken();
-            if (refreshOk) {
-              const newToken = await AsyncStorage.getItem('authToken');
-              if (newToken) {
-                try {
-                  const retryData = await apiClient.get(`${API_BASE_URL}/auth/me`, {
-                    'Authorization': `Bearer ${newToken}`,
-                  });
-                  if (retryData.success && retryData.data) {
-                      console.log('✅ AuthContext: User profile loaded after refresh');
-                    const retryUser: User = {
-                      id: retryData.data.id,
-                      email: retryData.data.email,
-                      name: retryData.data.name,
-                      phone: retryData.data.phone,
-                      avatar: undefined,
-                      createdAt: retryData.data.createdAt,
-                    };
-                    setUser(retryUser);
-                      await AsyncStorage.setItem('cachedUserData', JSON.stringify(retryUser));
-                      setIsLoading(false);
-                    return;
-                  }
-                  } catch (retryError) {
-                    console.log('⚠️ AuthContext: Retry after refresh failed:', retryError);
-                  }
-              }
-              } else {
-                console.log('❌ AuthContext: Token refresh failed');
-              }
-            }
-            
-            // Only clear tokens if refresh failed AND we got a 401
-            // Try to use cached data first
-            const cachedUserData = await AsyncStorage.getItem('cachedUserData');
-            if (cachedUserData) {
-              try {
-                const user: User = JSON.parse(cachedUserData);
-                console.log('⚠️ AuthContext: Using cached user data (auth failed, refresh failed)');
-                setUser(user);
-                setIsLoading(false);
-                return;
-              } catch {}
-            }
-            
-            // Last resort: clear tokens only if refresh failed and no cached data
-            console.log('❌ AuthContext: Clearing tokens - refresh failed and no cached data');
-            await AsyncStorage.multiRemove(['authToken', 'refreshToken']);
-            setUser(null);
-          } else {
-            // For other errors (500, etc.), don't clear tokens - might be server issue
-            console.log('⚠️ AuthContext: Non-auth error, keeping tokens and trying cached data');
-            const cachedUserData = await AsyncStorage.getItem('cachedUserData');
-            if (cachedUserData) {
-              try {
-                const user: User = JSON.parse(cachedUserData);
-                setUser(user);
-                setIsLoading(false);
-                return;
-              } catch {}
-            }
-            // Keep tokens but set user to null temporarily
-            setUser(null);
-          }
-        }
-      } else {
-        console.log('ℹ️ AuthContext: No auth token found');
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('❌ AuthContext: Error loading user:', error);
-      // Don't clear tokens on unexpected errors - might be a bug
-      const cachedUserData = await AsyncStorage.getItem('cachedUserData');
-      if (cachedUserData) {
-        try {
-          const user: User = JSON.parse(cachedUserData);
-          setUser(user);
-        } catch {}
-      } else {
-      setUser(null);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // DEPRECATED: Email/password login removed - app is now fully passwordless
-  // Use OTP authentication flow instead (OTPRequestScreen -> OTPVerifyScreen)
-  /*
-  const login = async (email: string, password: string) => {
-    throw new Error('Email/password login is no longer supported. Please use OTP authentication.');
-  };
-  */
-
+  // Define refreshToken function early so it can be used in useEffect
   const refreshToken = async (): Promise<boolean> => {
     try {
       console.log('🔄 AuthContext: Attempting token refresh...');
@@ -349,6 +118,315 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return false;
     }
   };
+
+  // Periodic token refresh to keep tokens fresh (every 10 minutes)
+  // This prevents tokens from expiring while user is using the app
+  useEffect(() => {
+    if (!user) return; // Only run when user is logged in
+
+    let refreshInterval: NodeJS.Timeout | null = null;
+    let appStateSubscription: any = null;
+
+    const schedulePeriodicRefresh = () => {
+      // Clear existing interval
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+
+      // Refresh token every 10 minutes (600000 ms)
+      // Tokens expire in 24h, so refreshing every 10 minutes keeps them fresh
+      refreshInterval = setInterval(async () => {
+        if (AppState.currentState === 'active' && user) {
+          console.log('🔄 AuthContext: Periodic token refresh (every 10 minutes)');
+          await refreshToken();
+        }
+      }, 10 * 60 * 1000); // 10 minutes
+    };
+
+    // Refresh token when app comes to foreground
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && user) {
+        console.log('🔄 AuthContext: App came to foreground, refreshing token');
+        refreshToken();
+        schedulePeriodicRefresh();
+      }
+    };
+
+    // Start periodic refresh
+    schedulePeriodicRefresh();
+
+    // Listen to app state changes
+    appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Cleanup
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+      appStateSubscription?.remove();
+    };
+  }, [user]);
+
+  const loadUser = async () => {
+    let loadingResolved = false;
+    const resolveLoading = () => {
+      if (!loadingResolved) {
+        setIsLoading(false);
+        loadingResolved = true;
+      }
+    };
+
+    try {
+      console.log('🔄 AuthContext: Loading user from storage...');
+      
+      // Read tokens and cached user concurrently for faster startup
+      const [token, refreshTokenValue, cachedUserData] = await Promise.all([
+        AsyncStorage.getItem('authToken'),
+        AsyncStorage.getItem('refreshToken'),
+        AsyncStorage.getItem('cachedUserData')
+      ]);
+      
+      console.log('🔄 AuthContext: Token check:', { 
+        hasAuthToken: !!token, 
+        hasRefreshToken: !!refreshTokenValue 
+      });
+
+      // Hydrate UI immediately from cache to prevent logout flash
+      if (cachedUserData) {
+        try {
+          const cachedUser: User = JSON.parse(cachedUserData);
+          setUser(prev => prev ?? cachedUser);
+          resolveLoading();
+          console.log('✅ AuthContext: Hydrated user from cache while verifying session');
+        } catch (cacheError) {
+          console.log('⚠️ AuthContext: Failed to parse cached user data:', cacheError);
+        }
+      }
+
+      if (!token) {
+        console.log('ℹ️ AuthContext: No auth token found');
+        setUser(null);
+        resolveLoading();
+        return;
+      }
+
+      // Store these in outer scope so catch block can access them
+      const apiClientInstance = ApiClient.getInstance();
+      const refreshTokenVal = refreshTokenValue;
+
+      try {
+        console.log('🔄 AuthContext: Attempting to fetch user profile...');
+        const userData = await apiClientInstance.get(`${API_BASE_URL}/auth/me`, {
+          'Authorization': `Bearer ${token}`,
+        });
+
+        if (userData.success && userData.data) {
+          console.log('✅ AuthContext: User profile loaded successfully');
+          const user: User = {
+            id: userData.data.id,
+            email: userData.data.email,
+            name: userData.data.name,
+            phone: userData.data.phone,
+            avatar: undefined,
+            createdAt: userData.data.createdAt,
+          };
+          setUser(user);
+          
+          // Cache user data for offline mode
+          await AsyncStorage.setItem('cachedUserData', JSON.stringify(user));
+          resolveLoading();
+          return;
+        } else {
+          console.log('⚠️ AuthContext: /auth/me returned unsuccessful, trying refresh...');
+          // Try one refresh before clearing
+          if (refreshTokenVal) {
+            const refreshOk = await refreshToken();
+            if (refreshOk) {
+              const newToken = await AsyncStorage.getItem('authToken');
+              if (newToken) {
+                const retryData = await apiClientInstance.get(`${API_BASE_URL}/auth/me`, {
+                  'Authorization': `Bearer ${newToken}`,
+                });
+                if (retryData.success && retryData.data) {
+                  console.log('✅ AuthContext: User profile loaded after token refresh');
+                  const retryUser: User = {
+                    id: retryData.data.id,
+                    email: retryData.data.email,
+                    name: retryData.data.name,
+                    phone: retryData.data.phone,
+                    avatar: undefined,
+                    createdAt: retryData.data.createdAt,
+                  };
+                  setUser(retryUser);
+                  await AsyncStorage.setItem('cachedUserData', JSON.stringify(retryUser));
+                  resolveLoading();
+                  return;
+                }
+              }
+            }
+          }
+          // If refresh failed, only clear if we got a 401 (unauthorized)
+          console.log('❌ AuthContext: Token refresh failed, checking error type...');
+          // Don't clear tokens yet - might be a temporary network issue
+          // Only clear if we explicitly get a 401
+          if (cachedUserData) {
+            try {
+              const user: User = JSON.parse(cachedUserData);
+              console.log('⚠️ AuthContext: Using cached user data due to auth failure');
+              setUser(user);
+              resolveLoading();
+              return;
+            } catch {}
+          }
+          // Last resort: clear tokens only if we have no cached data
+          console.log('❌ AuthContext: No cached data, clearing tokens');
+          await AsyncStorage.multiRemove(['authToken', 'refreshToken']);
+          setUser(null);
+          resolveLoading();
+        }
+      } catch (error: any) {
+        // This catch handles errors from the inner try block (apiClient.get)
+        console.log('⚠️ AuthContext: Error fetching user profile:', error?.message || error);
+        
+        // Check if it's a network error (no internet)
+        const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+        const isTimeoutError = error instanceof Error && (error.message.includes('timeout') || error.message.includes('network'));
+        const isConnectionError = error instanceof Error && (
+          error.message.includes('Network request failed') ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('Connection refused')
+        );
+        
+        // Check if it's a 401 (unauthorized) - token is invalid
+        const isUnauthorized = error?.response?.status === 401 || 
+                               error?.status === 401 ||
+                               (error?.message && error.message.includes('401'));
+        
+        if (isNetworkError || isTimeoutError || isConnectionError || !isOnline) {
+          console.log('🌐 AuthContext: Network error detected, using offline mode');
+          setIsOfflineMode(true);
+          
+          // Try to get cached user data from AsyncStorage
+          try {
+            const cachedUserData = await AsyncStorage.getItem('cachedUserData');
+            if (cachedUserData) {
+              const user: User = JSON.parse(cachedUserData);
+              console.log('✅ AuthContext: Using cached user data (offline mode)');
+              setUser(user);
+              resolveLoading();
+              return;
+            }
+          } catch (cacheError) {
+            console.log('⚠️ AuthContext: Error reading cached user data:', cacheError);
+          }
+          
+          // If no cached data but we have tokens, keep them and show offline user
+          // Don't clear tokens on network errors - they might still be valid
+          console.log('⚠️ AuthContext: No cached data, but keeping tokens for offline mode');
+          setUser({ 
+            id: 'offline-user', 
+            email: 'offline@user.com', 
+            name: 'Offline User',
+            createdAt: new Date().toISOString()
+          } as User);
+          resolveLoading();
+          return;
+        }
+        
+        // If it's a 401 (unauthorized), the token is invalid - try refresh
+        if (isUnauthorized) {
+          console.log('🔐 AuthContext: 401 Unauthorized - token invalid, trying refresh...');
+          if (refreshTokenVal) {
+            const refreshOk = await refreshToken();
+            if (refreshOk) {
+              const newToken = await AsyncStorage.getItem('authToken');
+              if (newToken) {
+                try {
+                  const retryData = await apiClientInstance.get(`${API_BASE_URL}/auth/me`, {
+                    'Authorization': `Bearer ${newToken}`,
+                  });
+                  if (retryData.success && retryData.data) {
+                    console.log('✅ AuthContext: User profile loaded after refresh');
+                    const retryUser: User = {
+                      id: retryData.data.id,
+                      email: retryData.data.email,
+                      name: retryData.data.name,
+                      phone: retryData.data.phone,
+                      avatar: undefined,
+                      createdAt: retryData.data.createdAt,
+                    };
+                    setUser(retryUser);
+                    await AsyncStorage.setItem('cachedUserData', JSON.stringify(retryUser));
+                    resolveLoading();
+                    return;
+                  }
+                } catch (retryError) {
+                  console.log('⚠️ AuthContext: Retry after refresh failed:', retryError);
+                }
+              }
+            } else {
+              console.log('❌ AuthContext: Token refresh failed');
+            }
+          }
+          
+          // Only clear tokens if refresh failed AND we got a 401
+          // Try to use cached data first
+          const cachedUserData = await AsyncStorage.getItem('cachedUserData');
+          if (cachedUserData) {
+            try {
+              const user: User = JSON.parse(cachedUserData);
+              console.log('⚠️ AuthContext: Using cached user data (auth failed, refresh failed)');
+              setUser(user);
+              resolveLoading();
+              return;
+            } catch {}
+          }
+          
+          // Last resort: clear tokens only if refresh failed and no cached data
+          console.log('❌ AuthContext: Clearing tokens - refresh failed and no cached data');
+          await AsyncStorage.multiRemove(['authToken', 'refreshToken']);
+          setUser(null);
+        } else {
+          // For other errors (500, etc.), don't clear tokens - might be server issue
+          console.log('⚠️ AuthContext: Non-auth error, keeping tokens and trying cached data');
+          const cachedUserData = await AsyncStorage.getItem('cachedUserData');
+          if (cachedUserData) {
+            try {
+              const user: User = JSON.parse(cachedUserData);
+              setUser(user);
+              resolveLoading();
+              return;
+            } catch {}
+          }
+          // Keep tokens but set user to null temporarily
+          setUser(null);
+          resolveLoading();
+        }
+      }
+    } catch (error) {
+      // This catch handles any unexpected errors in the entire loadUser function
+      console.error('❌ AuthContext: Error loading user:', error);
+      // Don't clear tokens on unexpected errors - might be a bug
+      const cachedUserData = await AsyncStorage.getItem('cachedUserData');
+      if (cachedUserData) {
+        try {
+          const user: User = JSON.parse(cachedUserData);
+          setUser(user);
+        } catch {}
+      } else {
+        setUser(null);
+      }
+      resolveLoading();
+    }
+  };
+
+  // DEPRECATED: Email/password login removed - app is now fully passwordless
+  // Use OTP authentication flow instead (OTPRequestScreen -> OTPVerifyScreen)
+  /*
+  const login = async (email: string, password: string) => {
+    throw new Error('Email/password login is no longer supported. Please use OTP authentication.');
+  };
+  */
 
   // DEPRECATED: Email/password registration removed - app is now fully passwordless
   // Use OTP signup flow instead (OTPRequestScreen -> OTPVerifyScreen -> CompleteSignupScreen)

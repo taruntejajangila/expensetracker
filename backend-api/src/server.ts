@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import { extractTokenFromHeader, verifyAccessToken } from './utils/authUtils';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -122,27 +123,47 @@ if (isProduction && allowedOrigins === true) {
   logger.warn('⚠️  SECURITY WARNING: CORS is allowing all origins in production! Set FRONTEND_URL, ADMIN_PANEL_URL, or MOBILE_APP_URL environment variables.');
 }
 
-// Rate limiting - SECURITY: Stricter limits in production
-// Increased from 100 to 200 to accommodate mobile app usage patterns
-const defaultRateLimit = isProduction ? 200 : 500; // More reasonable for mobile apps
+// Rate limiting - SECURITY: Per-user rate limiting for authenticated requests, per-IP for unauthenticated
+// This ensures each user gets their own rate limit, not shared by IP address
+// Increased to 500 per user to accommodate mobile app usage patterns (multiple API calls per screen load)
+const defaultRateLimit = isProduction ? 500 : 2000; // Per-user limit for authenticated requests
 
 app.use('/api/', rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || String(defaultRateLimit)),
-  // Better IP detection: use X-Forwarded-For if available, fallback to req.ip
+  // Smart key generator: Use user ID for authenticated requests, IP for unauthenticated
   keyGenerator: (req) => {
+    // Try to extract user ID from JWT token for authenticated requests
+    try {
+      const authHeader = req.headers.authorization;
+      const token = extractTokenFromHeader(authHeader);
+      
+      if (token) {
+        // Verify and decode token to get user ID
+        const decoded = verifyAccessToken(token);
+        if (decoded && decoded.userId) {
+          // Rate limit per user ID for authenticated requests
+          return `user:${decoded.userId}`;
+        }
+      }
+    } catch (error) {
+      // If token extraction/verification fails, fall back to IP-based limiting
+      logger.debug('Rate limit: Could not extract user ID from token, using IP:', error);
+    }
+    
+    // Fall back to IP-based rate limiting for unauthenticated requests
     // Get real client IP from X-Forwarded-For header (when behind proxy)
     const forwardedFor = req.headers['x-forwarded-for'];
     if (forwardedFor) {
       // X-Forwarded-For can contain multiple IPs, take the first one (original client)
       const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor.split(',')[0].trim();
-      return ips || req.ip || 'unknown';
+      return `ip:${ips || req.ip || 'unknown'}`;
     }
-    return req.ip || 'unknown';
+    return `ip:${req.ip || 'unknown'}`;
   },
   message: {
     success: false,
-    message: 'Too many requests from this IP. Please wait a few minutes and try again.'
+    message: 'Too many requests. Please wait a few minutes and try again.'
   },
   standardHeaders: true,
   legacyHeaders: false,

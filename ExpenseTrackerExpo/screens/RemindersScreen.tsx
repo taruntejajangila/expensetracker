@@ -121,21 +121,29 @@ const RemindersScreen: React.FC = () => {
   ];
 
   useEffect(() => {
-    loadReminders();
-    loadPaidItems();
-    requestNotificationPermissions();
-    
-    // Clean up expired paid items on component load
-    cleanupExpiredPaidItems();
-    
+    const initialize = async () => {
+      // Load paid items first so they're available when scheduling notifications
+      await loadPaidItems();
+      // Then load reminders (which will schedule notifications)
+      await loadReminders();
+      requestNotificationPermissions();
+      // Clean up expired paid items on component load
+      cleanupExpiredPaidItems();
+    };
+    initialize();
   }, []);
 
   // Reload reminders when screen comes into focus (e.g., after deleting a reminder and returning)
   useFocusEffect(
     React.useCallback(() => {
-      loadReminders();
-      loadPaidItems();
-      cleanupExpiredPaidItems();
+      const refresh = async () => {
+        // Load paid items first so they're available when scheduling notifications
+        await loadPaidItems();
+        // Then load reminders (which will schedule notifications)
+        await loadReminders();
+        cleanupExpiredPaidItems();
+      };
+      refresh();
     }, [])
   );
     
@@ -297,6 +305,28 @@ const RemindersScreen: React.FC = () => {
       const allReminders = [...uniqueLoanReminders, ...uniqueSmartReminders, ...uniqueManualReminders];
       setReminders(allReminders);
       
+      // Schedule notifications for all enabled reminders (skip if already marked as paid)
+      console.log('📅 Scheduling notifications for all enabled reminders...');
+      let scheduledCount = 0;
+      let skippedCount = 0;
+      for (const reminder of allReminders) {
+        // Skip if reminder is disabled or already marked as paid
+        if (!reminder.isEnabled) {
+          skippedCount++;
+          continue;
+        }
+        if (paidItems[reminder.id]) {
+          console.log(`⏭️ Skipping notification for paid reminder: ${reminder.id}`);
+          skippedCount++;
+          continue;
+        }
+        const notificationId = await scheduleNotification(reminder);
+        if (notificationId) {
+          scheduledCount++;
+        }
+      }
+      console.log(`✅ Scheduled ${scheduledCount} notifications, skipped ${skippedCount} (disabled or paid) out of ${allReminders.length} reminders`);
+      
     } catch (error: any) {
       console.error('❌ RemindersScreen: Error loading reminders:', error);
       const errorMessage = error?.message || 'Failed to load reminders';
@@ -312,6 +342,24 @@ const RemindersScreen: React.FC = () => {
               onPress: () => {
                 // Navigation to login will be handled by AuthContext
               }
+            }
+          ]
+        );
+      } else if (errorMessage.includes('Rate limit') || errorMessage.includes('429') || errorMessage.includes('Too many requests')) {
+        Alert.alert(
+          'Too Many Requests',
+          'You\'re making requests too quickly. Please wait a moment and try again.',
+          [
+            {
+              text: 'Retry',
+              onPress: () => {
+                // Wait 3 seconds before retrying
+                setTimeout(() => loadReminders(), 3000);
+              }
+            },
+            {
+              text: 'OK',
+              style: 'cancel'
             }
           ]
         );
@@ -378,6 +426,10 @@ const RemindersScreen: React.FC = () => {
     // Save to AsyncStorage
     await savePaidItems(newPaidItems!);
     
+    // Cancel notification for this reminder since it's marked as paid
+    await cancelNotification(reminder.id);
+    console.log(`🔕 Cancelled notification for paid reminder: ${reminder.id}`);
+    
     const successMessage = type === 'loan' ? 'Loan EMI' : type === 'smart' ? 'Payment' : 'Custom reminder';
     Alert.alert('Success', `${successMessage} marked as paid successfully.`);
     
@@ -398,6 +450,13 @@ const RemindersScreen: React.FC = () => {
     
     // Save to AsyncStorage
     await savePaidItems(newPaidItems!);
+    
+    // Reschedule notification for this reminder since payment was reverted
+    const reminder = reminders.find(r => r.id === reminderId);
+    if (reminder && reminder.isEnabled) {
+      await scheduleNotification(reminder);
+      console.log(`🔔 Rescheduled notification for reverted reminder: ${reminderId}`);
+    }
     
     Alert.alert('Success', 'Payment reverted successfully.');
   };
@@ -500,20 +559,71 @@ const RemindersScreen: React.FC = () => {
 
   const scheduleNotification = async (reminder: Reminder) => {
     try {
-      // Create the notification date
+      // First, cancel any existing notifications for this reminder to avoid duplicates
+      await cancelNotification(reminder.id);
+      
+      // Check if reminder is enabled
+      if (!reminder.isEnabled) {
+        console.log(`⏭️ Skipping notification for disabled reminder: ${reminder.id}`);
+        return null;
+      }
+      
+      // Parse time
       const [hours, minutes] = reminder.time.split(':').map(Number);
       const notificationDate = new Date(reminder.date);
       notificationDate.setHours(hours, minutes, 0, 0);
       
-      // If the date is in the past, schedule for tomorrow
-      if (notificationDate < new Date()) {
-        notificationDate.setDate(notificationDate.getDate() + 1);
+      // Determine trigger based on repeat type
+      let trigger: any;
+      
+      if (reminder.repeat === 'daily') {
+        // Daily recurring notification
+        trigger = {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: hours,
+          minute: minutes,
+          repeats: true,
+        };
+      } else if (reminder.repeat === 'weekly') {
+        // Weekly recurring notification (on the same day of week)
+        const dayOfWeek = notificationDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        trigger = {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: dayOfWeek + 1, // expo-notifications uses 1-7 (Sunday = 1)
+          hour: hours,
+          minute: minutes,
+          repeats: true,
+        };
+      } else if (reminder.repeat === 'monthly') {
+        // Monthly recurring notification (on the same day of month)
+        const dayOfMonth = notificationDate.getDate();
+        // For monthly, we use a date-based trigger that repeats
+        // Since expo-notifications doesn't have a direct monthly trigger,
+        // we'll schedule it for the next occurrence and handle repeats manually
+        // For now, schedule for the next occurrence
+        if (notificationDate < new Date()) {
+          notificationDate.setMonth(notificationDate.getMonth() + 1);
+        }
+        trigger = {
+          type: 'date',
+          date: notificationDate,
+        };
+      } else {
+        // One-time notification (repeat === 'none')
+        // If the date is in the past, schedule for tomorrow
+        if (notificationDate < new Date()) {
+          notificationDate.setDate(notificationDate.getDate() + 1);
+        }
+        trigger = {
+          type: 'date',
+          date: notificationDate,
+        };
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: reminder.title,
-          body: reminder.description,
+          body: reminder.description || `Reminder: ${reminder.title}`,
           data: { 
             reminderId: reminder.id,
             type: reminder.type,
@@ -521,14 +631,13 @@ const RemindersScreen: React.FC = () => {
           },
           sound: 'default',
         },
-        trigger: {
-          type: 'date',
-          date: notificationDate,
-        } as any,
+        trigger: trigger as any,
       });
       
+      console.log(`✅ Scheduled notification for reminder "${reminder.title}" (ID: ${reminder.id}, Repeat: ${reminder.repeat})`);
       return notificationId;
     } catch (error) {
+      console.error(`❌ Error scheduling notification for reminder ${reminder.id}:`, error);
       return null;
     }
   };
@@ -609,9 +718,16 @@ const RemindersScreen: React.FC = () => {
         }
       }
 
-      // Schedule notification if enabled
+      // Schedule notification if enabled (cancel old one first if updating)
+      if (editingReminder) {
+        // Cancel old notification before scheduling new one
+        await cancelNotification(editingReminder.id);
+      }
       if (newReminder.isEnabled) {
         await scheduleNotification(newReminder);
+      } else {
+        // If disabled, make sure to cancel any existing notifications
+        await cancelNotification(newReminder.id);
       }
 
       // Reset form with current time
