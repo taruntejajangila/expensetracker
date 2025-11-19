@@ -192,14 +192,25 @@ app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE ||
 // Compression middleware
 app.use(compression());
 
-// Logging middleware - exclude notification polling to reduce log noise
-app.use(morgan('combined', {
+// Logging middleware - reduce verbosity in production
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'short' : 'combined', {
   skip: (req, res) => {
-    // Skip logging for notification polling requests
+    // Skip logging for notification polling requests and health checks in production
+    if (process.env.NODE_ENV === 'production') {
+      return req.url === '/api/notifications/poll' || req.url === '/health';
+    }
+    // In development, only skip notification polling
     return req.url === '/api/notifications/poll';
   },
   stream: {
-    write: (message: string) => logger.info(message.trim())
+    write: (message: string) => {
+      // In production, only log warnings/errors, not info
+      if (process.env.NODE_ENV === 'production') {
+        // Don't log HTTP requests in production to reduce log volume
+        return;
+      }
+      logger.info(message.trim());
+    }
   }
 }));
 
@@ -277,9 +288,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use('/api/auth', authRoutes);
-logger.info('✅ Auth routes registered at /api/auth');
-// Log all registered routes for debugging
-logger.info('🔍 Registered auth routes: GET /test, GET /me-test, GET /me, POST /refresh, POST /logout, POST /request-otp, POST /check-phone, POST /verify-otp, POST /complete-signup');
+if (process.env.NODE_ENV !== 'production') {
+  logger.info('✅ Auth routes registered at /api/auth');
+  // Log all registered routes for debugging (only in development)
+  logger.info('🔍 Registered auth routes: GET /test, GET /me-test, GET /me, POST /refresh, POST /logout, POST /request-otp, POST /check-phone, POST /verify-otp, POST /complete-signup');
+}
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -333,14 +346,16 @@ const startServer = async () => {
     // Start server FIRST (don't wait for database)
     // This allows healthcheck to work even if database connection is slow
     app.listen(Number(PORT), '0.0.0.0', () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
-      logger.info(`📱 Mobile App URL: ${process.env.MOBILE_APP_URL || 'http://localhost:19006'}`);
-      logger.info(`🖥️ Admin Panel URL: ${process.env.ADMIN_PANEL_URL || 'http://localhost:3001'}`);
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🌐 API Base URL: http://0.0.0.0:${PORT}/api`);
-      logger.info(`🏥 Health Check: http://0.0.0.0:${PORT}/health`);
-      if (process.env.SERVER_URL) {
-        logger.info(`🌐 Network Access: ${process.env.SERVER_URL}/api`);
+      logger.warn(`🚀 Server running on port ${PORT}`);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`📱 Mobile App URL: ${process.env.MOBILE_APP_URL || 'http://localhost:19006'}`);
+        logger.info(`🖥️ Admin Panel URL: ${process.env.ADMIN_PANEL_URL || 'http://localhost:3001'}`);
+        logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`🌐 API Base URL: http://0.0.0.0:${PORT}/api`);
+        logger.info(`🏥 Health Check: http://0.0.0.0:${PORT}/health`);
+        if (process.env.SERVER_URL) {
+          logger.info(`🌐 Network Access: ${process.env.SERVER_URL}/api`);
+        }
       }
     });
 
@@ -348,10 +363,12 @@ const startServer = async () => {
     // This allows server to start even if database connection takes time
     connectDatabase()
       .then(() => {
-        logger.info('✅ Database connected successfully');
+        logger.warn('✅ Database connected successfully');
         // Set up database pool in app.locals for routes to use
         app.locals.db = getPool();
-        logger.info('✅ Database pool set in app.locals');
+        if (process.env.NODE_ENV !== 'production') {
+          logger.info('✅ Database pool set in app.locals');
+        }
         
         // SECURITY: Start periodic cleanup of expired blacklist entries (every 6 hours)
         setInterval(async () => {

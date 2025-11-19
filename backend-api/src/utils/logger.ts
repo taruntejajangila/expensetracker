@@ -12,8 +12,12 @@ const logFormat = winston.format.combine(
 );
 
 // Create logger instance
+// In production, use 'warn' level to reduce log volume (only warnings and errors)
+// In development, use 'info' level for more detailed logging
+const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'warn' : 'info');
+
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: logLevel,
   format: logFormat,
   defaultMeta: { service: 'expense-tracker-api' },
   transports: [

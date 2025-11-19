@@ -33,8 +33,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // Debug: Log token details for troubleshooting
-    logger.debug(`Token received: ${token.substring(0, 20)}... (length: ${token.length})`);
+    // Debug: Log token details for troubleshooting (only in development)
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`Token received: ${token.substring(0, 20)}... (length: ${token.length})`);
+    }
 
     // Handle test tokens ONLY in development - SECURITY: Reject in production
     const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -100,7 +102,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
           role: user.role,
           name: user.name
         };
-        logger.debug(`User authenticated: ${user.id} (${user.email})`);
+        // Only log in development
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`User authenticated: ${user.id} (${user.email})`);
+        }
         
         // SECURITY: Audit log authentication (async, don't block)
         auditLog({
@@ -146,7 +151,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         name: 'User' // Default name since not in JWT
       };
       
-      logger.debug(`User authenticated via JWT (DB unavailable - DEV ONLY): ${decoded.userId}`);
+      // Only log in development
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug(`User authenticated via JWT (DB unavailable - DEV ONLY): ${decoded.userId}`);
+      }
       next();
       return;
     }
@@ -228,7 +236,10 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     }
   } catch (error) {
     // Silently ignore auth errors for optional auth
-    logger.debug('Optional auth failed:', error);
+    // Only log in development
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('Optional auth failed:', error);
+    }
   }
 
   next();

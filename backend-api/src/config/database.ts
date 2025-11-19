@@ -1,14 +1,16 @@
 import { Pool, PoolConfig } from 'pg';
 import { logger } from '../utils/logger';
 
-// Debug: Log environment variables
-logger.info('🔍 Environment Variables Debug:');
-logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? '***SET***' : 'NOT SET'}`);
-logger.info(`DB_USER: ${process.env.DB_USER}`);
-logger.info(`DB_HOST: ${process.env.DB_HOST}`);
-logger.info(`DB_NAME: ${process.env.DB_NAME}`);
-logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`);
-logger.info(`DB_PORT: ${process.env.DB_PORT}`);
+// Debug: Log environment variables (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  logger.info('🔍 Environment Variables Debug:');
+  logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? '***SET***' : 'NOT SET'}`);
+  logger.info(`DB_USER: ${process.env.DB_USER}`);
+  logger.info(`DB_HOST: ${process.env.DB_HOST}`);
+  logger.info(`DB_NAME: ${process.env.DB_NAME}`);
+  logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`);
+  logger.info(`DB_PORT: ${process.env.DB_PORT}`);
+}
 
 // Database configuration - Use DATABASE_URL if available, otherwise use individual variables
 // Increased timeouts for Railway/cloud databases which may be slower
@@ -36,17 +38,19 @@ const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
   keepAliveInitialDelayMillis: 10000,
 };
 
-// Debug: Log the actual config being used
-if (process.env.DATABASE_URL) {
-  logger.info('🔍 Database Config: Using DATABASE_URL connection string');
-} else {
-  logger.info('🔍 Database Config (without password):', {
-    user: dbConfig.user,
-    host: dbConfig.host,
-    database: dbConfig.database,
-    port: dbConfig.port,
-    passwordSet: !!dbConfig.password
-  });
+// Debug: Log the actual config being used (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  if (process.env.DATABASE_URL) {
+    logger.info('🔍 Database Config: Using DATABASE_URL connection string');
+  } else {
+    logger.info('🔍 Database Config (without password):', {
+      user: dbConfig.user,
+      host: dbConfig.host,
+      database: dbConfig.database,
+      port: dbConfig.port,
+      passwordSet: !!dbConfig.password
+    });
+  }
 }
 
 // Create connection pool
@@ -62,18 +66,26 @@ const testConnection = async (): Promise<void> => {
       setTimeout(() => reject(new Error('Connection timeout after 65 seconds')), 65000)
     );
     
-    logger.debug('Attempting to get client from pool...');
-    client = await Promise.race([connectionPromise, timeoutPromise]) as any;
-    
-    logger.debug('Client obtained, executing test query...');
-    const result = await client.query('SELECT NOW()');
-    logger.info(`✅ Database connected successfully at ${result.rows[0].now}`);
-    
-    // Initialize database schema
-    logger.debug('Initializing database schema...');
-    await initializeDatabaseSchema(client);
-    
-    logger.debug('Schema initialized, releasing client...');
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Attempting to get client from pool...');
+      }
+      client = await Promise.race([connectionPromise, timeoutPromise]) as any;
+      
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Client obtained, executing test query...');
+      }
+      const result = await client.query('SELECT NOW()');
+      logger.warn(`✅ Database connected successfully at ${result.rows[0].now}`);
+      
+      // Initialize database schema
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Initializing database schema...');
+      }
+      await initializeDatabaseSchema(client);
+      
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Schema initialized, releasing client...');
+      }
     client.release();
     client = null;
   } catch (error) {
@@ -102,18 +114,20 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
     `);
     
     if (!tableCheck.rows[0].exists) {
-      logger.info('🔧 Initializing database schema...');
+      logger.warn('🔧 Initializing database schema...');
       
       // Execute schema creation directly
       await createDatabaseSchema(client);
-      logger.info('✅ Database schema initialized successfully');
-    } else {
+      logger.warn('✅ Database schema initialized successfully');
+    } else if (process.env.NODE_ENV !== 'production') {
       logger.info('✅ Database schema already exists');
     }
 
     // ALWAYS run migrations (for both new and existing databases)
     try {
-      logger.info('🔄 Checking for pending migrations...');
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info('🔄 Checking for pending migrations...');
+      }
       const { MigrationRunner } = await import('../migrations/migrationRunner');
       const migrationRunner = new MigrationRunner(client);
       await migrationRunner.runMigrations();
@@ -125,7 +139,6 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
 
     // SECURITY: Ensure token_blacklist table exists (runs on every startup)
     try {
-      logger.info('🔄 Ensuring token_blacklist table exists...');
       const blacklistCheck = await client.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -135,7 +148,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       `);
       
       if (!blacklistCheck.rows[0].exists) {
-        logger.info('➕ Creating token_blacklist table...');
+        logger.warn('➕ Creating token_blacklist table...');
         await client.query(`
           CREATE TABLE token_blacklist (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -150,9 +163,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
           CREATE INDEX IF NOT EXISTS idx_token_blacklist_hash ON token_blacklist(token_hash);
           CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
         `);
-        logger.info('✅ token_blacklist table created successfully');
-      } else {
-        logger.info('✅ token_blacklist table already exists');
+        logger.warn('✅ token_blacklist table created successfully');
       }
     } catch (blacklistError: any) {
       logger.error('❌ Error ensuring token_blacklist table (non-fatal):', blacklistError.message);
@@ -161,7 +172,6 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
 
     // SECURITY: Ensure audit_logs table exists (runs on every startup)
     try {
-      logger.info('🔄 Ensuring audit_logs table exists...');
       const auditCheck = await client.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -171,7 +181,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       `);
       
       if (!auditCheck.rows[0].exists) {
-        logger.info('➕ Creating audit_logs table...');
+        logger.warn('➕ Creating audit_logs table...');
         await client.query(`
           CREATE TABLE audit_logs (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -191,9 +201,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
           CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
           CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
         `);
-        logger.info('✅ audit_logs table created successfully');
-      } else {
-        logger.info('✅ audit_logs table already exists');
+        logger.warn('✅ audit_logs table created successfully');
       }
     } catch (auditError: any) {
       logger.error('❌ Error ensuring audit_logs table (non-fatal):', auditError.message);
@@ -202,7 +210,6 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
 
     // SECURITY: Ensure otp_verifications table exists (runs on every startup)
     try {
-      logger.info('🔄 Ensuring otp_verifications table exists...');
       const otpCheck = await client.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -212,7 +219,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       `);
       
       if (!otpCheck.rows[0].exists) {
-        logger.info('➕ Creating otp_verifications table...');
+        logger.warn('➕ Creating otp_verifications table...');
         await client.query(`
           CREATE TABLE otp_verifications (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -228,9 +235,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
           CREATE INDEX IF NOT EXISTS idx_otp_expires_at ON otp_verifications(expires_at);
           CREATE INDEX IF NOT EXISTS idx_otp_phone_created ON otp_verifications(phone, created_at);
         `);
-        logger.info('✅ otp_verifications table created successfully');
-      } else {
-        logger.info('✅ otp_verifications table already exists');
+        logger.warn('✅ otp_verifications table created successfully');
       }
     } catch (otpError: any) {
       logger.error('❌ Error ensuring otp_verifications table (non-fatal):', otpError.message);
@@ -239,21 +244,18 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
 
     // Ensure Balance Transfer category exists (runs on every startup)
     try {
-      logger.info('🔄 Ensuring Balance Transfer category exists...');
       const existing = await client.query(
         "SELECT id FROM categories WHERE name = 'Balance Transfer' AND type = 'transfer'"
       );
 
       if (existing.rows.length === 0) {
-        logger.info('➕ Adding Balance Transfer category...');
+        logger.warn('➕ Adding Balance Transfer category...');
         await client.query(`
           INSERT INTO categories (id, user_id, name, icon, color, type, is_default, is_active, sort_order, created_at, updated_at) 
           VALUES (gen_random_uuid(), NULL, 'Balance Transfer', 'swap-horizontal', '#9C88FF', 'transfer', true, true, 999, NOW(), NOW())
           ON CONFLICT DO NOTHING
         `);
-        logger.info('✅ Balance Transfer category added successfully');
-      } else {
-        logger.info('✅ Balance Transfer category already exists');
+        logger.warn('✅ Balance Transfer category added successfully');
       }
     } catch (categoryError: any) {
       logger.error('❌ Error ensuring Balance Transfer category (non-fatal):', categoryError.message);
@@ -797,7 +799,10 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
   // Set up event listeners for the pool (only once)
   if (!pool.listeners('connect').length) {
     pool.on('connect', (client) => {
-      logger.debug('🔄 New client connected to database');
+      // Only log in development
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('🔄 New client connected to database');
+      }
     });
 
     pool.on('error', (err, client) => {
@@ -806,19 +811,24 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
     });
 
     pool.on('remove', (client) => {
-      logger.debug('🔄 Client removed from pool');
+      // Only log in development
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('🔄 Client removed from pool');
+      }
     });
   }
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const startTime = Date.now();
-      logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      }
       
       await testConnection();
       
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      logger.info(`✅ Database connection established successfully (took ${duration}s)`);
+      logger.warn(`✅ Database connection established successfully (took ${duration}s)`);
       return; // Success!
 
   } catch (error) {
@@ -832,7 +842,9 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
       }
       
       if (attempt < maxRetries) {
-        logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
+        }
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
