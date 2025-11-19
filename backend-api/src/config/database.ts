@@ -200,6 +200,43 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
       // Don't throw - allow app to start
     }
 
+    // SECURITY: Ensure otp_verifications table exists (runs on every startup)
+    try {
+      logger.info('🔄 Ensuring otp_verifications table exists...');
+      const otpCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'otp_verifications'
+        );
+      `);
+      
+      if (!otpCheck.rows[0].exists) {
+        logger.info('➕ Creating otp_verifications table...');
+        await client.query(`
+          CREATE TABLE otp_verifications (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            phone VARCHAR(20) NOT NULL,
+            otp VARCHAR(6) NOT NULL,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_otp_phone_otp ON otp_verifications(phone, otp);
+          CREATE INDEX IF NOT EXISTS idx_otp_expires_at ON otp_verifications(expires_at);
+          CREATE INDEX IF NOT EXISTS idx_otp_phone_created ON otp_verifications(phone, created_at);
+        `);
+        logger.info('✅ otp_verifications table created successfully');
+      } else {
+        logger.info('✅ otp_verifications table already exists');
+      }
+    } catch (otpError: any) {
+      logger.error('❌ Error ensuring otp_verifications table (non-fatal):', otpError.message);
+      // Don't throw - allow app to start
+    }
+
     // Ensure Balance Transfer category exists (runs on every startup)
     try {
       logger.info('🔄 Ensuring Balance Transfer category exists...');
