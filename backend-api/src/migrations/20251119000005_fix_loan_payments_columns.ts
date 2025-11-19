@@ -85,6 +85,41 @@ export const up = async (client: PoolClient): Promise<void> => {
     { name: 'notes', type: 'TEXT' }
   ];
   
+  // Remove old/deprecated columns that conflict with new ones
+  const deprecatedColumns = ['amount', 'total_amount', 'principal_amount', 'interest_amount'];
+  for (const oldCol of deprecatedColumns) {
+    if (existingColumns.has(oldCol)) {
+      // Check if the new column exists
+      const newColName = oldCol === 'amount' ? 'payment_amount' :
+                        oldCol === 'total_amount' ? 'payment_amount' :
+                        oldCol === 'principal_amount' ? 'principal_paid' :
+                        oldCol === 'interest_amount' ? 'interest_paid' : null;
+      
+      if (newColName && existingColumns.has(newColName)) {
+        console.log(`🗑️  Dropping deprecated column: ${oldCol} (replaced by ${newColName})`);
+        try {
+          await client.query(`
+            ALTER TABLE loan_payments 
+            DROP COLUMN IF EXISTS ${oldCol};
+          `);
+          console.log(`✅ Dropped column: ${oldCol}`);
+        } catch (error: any) {
+          console.log(`⚠️  Could not drop ${oldCol}: ${error.message}`);
+          // If we can't drop it (maybe has data), make it nullable
+          try {
+            await client.query(`
+              ALTER TABLE loan_payments 
+              ALTER COLUMN ${oldCol} DROP NOT NULL;
+            `);
+            console.log(`✅ Made ${oldCol} nullable`);
+          } catch (nullableError: any) {
+            console.log(`⚠️  Could not make ${oldCol} nullable: ${nullableError.message}`);
+          }
+        }
+      }
+    }
+  }
+  
   // Add missing columns
   for (const column of requiredColumns) {
     if (!existingColumns.has(column.name)) {
