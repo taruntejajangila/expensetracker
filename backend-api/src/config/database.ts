@@ -383,6 +383,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       account_name VARCHAR(100) NOT NULL,
       account_number VARCHAR(50) NOT NULL,
       bank_name VARCHAR(100) NOT NULL,
+      account_holder_name VARCHAR(255),
       account_type VARCHAR(20) DEFAULT 'checking' CHECK (account_type IN ('savings', 'current', 'salary', 'wallet', 'checking', 'investment')),
       balance DECIMAL(12,2) DEFAULT 0,
       currency VARCHAR(3) DEFAULT 'USD',
@@ -391,6 +392,27 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )
   `);
+  
+  // Add account_holder_name column if it doesn't exist (for existing tables)
+  try {
+    const columnCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'bank_accounts' 
+        AND column_name = 'account_holder_name'
+      );
+    `);
+    
+    if (!columnCheck.rows[0].exists) {
+      await client.query(`
+        ALTER TABLE bank_accounts 
+        ADD COLUMN account_holder_name VARCHAR(255)
+      `);
+      console.log('✅ account_holder_name column added to bank_accounts');
+    }
+  } catch (error) {
+    console.log('⚠️ Error adding account_holder_name column:', (error as Error).message);
+  }
 
   // Transactions table
   await client.query(`
@@ -425,8 +447,8 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
       category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
       name VARCHAR(100) NOT NULL,
-      amount DECIMAL(12,2) NOT NULL,
-      spent DECIMAL(12,2) DEFAULT 0,
+      amount DECIMAL(15,2) NOT NULL,
+      spent DECIMAL(15,2) DEFAULT 0,
       period VARCHAR(20) DEFAULT 'monthly' CHECK (period IN ('weekly', 'monthly', 'yearly')),
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
@@ -449,7 +471,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       current_amount DECIMAL(12,2) DEFAULT 0,
       target_date DATE NOT NULL,
       status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
-      goal_type VARCHAR(20) DEFAULT 'savings' CHECK (goal_type IN ('savings', 'debt_payoff', 'purchase', 'emergency_fund')),
+      goal_type VARCHAR(20) DEFAULT 'savings' CHECK (goal_type IN ('savings', 'debt_payoff', 'purchase', 'emergency_fund', 'other')),
       icon VARCHAR(50) DEFAULT 'target',
       color VARCHAR(7) DEFAULT '#10B981',
       is_active BOOLEAN DEFAULT true,
