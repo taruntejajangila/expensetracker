@@ -442,7 +442,14 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     let loansResult = { rows: [] };
     try {
       loansResult = await pool.query(`
-        SELECT id, name, amount, interest_rate, term_months, status, created_at
+        SELECT 
+          id, 
+          loan_name as name, 
+          principal_amount as amount, 
+          interest_rate, 
+          loan_term_months as term_months, 
+          is_active as status, 
+          created_at
         FROM loans 
         WHERE user_id = $1
         ORDER BY created_at DESC
@@ -457,7 +464,13 @@ router.get('/users/:id/details', authenticateToken, requireAnyRole(['admin', 'su
     let creditCardsResult = { rows: [] };
     try {
       creditCardsResult = await pool.query(`
-        SELECT id, name, credit_limit, balance as current_balance, due_date, is_active
+        SELECT 
+          id, 
+          card_name as name, 
+          credit_limit, 
+          available_credit as current_balance, 
+          due_date, 
+          is_active
         FROM credit_cards 
         WHERE user_id = $1 AND is_active = true
         ORDER BY created_at DESC
