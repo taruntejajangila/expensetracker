@@ -273,6 +273,56 @@ const AddLoanScreen: React.FC = () => {
         }
     }, [route.params?.editLoan]);
 
+    // Auto-fill function
+    const handleAutoFill = () => {
+        const editLoan = route.params?.editLoan as any | undefined;
+        if (editLoan) {
+            // Don't auto-fill when editing
+            return;
+        }
+
+        // Check if form has any data
+        const hasData = name || type || lender || principal || interestRate || termYears || emiStartDate;
+        
+        if (hasData) {
+            Alert.alert(
+                'Auto Fill',
+                'This will replace all current form data. Do you want to continue?',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                        text: 'Auto Fill', 
+                        onPress: () => {
+                            performAutoFill();
+                        },
+                        style: 'default'
+                    }
+                ]
+            );
+        } else {
+            performAutoFill();
+        }
+    };
+
+    const performAutoFill = () => {
+        // Sample loan data
+        setName('Sample Personal Loan');
+        setType('Personal Loan');
+        setLender('HDFC Bank');
+        setPrincipal('500000');
+        setInterestRate('12.5');
+        setTermYears('5');
+        setTenureUnit('Years');
+        
+        // Set EMI start date to today
+        const today = new Date();
+        setEmiDate(today);
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        setEmiStartDate(`${y}-${m}-${day}`);
+    };
+
     // Header Component
     const ScreenHeader: React.FC<{ theme: any; insets: any }> = ({ theme, insets }) => {
         const headerPaddingTop = Platform.OS === 'android' ? insets.top + 5 : insets.top + 10;
@@ -302,6 +352,19 @@ const AddLoanScreen: React.FC = () => {
                     </View>
                     
                     <View style={styles.headerRight}>
+                        {!editLoan && (
+                            <TouchableOpacity 
+                                style={styles.autoFillButton}
+                                onPress={handleAutoFill}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons 
+                                    name="sparkles" 
+                                    size={20} 
+                                    color="#667eea" 
+                                />
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity 
                             style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
                             onPress={handleSaveLoan}
