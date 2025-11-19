@@ -9,9 +9,39 @@ import { PoolClient } from 'pg';
  */
 
 export const up = async (client: PoolClient): Promise<void> => {
+  console.log('🔧 Creating loan_payments table...');
+  
+  // Check if loans table exists first
+  const loansTableCheck = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'loans'
+    );
+  `);
+  
+  if (!loansTableCheck.rows[0].exists) {
+    console.log('⚠️  loans table does not exist, skipping loan_payments table creation');
+    return;
+  }
+  
+  // Check if loan_payments table already exists
+  const tableCheck = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'loan_payments'
+    );
+  `);
+  
+  if (tableCheck.rows[0].exists) {
+    console.log('✅ loan_payments table already exists, skipping creation');
+    return;
+  }
+  
   await client.query(`
-    CREATE TABLE IF NOT EXISTS loan_payments (
-      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    CREATE TABLE loan_payments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       loan_id UUID REFERENCES loans(id) ON DELETE CASCADE,
       payment_number INTEGER NOT NULL,
       payment_date DATE NOT NULL,
@@ -44,6 +74,8 @@ export const up = async (client: PoolClient): Promise<void> => {
     CREATE INDEX IF NOT EXISTS idx_loan_payments_status 
     ON loan_payments(status);
   `);
+  
+  console.log('✅ loan_payments table created successfully');
 };
 
 export const down = async (client: PoolClient): Promise<void> => {
