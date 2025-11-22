@@ -15,6 +15,10 @@ import { auditLog } from '../utils/auditLogger';
 
 const router = express.Router();
 
+// Test credentials for Google Play reviewers
+const TEST_PHONE_NUMBER = '+919999999999'; // Test phone number for reviewers
+const TEST_OTP = '123456'; // Fixed OTP for test phone number
+
 // Test route to verify router is working
 router.get('/test', (req, res) => {
   logger.info('🔍 /auth/test endpoint hit');
@@ -540,6 +544,30 @@ router.post('/request-otp',
 
       logger.info(`OTP request for phone: ${formattedPhone}`);
 
+      // Handle test phone number for Google Play reviewers
+      if (formattedPhone === TEST_PHONE_NUMBER) {
+        // Store test OTP in database (with longer expiry for reviewers)
+        // Delete any existing test OTPs for this phone first
+        await pool.query(`
+          DELETE FROM otp_verifications WHERE phone = $1
+        `, [formattedPhone]);
+        
+        // Insert new test OTP with 24 hour expiry
+        await pool.query(`
+          INSERT INTO otp_verifications (phone, otp, expires_at, used)
+          VALUES ($1, $2, NOW() + INTERVAL '24 hours', false)
+        `, [formattedPhone, TEST_OTP]);
+
+        logger.info(`Test OTP requested for reviewer phone: ${formattedPhone}`);
+        
+        return res.json({
+          success: true,
+          message: 'OTP sent to your phone number',
+          // For test phone, we can include the OTP in response (only for this specific test number)
+          testOtp: TEST_OTP
+        });
+      }
+
       // Rate limiting: Check if user requested OTP recently
       // SECURITY: Stricter limits in production (3 per hour) vs development (15 per hour)
       const isProduction = process.env.NODE_ENV === 'production';
@@ -569,8 +597,11 @@ router.post('/request-otp',
         VALUES ($1, $2, NOW() + INTERVAL '5 minutes')
       `, [formattedPhone, otp]);
 
-      // Send OTP via 2Factor.in
-      const sent = await TwoFactorService.sendOTP(formattedPhone, otp);
+      // Send OTP via 2Factor.in (skip for test phone number)
+      let sent = true;
+      if (formattedPhone !== TEST_PHONE_NUMBER) {
+        sent = await TwoFactorService.sendOTP(formattedPhone, otp);
+      }
 
       if (!sent) {
         // Delete the OTP if sending failed
@@ -673,30 +704,44 @@ router.post('/verify-otp',
 
       logger.info(`OTP verification attempt for phone: ${formattedPhone}, OTP: ${normalizedOtp}`);
 
-      // Find valid OTP
-      const otpRecord = await pool.query(`
-        SELECT * FROM otp_verifications 
-        WHERE phone = $1 
-          AND otp = $2 
-          AND expires_at > NOW()
-          AND used = false
-        ORDER BY created_at DESC 
-        LIMIT 1
-      `, [formattedPhone, normalizedOtp]);
+      // Handle test phone number for Google Play reviewers
+      if (formattedPhone === TEST_PHONE_NUMBER && normalizedOtp === TEST_OTP) {
+        // For test phone, accept the fixed OTP without database check
+        // But still create/update the OTP record for consistency
+        await pool.query(`
+          INSERT INTO otp_verifications (phone, otp, expires_at, used)
+          VALUES ($1, $2, NOW() + INTERVAL '24 hours', true)
+          ON CONFLICT DO NOTHING
+        `, [formattedPhone, normalizedOtp]);
 
-      if (otpRecord.rows.length === 0) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid or expired OTP'
-        });
+        logger.info(`Test OTP verified for reviewer phone: ${formattedPhone}`);
+        // Continue with user creation/login flow below
+      } else {
+        // Find valid OTP for regular users
+        const otpRecord = await pool.query(`
+          SELECT * FROM otp_verifications 
+          WHERE phone = $1 
+            AND otp = $2 
+            AND expires_at > NOW()
+            AND used = false
+          ORDER BY created_at DESC 
+          LIMIT 1
+        `, [formattedPhone, normalizedOtp]);
+
+        if (otpRecord.rows.length === 0) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid or expired OTP'
+          });
+        }
+
+        // Mark OTP as used
+        await pool.query(`
+          UPDATE otp_verifications 
+          SET used = true 
+          WHERE id = $1
+        `, [otpRecord.rows[0].id]);
       }
-
-      // Mark OTP as used
-      await pool.query(`
-        UPDATE otp_verifications 
-        SET used = true 
-        WHERE id = $1
-      `, [otpRecord.rows[0].id]);
 
       // Check if user exists
       const user = await pool.query(
