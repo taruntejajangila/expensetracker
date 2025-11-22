@@ -27,6 +27,8 @@ import BudgetService from '../services/BudgetService';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import { formatCurrency } from '../utils/currencyFormatter';
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
 
 interface BudgetCategory {
   id: string | number;
@@ -181,14 +183,31 @@ const BudgetPlanningScreen: React.FC = () => {
       };
     });
     
+    // Sort categories:
+    // - Categories with spending > 0: sort by spending amount (descending) - show first
+    // - Categories with spending = 0: sort alphabetically - show after
+    const categoriesWithSpending = budgetCategories.filter(cat => cat.spentAmount > 0);
+    const categoriesWithoutSpending = budgetCategories.filter(cat => cat.spentAmount === 0);
+    
+    // Sort categories with spending by spending amount (descending)
+    categoriesWithSpending.sort((a, b) => b.spentAmount - a.spentAmount);
+    
+    // Sort categories without spending alphabetically
+    categoriesWithoutSpending.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Combine: spending categories first, then zero-spending categories
+    const sortedBudgetCategories = [...categoriesWithSpending, ...categoriesWithoutSpending];
+    
     // Calculate totals
-    const totalBudget = budgetCategories.reduce((sum, cat) => sum + cat.budgetAmount, 0);
-    const totalSpent = budgetCategories.reduce((sum, cat) => sum + cat.spentAmount, 0);
+    const totalBudget = sortedBudgetCategories.reduce((sum, cat) => sum + cat.budgetAmount, 0);
+    const totalSpent = sortedBudgetCategories.reduce((sum, cat) => sum + cat.spentAmount, 0);
     
     console.log('🔍 BudgetPlanningScreen: Budget overview totals:', {
       totalBudget,
       totalSpent,
-      categoriesCount: budgetCategories.length
+      categoriesCount: sortedBudgetCategories.length,
+      withSpending: categoriesWithSpending.length,
+      withoutSpending: categoriesWithoutSpending.length
     });
     
     const budgetOverview: BudgetOverview = {
@@ -196,7 +215,7 @@ const BudgetPlanningScreen: React.FC = () => {
       year: currentYear,
       totalBudget,
       totalSpent,
-      categories: budgetCategories
+      categories: sortedBudgetCategories
     };
     
     setCurrentBudget(budgetOverview);
@@ -502,7 +521,7 @@ const BudgetPlanningScreen: React.FC = () => {
                 </TouchableOpacity>
                 
                 {/* Show banner ad after every 2 categories */}
-                {showAd && (
+                {showAd && !HIDE_ADS_FOR_SCREENSHOTS && (
                   <View style={styles.adContainer}>
                     <BannerAdComponent />
                   </View>

@@ -26,8 +26,8 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
-
-
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
 
 interface Account {
   id: string;
@@ -493,9 +493,11 @@ const AccountsScreen: React.FC = () => {
         </View>
 
         {/* Banner Ad above Cash Wallet */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Cash Wallet Component */}
         <View style={styles.cashWalletContainer}>
@@ -510,9 +512,11 @@ const AccountsScreen: React.FC = () => {
         </View>
 
         {/* Banner Ad above Smart Insights */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Spending Analytics Component */}
         <View style={styles.analyticsContainer}>
@@ -520,9 +524,11 @@ const AccountsScreen: React.FC = () => {
         </View>
 
         {/* Banner Ad below Spending Analytics */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Recent Activity Component */}
         <View style={styles.activityContainer}>

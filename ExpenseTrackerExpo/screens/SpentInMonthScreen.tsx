@@ -20,6 +20,9 @@ import TransactionService from '../services/transactionService';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import { formatCurrency } from '../utils/currencyFormatter';
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
+
 const { width } = Dimensions.get('window');
 
 // Greeting function (same as HomeScreen)
@@ -1152,7 +1155,7 @@ const SpentInMonthScreen: React.FC = () => {
          </View>
          
          {/* Banner Ad - Above Recent Transactions */}
-         {!loading && (
+         {!loading && !HIDE_ADS_FOR_SCREENSHOTS && (
            <View style={styles.adContainer}>
              <BannerAdComponent />
            </View>
@@ -1369,7 +1372,7 @@ const SpentInMonthScreen: React.FC = () => {
          )}
          
          {/* Banner Ad at the bottom of the screen */}
-         {!loading && (
+         {!loading && !HIDE_ADS_FOR_SCREENSHOTS && (
            <View style={styles.adContainer}>
              <BannerAdComponent />
            </View>

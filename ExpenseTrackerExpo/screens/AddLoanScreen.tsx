@@ -698,21 +698,9 @@ const createStyles = (theme: any) => StyleSheet.create({
         justifyContent: 'center',
     },
     headerRight: {
-        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 12,
-        minWidth: 60,
-    },
-    autoFillButton: {
-        width: 40,
-        height: 40,
         justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F3F4F6',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        minWidth: 60,
     },
     backButton: {
         width: 40,

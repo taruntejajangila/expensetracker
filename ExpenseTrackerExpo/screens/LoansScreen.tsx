@@ -21,6 +21,9 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
+
 interface Loan {
   id: string;
   name: string;
@@ -391,9 +394,11 @@ const LoansScreen: React.FC = () => {
         </View>
 
         {/* Banner Ad above Payment Schedule */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Payment Schedule */}
         <View style={styles.scheduleSection}>
@@ -543,9 +548,11 @@ const LoansScreen: React.FC = () => {
         </View>
 
         {/* Banner Ad at bottom of screen */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
       </ScrollView>
 
       {/* Interstitial modal removed; direct interstitial shown on action */}

@@ -25,6 +25,9 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import AppOpenAdService from '../services/AppOpenAdService';
 import { formatCurrency } from '../utils/currencyFormatter';
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
+
 interface SavingsGoal {
   id: string;
   name: string;
@@ -469,7 +472,7 @@ const SavingsGoalsScreen: React.FC = () => {
               </View>
               
               {/* Show banner ad after every 2 goals */}
-              {showAd && (
+              {showAd && !HIDE_ADS_FOR_SCREENSHOTS && (
                 <View style={styles.adContainer}>
                   <BannerAdComponent />
                 </View>
@@ -504,9 +507,11 @@ const SavingsGoalsScreen: React.FC = () => {
         )}
 
         {/* Banner Ad above Tips Section */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Tips Section */}
         <View style={styles.tipsSection}>

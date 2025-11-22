@@ -12,7 +12,8 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
-    "db:add-categories": "node scripts/add-new-categories.js"
+    "db:add-categories": "node scripts/add-new-categories.js",
+    "db:create-tables": "node scripts/create-tables-from-sql.js"
   },
   "keywords": [
     "expense-tracker",

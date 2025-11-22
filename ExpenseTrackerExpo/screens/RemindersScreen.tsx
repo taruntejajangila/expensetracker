@@ -24,6 +24,9 @@ import WheelDatePicker from '../components/WheelDatePicker';
 import WheelTimePicker from '../components/WheelTimePicker';
 import { BannerAdComponent } from '../components/AdMobComponents';
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = false;
+
 // Import new components and types
 import { Reminder } from '../types/PaymentTypes';
 import TransactionAnalysisService from '../services/TransactionAnalysisService';
@@ -1944,9 +1947,11 @@ const RemindersScreen: React.FC = () => {
         )}
         
         {/* Banner Ad at the bottom of the screen */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
       </ScrollView>
 
       {/* Add/Edit Modal */}

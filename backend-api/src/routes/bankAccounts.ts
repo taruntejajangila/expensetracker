@@ -50,13 +50,13 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
     // Build query based on whether column exists
     const query = hasAccountHolderName
       ? `
-        SELECT 
-          id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
-          account_number, is_active as status, updated_at as last_updated,
-          created_at, updated_at
-        FROM bank_accounts 
-        WHERE user_id = $1 
-        ORDER BY created_at DESC
+      SELECT 
+        id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
+        account_number, is_active as status, updated_at as last_updated,
+        created_at, updated_at
+      FROM bank_accounts 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC
       `
       : `
         SELECT 
@@ -66,7 +66,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         FROM bank_accounts 
         WHERE user_id = $1 
         ORDER BY created_at DESC
-      `;
+    `;
     
     const result = await req.app.locals.db.query(query, [userId]);
     
@@ -199,12 +199,12 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
     // Build query based on whether column exists
     const query = hasAccountHolderName
       ? `
-        SELECT 
-          id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
-          account_number, is_active as status, updated_at as last_updated,
-          created_at, updated_at
-        FROM bank_accounts 
-        WHERE id = $1 AND user_id = $2
+      SELECT 
+        id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
+        account_number, is_active as status, updated_at as last_updated,
+        created_at, updated_at
+      FROM bank_accounts 
+      WHERE id = $1 AND user_id = $2
       `
       : `
         SELECT 
@@ -213,7 +213,7 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
           created_at, updated_at
         FROM bank_accounts 
         WHERE id = $1 AND user_id = $2
-      `;
+    `;
     
     const result = await req.app.locals.db.query(query, [accountId, userId]);
     
@@ -320,11 +320,11 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
     // Build query based on whether column exists
     const query = hasAccountHolderName
       ? `
-        INSERT INTO bank_accounts (
-          user_id, account_name, bank_name, account_holder_name, account_type, balance, currency,
-          account_number, is_active, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        RETURNING *
+      INSERT INTO bank_accounts (
+        user_id, account_name, bank_name, account_holder_name, account_type, balance, currency,
+        account_number, is_active, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      RETURNING *
       `
       : `
         INSERT INTO bank_accounts (
@@ -332,7 +332,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
           account_number, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING *
-      `;
+    `;
     
     const values = hasAccountHolderName
       ? [
@@ -342,7 +342,7 @@ router.post('/', authenticateToken, validateAccountInput, async (req: any, res: 
       : [
           userId, name, bankName, accountType, balance, currency,
           accountNumber || null, true
-        ];
+    ];
     
     const result = await req.app.locals.db.query(query, values);
     const newAccount = result.rows[0];
@@ -484,8 +484,8 @@ router.put('/:id', authenticateToken, validateAccountUpdate, async (req: any, re
        `);
        
        if (columnCheck.rows[0].exists) {
-         updateFields.push(`account_holder_name = $${paramIndex++}`);
-         updateValues.push(accountHolderName);
+       updateFields.push(`account_holder_name = $${paramIndex++}`);
+       updateValues.push(accountHolderName);
        }
      }
      if (balance !== undefined) {
@@ -644,12 +644,12 @@ router.get('/test/sync', async (req: any, res: any) => {
     // Build query based on whether column exists
     const query = hasAccountHolderName
       ? `
-        SELECT 
-          id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
-          account_number, is_active, created_at, updated_at
-        FROM bank_accounts 
-        WHERE user_id = $1 
-        ORDER BY created_at DESC
+      SELECT 
+        id, account_name, bank_name, account_holder_name, account_type, balance, currency, 
+        account_number, is_active, created_at, updated_at
+      FROM bank_accounts 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC
       `
       : `
         SELECT 
@@ -658,7 +658,7 @@ router.get('/test/sync', async (req: any, res: any) => {
         FROM bank_accounts 
         WHERE user_id = $1 
         ORDER BY created_at DESC
-      `;
+    `;
     
     const result = await req.app.locals.db.query(query, ['0041a7fa-a4cf-408a-a106-4bc3e3744fbb']);
     

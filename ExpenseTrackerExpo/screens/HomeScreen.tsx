@@ -42,7 +42,7 @@ import AppOpenAdService from '../services/AppOpenAdService';
 const { width } = Dimensions.get('window');
 
 // 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
-const HIDE_ADS_FOR_SCREENSHOTS = true;
+const HIDE_ADS_FOR_SCREENSHOTS = false;
 
 // Helper function to get greeting
 const getGreeting = (userName?: string) => {
