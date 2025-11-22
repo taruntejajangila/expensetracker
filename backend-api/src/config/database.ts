@@ -809,11 +809,40 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   `);
 
   // Create admin user (password: admin123)
-  await client.query(`
+  const adminUserResult = await client.query(`
     INSERT INTO users (id, email, password, first_name, last_name, is_verified, is_active) VALUES
       (uuid_generate_v4(), 'admin@expensetracker.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4Z9W2XvK6u', 'Admin', 'User', true, true)
     ON CONFLICT (email) DO NOTHING
+    RETURNING id
   `);
+
+  // Create admin_users entry if admin user was created or already exists
+  if (adminUserResult.rows.length > 0 || adminUserResult.rowCount === 0) {
+    // Get the admin user ID (either from insert or existing)
+    let adminUserId: string;
+    if (adminUserResult.rows.length > 0) {
+      adminUserId = adminUserResult.rows[0].id;
+    } else {
+      // User already exists, fetch it
+      const existingUser = await client.query(
+        "SELECT id FROM users WHERE email = 'admin@expensetracker.com'"
+      );
+      if (existingUser.rows.length > 0) {
+        adminUserId = existingUser.rows[0].id;
+      } else {
+        return; // Couldn't find or create admin user
+      }
+    }
+
+    // Create admin_users entry if it doesn't exist
+    await client.query(`
+      INSERT INTO admin_users (user_id, role, created_at, updated_at)
+      SELECT $1, 'admin', NOW(), NOW()
+      WHERE NOT EXISTS (
+        SELECT 1 FROM admin_users WHERE user_id = $1
+      )
+    `, [adminUserId]);
+  }
 };
 
 // Connect to database with retry logic
