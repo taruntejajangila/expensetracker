@@ -548,9 +548,9 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       [ticketId]
     );
 
-    // Get ticket details for logging
+    // Get ticket details for logging and notification
     const ticketDetails = await client.query(
-      `SELECT st.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email 
+      `SELECT st.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.id as user_id
        FROM support_tickets st 
        JOIN users u ON st.user_id = u.id 
        WHERE st.id = $1`,
@@ -561,6 +561,27 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
     if (ticketDetails.rows.length > 0) {
       const ticket = ticketDetails.rows[0];
       console.log(`✅ Admin reply added to ticket ${ticket.ticket_number} for user ${ticket.user_email}`);
+
+      // Send push notification to user about the admin reply
+      try {
+        const messagePreview = message.length > 100 ? message.substring(0, 100) + '...' : message;
+        await notificationService.sendToUser({
+          userId: ticket.user_id,
+          title: `New reply on ticket ${ticket.ticket_number}`,
+          body: messagePreview,
+          data: {
+            type: 'support_ticket_reply',
+            ticketId: ticketId,
+            ticketNumber: ticket.ticket_number,
+            subject: ticket.subject,
+            action: 'open_ticket'
+          }
+        });
+        console.log(`✅ Notification sent to user ${ticket.user_email} about admin reply`);
+      } catch (notificationError) {
+        // Log error but don't fail the request
+        console.error('❌ Error sending notification to user:', notificationError);
+      }
     }
 
     return res.status(201).json({
