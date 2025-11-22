@@ -50,6 +50,15 @@ const NotificationScreen: React.FC = () => {
       console.log('🔔 Data type:', notification.data.type);
       console.log('🔔 Custom notification ID:', notification.data.customNotificationId);
       
+      // Handle support ticket reply notifications
+      if (notification.data.type === 'support_ticket_reply' && notification.data.ticketId) {
+        console.log('🎫 Support ticket reply notification detected');
+        console.log('🎫 Ticket ID:', notification.data.ticketId);
+        // Navigate to ticket detail screen
+        navigation.navigate('TicketDetail' as never, { ticketId: notification.data.ticketId } as never);
+        return;
+      }
+      
       // Check if it's a custom notification
       if (notification.data.type === 'custom' && notification.data.customNotificationId) {
         console.log('📱 Custom notification detected! Fetching full content...');

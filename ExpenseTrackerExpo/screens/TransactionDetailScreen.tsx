@@ -315,7 +315,7 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     'Gifts & Donations': require('../assets/images/categories/expense/expense_gifts_donations.png'),
     'Gas/Fuel': require('../assets/images/categories/expense/expense_gas_fuel.png'),
     'EMI/Loan Payment': require('../assets/images/categories/expense/expense_emi_loan_payment.png'),
-    'Others': require('../assets/images/categories/expense/expense_groceries_cart.png'), // Using groceries cart as placeholder - can be replaced with dedicated image
+    'Others': require('../assets/images/categories/expense/expense_utilities_electricity.png'), // Using bills/utilities image
     
     // Legacy mappings for backward compatibility
     'Groceries': require('../assets/images/categories/expense/expense_groceries_cart.png'),
