@@ -21,7 +21,10 @@ export default function SettingsPage() {
     phone: '+91 98765 43210',
     hours: 'Mon-Fri 9AM-6PM',
     legalEmail: 'legal@mypaisa.com',
-    privacyEmail: 'privacy@mypaisa.com'
+    privacyEmail: 'privacy@mypaisa.com',
+    showEmail: true,
+    showPhone: true,
+    showHours: true
   })
   
   const [isLoading, setIsLoading] = useState(false)
@@ -248,6 +251,18 @@ export default function SettingsPage() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="support@example.com"
               />
+              <div className="mt-2 flex items-center">
+                <input
+                  type="checkbox"
+                  id="showEmail"
+                  checked={contactInfo.showEmail}
+                  onChange={(e) => handleContactInfoChange('showEmail', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="showEmail" className="ml-2 block text-sm text-gray-700">
+                  Show in mobile app
+                </label>
+              </div>
             </div>
 
             <div>
@@ -262,6 +277,18 @@ export default function SettingsPage() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="+1 234 567 8900"
               />
+              <div className="mt-2 flex items-center">
+                <input
+                  type="checkbox"
+                  id="showPhone"
+                  checked={contactInfo.showPhone}
+                  onChange={(e) => handleContactInfoChange('showPhone', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="showPhone" className="ml-2 block text-sm text-gray-700">
+                  Show in mobile app
+                </label>
+              </div>
             </div>
 
             <div>
@@ -276,6 +303,18 @@ export default function SettingsPage() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="Mon-Fri 9AM-6PM"
               />
+              <div className="mt-2 flex items-center">
+                <input
+                  type="checkbox"
+                  id="showHours"
+                  checked={contactInfo.showHours}
+                  onChange={(e) => handleContactInfoChange('showHours', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="showHours" className="ml-2 block text-sm text-gray-700">
+                  Show in mobile app
+                </label>
+              </div>
             </div>
 
             <div>

@@ -11,10 +11,37 @@ router.get('/contact', async (req: Request, res: Response) => {
   const client = await pool.connect();
   
   try {
+    // Check if table exists first
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'app_settings'
+      )
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      // Table doesn't exist yet, return default values
+      logger.warn('app_settings table does not exist yet, returning default values');
+      return res.json({
+        success: true,
+        data: {
+          email: 'support@mypaisa.com',
+          phone: '+91 98765 43210',
+          hours: 'Mon-Fri 9AM-6PM',
+          legalEmail: 'legal@mypaisa.com',
+          privacyEmail: 'privacy@mypaisa.com',
+          showEmail: true,
+          showPhone: true,
+          showHours: true
+        }
+      });
+    }
+
     const result = await client.query(`
       SELECT setting_key, setting_value 
       FROM app_settings 
-      WHERE setting_key IN ('contact_email', 'contact_phone', 'contact_hours', 'legal_email', 'privacy_email')
+      WHERE setting_key IN ('contact_email', 'contact_phone', 'contact_hours', 'legal_email', 'privacy_email', 'contact_email_visible', 'contact_phone_visible', 'contact_hours_visible')
     `);
 
     // Convert rows to object
@@ -31,15 +58,27 @@ router.get('/contact', async (req: Request, res: Response) => {
         phone: contactInfo.contact_phone || '+91 98765 43210',
         hours: contactInfo.contact_hours || 'Mon-Fri 9AM-6PM',
         legalEmail: contactInfo.legal_email || 'legal@mypaisa.com',
-        privacyEmail: contactInfo.privacy_email || 'privacy@mypaisa.com'
+        privacyEmail: contactInfo.privacy_email || 'privacy@mypaisa.com',
+        showEmail: contactInfo.contact_email_visible !== 'false',
+        showPhone: contactInfo.contact_phone_visible !== 'false',
+        showHours: contactInfo.contact_hours_visible !== 'false'
       }
     });
   } catch (error) {
     logger.error('Error fetching contact information:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch contact information',
-      error: (error as Error).message
+    // Return default values on error
+    return res.json({
+      success: true,
+      data: {
+        email: 'support@mypaisa.com',
+        phone: '+91 98765 43210',
+        hours: 'Mon-Fri 9AM-6PM',
+        legalEmail: 'legal@mypaisa.com',
+        privacyEmail: 'privacy@mypaisa.com',
+        showEmail: true,
+        showPhone: true,
+        showHours: true
+      }
     });
   } finally {
     client.release();
@@ -80,7 +119,23 @@ router.put('/contact', authenticateToken, requireAdmin, async (req: Request, res
   const client = await pool.connect();
   
   try {
-    const { email, phone, hours, legalEmail, privacyEmail } = req.body;
+    // Check if table exists first
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'app_settings'
+      )
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      return res.status(503).json({
+        success: false,
+        message: 'app_settings table does not exist yet. Please wait for the migration to complete or contact system administrator.'
+      });
+    }
+
+    const { email, phone, hours, legalEmail, privacyEmail, showEmail, showPhone, showHours } = req.body;
 
     // Update each setting
     const updates: Promise<any>[] = [];
@@ -140,6 +195,40 @@ router.put('/contact', authenticateToken, requireAdmin, async (req: Request, res
       );
     }
 
+    // Update visibility flags
+    if (showEmail !== undefined) {
+      updates.push(
+        client.query(
+          `INSERT INTO app_settings (setting_key, setting_value, setting_type, description, updated_at)
+           VALUES ('contact_email_visible', $1, 'boolean', 'Show email in mobile app', NOW())
+           ON CONFLICT (setting_key) DO UPDATE SET setting_value = $1, updated_at = NOW()`,
+          [showEmail ? 'true' : 'false']
+        )
+      );
+    }
+
+    if (showPhone !== undefined) {
+      updates.push(
+        client.query(
+          `INSERT INTO app_settings (setting_key, setting_value, setting_type, description, updated_at)
+           VALUES ('contact_phone_visible', $1, 'boolean', 'Show phone in mobile app', NOW())
+           ON CONFLICT (setting_key) DO UPDATE SET setting_value = $1, updated_at = NOW()`,
+          [showPhone ? 'true' : 'false']
+        )
+      );
+    }
+
+    if (showHours !== undefined) {
+      updates.push(
+        client.query(
+          `INSERT INTO app_settings (setting_key, setting_value, setting_type, description, updated_at)
+           VALUES ('contact_hours_visible', $1, 'boolean', 'Show hours in mobile app', NOW())
+           ON CONFLICT (setting_key) DO UPDATE SET setting_value = $1, updated_at = NOW()`,
+          [showHours ? 'true' : 'false']
+        )
+      );
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({
         success: false,
@@ -153,7 +242,7 @@ router.put('/contact', authenticateToken, requireAdmin, async (req: Request, res
     const result = await client.query(`
       SELECT setting_key, setting_value 
       FROM app_settings 
-      WHERE setting_key IN ('contact_email', 'contact_phone', 'contact_hours', 'legal_email', 'privacy_email')
+      WHERE setting_key IN ('contact_email', 'contact_phone', 'contact_hours', 'legal_email', 'privacy_email', 'contact_email_visible', 'contact_phone_visible', 'contact_hours_visible')
     `);
 
     const contactInfo: any = {};
@@ -171,7 +260,10 @@ router.put('/contact', authenticateToken, requireAdmin, async (req: Request, res
         phone: contactInfo.contact_phone || phone,
         hours: contactInfo.contact_hours || hours,
         legalEmail: contactInfo.legal_email || legalEmail,
-        privacyEmail: contactInfo.privacy_email || privacyEmail
+        privacyEmail: contactInfo.privacy_email || privacyEmail,
+        showEmail: contactInfo.contact_email_visible !== 'false',
+        showPhone: contactInfo.contact_phone_visible !== 'false',
+        showHours: contactInfo.contact_hours_visible !== 'false'
       }
     });
   } catch (error) {

@@ -727,7 +727,10 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       ('contact_phone', '+91 98765 43210', 'text', 'Support phone number'),
       ('contact_hours', 'Mon-Fri 9AM-6PM', 'text', 'Support hours'),
       ('legal_email', 'legal@mypaisa.com', 'text', 'Legal inquiries email'),
-      ('privacy_email', 'privacy@mypaisa.com', 'text', 'Privacy inquiries email')
+      ('privacy_email', 'privacy@mypaisa.com', 'text', 'Privacy inquiries email'),
+      ('contact_email_visible', 'true', 'boolean', 'Show email in mobile app'),
+      ('contact_phone_visible', 'true', 'boolean', 'Show phone in mobile app'),
+      ('contact_hours_visible', 'true', 'boolean', 'Show hours in mobile app')
     ON CONFLICT (setting_key) DO NOTHING
   `);
 

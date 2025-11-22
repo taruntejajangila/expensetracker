@@ -29,6 +29,9 @@ const HelpSupportScreen: React.FC = () => {
     email: 'support@mypaisa.com',
     phone: '+91 98765 43210',
     hours: 'Mon-Fri 9AM-6PM',
+    showEmail: true,
+    showPhone: true,
+    showHours: true,
   });
   const [isLoadingContact, setIsLoadingContact] = useState(false);
 
@@ -133,6 +136,9 @@ const HelpSupportScreen: React.FC = () => {
               email: data.data.email || 'support@mypaisa.com',
               phone: data.data.phone || '+91 98765 43210',
               hours: data.data.hours || 'Mon-Fri 9AM-6PM',
+              showEmail: data.data.showEmail !== false,
+              showPhone: data.data.showPhone !== false,
+              showHours: data.data.showHours !== false,
             });
           }
         }
@@ -598,37 +604,43 @@ const HelpSupportScreen: React.FC = () => {
         <Text style={styles.contactInfoTitle} allowFontScaling={false}>
           Contact Information
         </Text>
-        <TouchableOpacity
-          style={styles.contactItem}
-          activeOpacity={0.7}
-          onPress={() => Linking.openURL(`mailto:${contactInfo.email}`)}
-          onLongPress={async () => {
-            Clipboard.setString(contactInfo.email);
-            Alert.alert('Copied', 'Email address copied to clipboard.');
-          }}
-        >
-          <Ionicons name="mail" size={16} color={theme.colors.primary} style={styles.contactIcon} />
-          <Text style={styles.contactText} allowFontScaling={false}>Email</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.email}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.contactItem}
-          activeOpacity={0.7}
-          onPress={() => Linking.openURL(`tel:${contactInfo.phone.replace(/\s/g, '')}`)}
-          onLongPress={async () => {
-            Clipboard.setString(contactInfo.phone);
-            Alert.alert('Copied', 'Phone number copied to clipboard.');
-          }}
-        >
-          <Ionicons name="call" size={16} color={theme.colors.primary} style={styles.contactIcon} />
-          <Text style={styles.contactText} allowFontScaling={false}>Phone</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.phone}</Text>
-        </TouchableOpacity>
-        <View style={styles.contactItem}>
-          <Ionicons name="time" size={16} color={theme.colors.primary} style={styles.contactIcon} />
-          <Text style={styles.contactText} allowFontScaling={false}>Hours</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.hours}</Text>
-        </View>
+        {contactInfo.showEmail && (
+          <TouchableOpacity
+            style={styles.contactItem}
+            activeOpacity={0.7}
+            onPress={() => Linking.openURL(`mailto:${contactInfo.email}`)}
+            onLongPress={async () => {
+              Clipboard.setString(contactInfo.email);
+              Alert.alert('Copied', 'Email address copied to clipboard.');
+            }}
+          >
+            <Ionicons name="mail" size={16} color={theme.colors.primary} style={styles.contactIcon} />
+            <Text style={styles.contactText} allowFontScaling={false}>Email</Text>
+            <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.email}</Text>
+          </TouchableOpacity>
+        )}
+        {contactInfo.showPhone && (
+          <TouchableOpacity
+            style={styles.contactItem}
+            activeOpacity={0.7}
+            onPress={() => Linking.openURL(`tel:${contactInfo.phone.replace(/\s/g, '')}`)}
+            onLongPress={async () => {
+              Clipboard.setString(contactInfo.phone);
+              Alert.alert('Copied', 'Phone number copied to clipboard.');
+            }}
+          >
+            <Ionicons name="call" size={16} color={theme.colors.primary} style={styles.contactIcon} />
+            <Text style={styles.contactText} allowFontScaling={false}>Phone</Text>
+            <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.phone}</Text>
+          </TouchableOpacity>
+        )}
+        {contactInfo.showHours && (
+          <View style={styles.contactItem}>
+            <Ionicons name="time" size={16} color={theme.colors.primary} style={styles.contactIcon} />
+            <Text style={styles.contactText} allowFontScaling={false}>Hours</Text>
+            <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.hours}</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
