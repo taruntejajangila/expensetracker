@@ -290,12 +290,9 @@ router.patch('/:ticketId/status', authenticateToken, isAdmin, async (req: Reques
       });
     }
 
-    const resolvedAt = status === 'resolved' ? 'CURRENT_TIMESTAMP' : 'resolved_at';
-
     const result = await client.query(
       `UPDATE support_tickets 
        SET status = $1, 
-           resolved_at = ${status === 'resolved' ? 'CURRENT_TIMESTAMP' : 'resolved_at'},
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING *`,
@@ -621,7 +618,6 @@ router.patch('/:ticketId/resolution', authenticateToken, isAdmin, async (req: Re
       `UPDATE support_tickets 
        SET resolution = $1, 
            status = 'resolved',
-           resolved_at = CURRENT_TIMESTAMP,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING *`,
