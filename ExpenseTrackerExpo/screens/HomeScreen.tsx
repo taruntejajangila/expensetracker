@@ -41,6 +41,9 @@ import AppOpenAdService from '../services/AppOpenAdService';
 
 const { width } = Dimensions.get('window');
 
+// 🎬 SCREENSHOT MODE: Set to true to hide banner ads for screenshots
+const HIDE_ADS_FOR_SCREENSHOTS = true;
+
 // Helper function to get greeting
 const getGreeting = (userName?: string) => {
   return userName ? `Hi ${userName} 😉` : 'Hi User 😉';
@@ -70,6 +73,8 @@ const getCategoryIcon = (category: string) => {
   const iconMap: { [key: string]: string } = {
     'Food & Dining': '🍕',
     'Food': '🍕',
+    'Groceries & Vegetables': '🛒',
+    'Groceries': '🛒',
     'Transport': '🚗',
     'Transportation': '🚗',
     'Bills & Utilities': '💡',
@@ -80,7 +85,6 @@ const getCategoryIcon = (category: string) => {
     'Healthcare': '🏥',
     'Education': '📚',
     'Travel': '✈️',
-    'Groceries': '🛒',
     'Fuel': '⛽',
     'Rent': '🏠',
     'Insurance': '🛡️',
@@ -2230,9 +2234,11 @@ const HomeScreen: React.FC = () => {
         )}
 
         {/* AdMob Banner Ad - Middle */}
-        <View style={styles.adContainer}>
-          <BannerAdComponent />
-        </View>
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
+          <View style={styles.adContainer}>
+            <BannerAdComponent />
+          </View>
+        )}
 
         {/* Quick Action Buttons */}
         <View style={styles.quickActionContainer}>
@@ -2380,9 +2386,11 @@ const HomeScreen: React.FC = () => {
         )}
 
         {/* AdMob Banner Ad - Top */}
+        {!HIDE_ADS_FOR_SCREENSHOTS && (
           <View style={styles.adContainer}>
             <BannerAdComponent />
           </View>
+        )}
 
         {/* Top Spending Categories */}
         {!loading && spendingCategories.length > 0 && (

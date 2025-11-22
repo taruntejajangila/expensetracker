@@ -2,6 +2,7 @@
 export const getCategoryIcon = (categoryName: string): string => {
   const iconMap: { [key: string]: string } = {
     'Food & Dining': 'restaurant',
+    'Groceries & Vegetables': 'basket',
     'Transportation': 'car',
     'Shopping': 'bag',
     'Entertainment': 'film',
@@ -20,6 +21,7 @@ export const getCategoryIcon = (categoryName: string): string => {
 export const getCategoryColor = (categoryName: string): string => {
   const colorMap: { [key: string]: string } = {
     'Food & Dining': '#FF6B6B',
+    'Groceries & Vegetables': '#4CAF50',
     'Transportation': '#4ECDC4',
     'Shopping': '#A8E6CF',
     'Entertainment': '#FFB6C1',

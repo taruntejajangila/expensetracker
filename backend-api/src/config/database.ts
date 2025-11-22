@@ -3,13 +3,13 @@ import { logger } from '../utils/logger';
 
 // Debug: Log environment variables (only in development)
 if (process.env.NODE_ENV !== 'production') {
-  logger.info('🔍 Environment Variables Debug:');
-  logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? '***SET***' : 'NOT SET'}`);
-  logger.info(`DB_USER: ${process.env.DB_USER}`);
-  logger.info(`DB_HOST: ${process.env.DB_HOST}`);
-  logger.info(`DB_NAME: ${process.env.DB_NAME}`);
-  logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`);
-  logger.info(`DB_PORT: ${process.env.DB_PORT}`);
+logger.info('🔍 Environment Variables Debug:');
+logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? '***SET***' : 'NOT SET'}`);
+logger.info(`DB_USER: ${process.env.DB_USER}`);
+logger.info(`DB_HOST: ${process.env.DB_HOST}`);
+logger.info(`DB_NAME: ${process.env.DB_NAME}`);
+logger.info(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'}`);
+logger.info(`DB_PORT: ${process.env.DB_PORT}`);
 }
 
 // Database configuration - Use DATABASE_URL if available, otherwise use individual variables
@@ -40,16 +40,16 @@ const dbConfig: PoolConfig = process.env.DATABASE_URL ? {
 
 // Debug: Log the actual config being used (only in development)
 if (process.env.NODE_ENV !== 'production') {
-  if (process.env.DATABASE_URL) {
-    logger.info('🔍 Database Config: Using DATABASE_URL connection string');
-  } else {
-    logger.info('🔍 Database Config (without password):', {
-      user: dbConfig.user,
-      host: dbConfig.host,
-      database: dbConfig.database,
-      port: dbConfig.port,
-      passwordSet: !!dbConfig.password
-    });
+if (process.env.DATABASE_URL) {
+  logger.info('🔍 Database Config: Using DATABASE_URL connection string');
+} else {
+  logger.info('🔍 Database Config (without password):', {
+    user: dbConfig.user,
+    host: dbConfig.host,
+    database: dbConfig.database,
+    port: dbConfig.port,
+    passwordSet: !!dbConfig.password
+  });
   }
 }
 
@@ -67,24 +67,24 @@ const testConnection = async (): Promise<void> => {
     );
     
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Attempting to get client from pool...');
+    logger.debug('Attempting to get client from pool...');
       }
-      client = await Promise.race([connectionPromise, timeoutPromise]) as any;
-      
+    client = await Promise.race([connectionPromise, timeoutPromise]) as any;
+    
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Client obtained, executing test query...');
+    logger.debug('Client obtained, executing test query...');
       }
-      const result = await client.query('SELECT NOW()');
+    const result = await client.query('SELECT NOW()');
       logger.warn(`✅ Database connected successfully at ${result.rows[0].now}`);
-      
-      // Initialize database schema
+    
+    // Initialize database schema
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Initializing database schema...');
+    logger.debug('Initializing database schema...');
       }
-      await initializeDatabaseSchema(client);
-      
+    await initializeDatabaseSchema(client);
+    
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Schema initialized, releasing client...');
+    logger.debug('Schema initialized, releasing client...');
       }
     client.release();
     client = null;
@@ -126,7 +126,7 @@ const initializeDatabaseSchema = async (client: any): Promise<void> => {
     // ALWAYS run migrations (for both new and existing databases)
     try {
       if (process.env.NODE_ENV !== 'production') {
-        logger.info('🔄 Checking for pending migrations...');
+      logger.info('🔄 Checking for pending migrations...');
       }
       const { MigrationRunner } = await import('../migrations/migrationRunner');
       const migrationRunner = new MigrationRunner(client);
@@ -772,6 +772,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   await client.query(`
     INSERT INTO categories (id, user_id, name, icon, color, type, is_default) VALUES
       (uuid_generate_v4(), NULL, 'Food & Dining', 'restaurant', '#FF6B6B', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Groceries & Vegetables', 'basket', '#4CAF50', 'expense', true),
       (uuid_generate_v4(), NULL, 'Transportation', 'car', '#4ECDC4', 'expense', true),
       (uuid_generate_v4(), NULL, 'Shopping', 'cart', '#45B7D1', 'expense', true),
       (uuid_generate_v4(), NULL, 'Entertainment', 'film', '#96CEB4', 'expense', true),
@@ -823,7 +824,7 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
     pool.on('connect', (client) => {
       // Only log in development
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('🔄 New client connected to database');
+      logger.debug('🔄 New client connected to database');
       }
     });
 
@@ -835,7 +836,7 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
     pool.on('remove', (client) => {
       // Only log in development
       if (process.env.NODE_ENV !== 'production') {
-        logger.debug('🔄 Client removed from pool');
+      logger.debug('🔄 Client removed from pool');
       }
     });
   }
@@ -844,7 +845,7 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
     try {
       const startTime = Date.now();
       if (process.env.NODE_ENV !== 'production') {
-        logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      logger.info(`🔄 Attempting database connection (attempt ${attempt}/${maxRetries})...`);
       }
       
       await testConnection();
@@ -865,7 +866,7 @@ export const connectDatabase = async (maxRetries: number = 5, retryDelay: number
       
       if (attempt < maxRetries) {
         if (process.env.NODE_ENV !== 'production') {
-          logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
+        logger.info(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
         }
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }

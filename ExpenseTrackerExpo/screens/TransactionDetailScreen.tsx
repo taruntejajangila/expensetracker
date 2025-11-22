@@ -34,6 +34,7 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
       
       // Expense Categories (matching database names)
       'Food & Dining': 'restaurant-outline',
+      'Groceries & Vegetables': 'basket-outline',
       'Transportation': 'car-outline',
       'Shopping': 'bag-outline',
       'Entertainment': 'film-outline',
@@ -43,7 +44,7 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
       'Travel': 'airplane-outline',
       
       // Legacy mappings for backward compatibility
-      'Groceries': 'cart-outline',
+      'Groceries': 'basket-outline',
       'Dining Out/Food Delivery': 'restaurant-outline',
       'Utilities': 'flash-outline',
       'Rent': 'home-outline',
