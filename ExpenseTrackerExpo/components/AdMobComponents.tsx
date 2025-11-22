@@ -15,6 +15,8 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [adLibraryLoaded, setAdLibraryLoaded] = useState(false);
   const [bannerSize, setBannerSize] = useState<any>(null);
+  const [adLoaded, setAdLoaded] = useState(false);
+  const [adFailed, setAdFailed] = useState(false);
 
   // Note: Removed auto-refresh interval and retry remounting to prevent layout shifts/shaking
   // BannerAd from react-native-google-mobile-ads handles refresh internally
@@ -59,16 +61,9 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
     }
   }, [disableAds]);
 
-  if (disableAds || !adLibraryLoaded) {
-    return (
-      <View style={styles.container}>
-        <View style={[styles.placeholder, { height: 50 }]}> 
-          <Text style={styles.placeholderText}>
-            {disableAds ? 'Ads disabled in Expo Go' : 'Loading ad...'}
-          </Text>
-        </View>
-      </View>
-    );
+  // Hide banner if ads are disabled, library not loaded, or ad failed to load
+  if (disableAds || !adLibraryLoaded || (adFailed && !adLoaded)) {
+    return null; // Return null to hide empty space when ad fails
   }
 
   // Use real banner ads when enabled
@@ -93,11 +88,16 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
           }}
             onAdLoaded={() => {
               console.log('✅ Banner ad loaded');
+              setAdLoaded(true);
+              setAdFailed(false);
               setRetryCount(0); // Reset retry count on successful load
             }}
             onAdFailedToLoad={(error) => {
           const errorCode = error?.code || '';
           const errorMessage = error?.message || '';
+          
+          // Mark ad as failed - this will hide the empty space
+          setAdFailed(true);
           
           // Check if it's an invalid request error (non-recoverable)
           if (errorCode === 'error-code-invalid-request' || errorMessage.includes('invalid')) {
@@ -110,11 +110,11 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
             return;
           }
           
-          // For other errors (like no-fill), retry with exponential backoff
+          // For other errors (like no-fill), hide the banner to avoid empty space
           if (errorCode === 'error-code-no-fill') {
-            // No-fill is normal in dev/test - just log silently
+            // No-fill is normal in dev/test - hide banner to avoid empty space
             if (retryCount === 0) {
-              console.log('ℹ️ No ad inventory available (normal in development)');
+              console.log('ℹ️ No ad inventory available - hiding banner to avoid empty space');
             }
             setRetryCount(0);
             return;
@@ -127,7 +127,7 @@ export const BannerAdComponent: React.FC<BannerAdComponentProps> = () => {
                 setRetryCount(newRetryCount);
                 console.log(`⚠️ Banner ad retry scheduled (attempt ${newRetryCount})`);
               } else {
-                console.log('❌ Banner ad failed after 3 retries, will retry on next refresh');
+                console.log('❌ Banner ad failed after 3 retries, hiding banner');
             setRetryCount(0);
               }
             }}
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 0,
     overflow: 'hidden',
-    minHeight: 50, // Prevent layout shift when ad loads/unloads
+    // Removed minHeight - let container collapse when ad doesn't load
     // Constrain ad to normalized dimensions - prevents ads from growing with display size
     alignItems: 'center', // Center the banner ad horizontally
     justifyContent: 'center', // Center the banner ad vertically
