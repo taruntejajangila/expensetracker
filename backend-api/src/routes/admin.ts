@@ -62,9 +62,21 @@ router.post('/login', async (req, res) => {
 
     const pool = getPool();
     
-    // Check if admin user exists in admin_users table
+    // Check if admin user exists - join admin_users with users table
+    // admin_users has: id, user_id, role
+    // users has: id, email, password, first_name, last_name
     const userResult = await pool.query(
-      'SELECT id, username as name, email, password_hash, role FROM admin_users WHERE email = $1 AND role IN ($2, $3)',
+      `SELECT 
+        au.id as admin_id,
+        au.user_id,
+        au.role,
+        u.id as user_id,
+        u.email,
+        u.password,
+        CONCAT(u.first_name, ' ', u.last_name) as name
+      FROM admin_users au
+      INNER JOIN users u ON au.user_id = u.id
+      WHERE u.email = $1 AND au.role IN ($2, $3) AND u.is_active = true`,
       [email, 'admin', 'super_admin']
     );
 
@@ -78,7 +90,14 @@ router.post('/login', async (req, res) => {
     const user = userResult.rows[0];
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -95,16 +114,18 @@ router.post('/login', async (req, res) => {
       });
     }
     
+    // Use admin_users.id for JWT (this is what we'll get in req.user.id)
+    // But we'll need to resolve it to users.id for foreign key operations
     const accessToken = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.admin_id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // Update last login
+    // Update last login using users.id
     await pool.query(
       'UPDATE users SET last_login = NOW() WHERE id = $1',
-      [user.id]
+      [user.user_id]
     );
 
     logger.info(`Admin login successful: ${user.email} (${user.role})`);
@@ -114,7 +135,7 @@ router.post('/login', async (req, res) => {
       message: 'Login successful',
       data: {
         user: {
-          id: user.id,
+          id: user.admin_id, // Return admin_users.id for consistency with JWT
           name: user.name,
           email: user.email,
           role: user.role

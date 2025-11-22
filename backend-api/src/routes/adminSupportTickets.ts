@@ -350,9 +350,32 @@ router.patch('/:ticketId/assign', authenticateToken, isAdmin, async (req: Reques
       [adminIdToUse]
     );
 
-    if (adminUserCheck.rows.length > 0 && adminUserCheck.rows[0].user_id) {
-      // This is an admin_users.id, get the corresponding users.id
-      assignTo = adminUserCheck.rows[0].user_id;
+    if (adminUserCheck.rows.length > 0) {
+      if (adminUserCheck.rows[0].user_id) {
+        // This is an admin_users.id, get the corresponding users.id
+        assignTo = adminUserCheck.rows[0].user_id;
+        
+        // Verify the user_id exists in users table
+        const userCheck = await client.query(
+          'SELECT id FROM users WHERE id = $1',
+          [assignTo]
+        );
+        
+        if (userCheck.rows.length === 0) {
+          console.error(`❌ Admin user_id ${assignTo} from admin_users ${adminIdToUse} not found in users table`);
+          return res.status(400).json({
+            success: false,
+            message: 'Admin account configuration error. Please contact system administrator.'
+          });
+        }
+      } else {
+        // admin_users record exists but user_id is NULL
+        console.error(`❌ Admin user ${adminIdToUse} exists but has no user_id set`);
+        return res.status(400).json({
+          success: false,
+          message: 'Admin account not properly configured. Please contact system administrator.'
+        });
+      }
     } else {
       // Check if it's already a users.id
       const userCheck = await client.query(
@@ -452,9 +475,32 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       [adminId]
     );
 
-    if (adminUserCheck.rows.length > 0 && adminUserCheck.rows[0].user_id) {
-      // This is an admin_users.id, get the corresponding users.id
-      actualUserId = adminUserCheck.rows[0].user_id;
+    if (adminUserCheck.rows.length > 0) {
+      if (adminUserCheck.rows[0].user_id) {
+        // This is an admin_users.id, get the corresponding users.id
+        actualUserId = adminUserCheck.rows[0].user_id;
+        
+        // Verify the user_id exists in users table
+        const userCheck = await client.query(
+          'SELECT id FROM users WHERE id = $1',
+          [actualUserId]
+        );
+        
+        if (userCheck.rows.length === 0) {
+          console.error(`❌ Admin user_id ${actualUserId} from admin_users ${adminId} not found in users table`);
+          return res.status(400).json({
+            success: false,
+            message: 'Admin account configuration error. Please contact system administrator.'
+          });
+        }
+      } else {
+        // admin_users record exists but user_id is NULL
+        console.error(`❌ Admin user ${adminId} exists but has no user_id set`);
+        return res.status(400).json({
+          success: false,
+          message: 'Admin account not properly configured. Please contact system administrator.'
+        });
+      }
     } else {
       // Check if it's already a users.id
       const userCheck = await client.query(
