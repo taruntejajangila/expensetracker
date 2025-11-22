@@ -12,7 +12,8 @@ export const getCategoryIcon = (categoryName: string): string => {
     'Salary': 'cash',
     'Freelance': 'laptop',
     'Investment': 'trending-up',
-    'Other': 'ellipsis-horizontal'
+    'Other': 'ellipsis-horizontal',
+    'Others': 'ellipsis-horizontal'
   };
   
   return iconMap[categoryName] || 'ellipsis-horizontal';
@@ -31,7 +32,8 @@ export const getCategoryColor = (categoryName: string): string => {
     'Salary': '#34C759',
     'Freelance': '#F7DC6F',
     'Investment': '#98D8C8',
-    'Other': '#CCCCCC'
+    'Other': '#CCCCCC',
+    'Others': '#CCCCCC'
   };
   
   return colorMap[categoryName] || '#CCCCCC';
@@ -88,7 +90,8 @@ export const getIconName = (iconName: string): string => {
     'salary': 'cash',
     'freelance': 'laptop',
     'investment': 'trending-up',
-    'other': 'ellipsis-horizontal'
+    'other': 'ellipsis-horizontal',
+    'others': 'ellipsis-horizontal'
   };
   
   // Return mapped icon or the original name if it's already valid

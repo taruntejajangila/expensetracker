@@ -785,6 +785,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
       (uuid_generate_v4(), NULL, 'Gifts & Donations', 'gift', '#FD79A8', 'expense', true),
       (uuid_generate_v4(), NULL, 'Gas/Fuel', 'car-sport', '#FDCB6E', 'expense', true),
       (uuid_generate_v4(), NULL, 'EMI/Loan Payment', 'wallet', '#E17055', 'expense', true),
+      (uuid_generate_v4(), NULL, 'Others', 'ellipsis-horizontal', '#CCCCCC', 'expense', true),
       (uuid_generate_v4(), NULL, 'Salary', 'cash', '#82E0AA', 'income', true),
       (uuid_generate_v4(), NULL, 'Freelance', 'briefcase', '#85C1E9', 'income', true),
       (uuid_generate_v4(), NULL, 'Investment', 'trending-up', '#F8C471', 'income', true),

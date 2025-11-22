@@ -42,6 +42,7 @@ const getCorrectIconName = (iconName: string, categoryName?: string): string => 
       'Healthcare': 'heart-outline',
       'Education': 'book-outline',
       'Travel': 'airplane-outline',
+      'Others': 'ellipsis-horizontal-outline',
       
       // Legacy mappings for backward compatibility
       'Groceries': 'basket-outline',
