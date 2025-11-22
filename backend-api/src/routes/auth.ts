@@ -1007,4 +1007,77 @@ router.get('/debug/users',
   }
 );
 
+// DELETE /api/auth/account - Delete user account and all associated data
+router.delete('/account',
+  authenticateToken,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      logger.info(`Account deletion requested for user: ${userId}`);
+
+      // Start transaction to delete all user data
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Delete all user-related data in order (respecting foreign keys)
+        await client.query('DELETE FROM support_ticket_messages WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM support_tickets WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM notification_tokens WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM custom_notifications WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM reminders WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM loan_payments WHERE loan_id IN (SELECT id FROM loans WHERE user_id = $1)', [userId]);
+        await client.query('DELETE FROM loans WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM goals WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM budgets WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM bank_accounts WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM credit_cards WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM otp_verifications WHERE phone IN (SELECT phone FROM users WHERE id = $1)', [userId]);
+        
+        // Finally delete the user
+        await client.query('DELETE FROM users WHERE id = $1', [userId]);
+
+        await client.query('COMMIT');
+        
+        logger.info(`Account and all data deleted successfully for user: ${userId}`);
+
+        // Blacklist the token
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.split(' ')[1];
+        if (token) {
+          // Token expires in 24 hours, set blacklist expiration to 25 hours to be safe
+          const expiresAt = new Date(Date.now() + 25 * 60 * 60 * 1000);
+          await blacklistToken(token, userId, expiresAt, 'revoked');
+        }
+
+        client.release();
+        return res.json({
+          success: true,
+          message: 'Account and all associated data deleted successfully'
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        client.release();
+        throw error;
+      }
+    } catch (error: any) {
+      logger.error('Account deletion error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete account',
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      });
+    }
+  }
+);
+
 export default router;
