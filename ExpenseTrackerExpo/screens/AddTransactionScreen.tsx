@@ -551,7 +551,33 @@ useEffect(() => {
 
   // Get categories based on transaction type
   const getCategoriesByType = (transactionType: 'expense' | 'income' | 'transfer') => {
-    return categories.filter(cat => cat.type === transactionType);
+    const filtered = categories.filter(cat => cat.type === transactionType);
+    
+    // Special sorting for income categories: Salary first, Bonus second, then alphabetical
+    if (transactionType === 'income') {
+      return filtered.sort((a, b) => {
+        // Priority order: Salary (1), Bonus (2), then alphabetical
+        const getPriority = (name: string) => {
+          if (name === 'Salary') return 1;
+          if (name === 'Bonus') return 2;
+          return 3; // All others
+        };
+        
+        const priorityA = getPriority(a.name);
+        const priorityB = getPriority(b.name);
+        
+        // If priorities are different, sort by priority
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // If same priority (both are "others"), sort alphabetically
+        return a.name.localeCompare(b.name);
+      });
+    }
+    
+    // For expense and transfer categories, sort alphabetically
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const expenseCategories = getCategoriesByType('expense');
