@@ -303,6 +303,7 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     
     // Expense Categories (matching database names)
     'Food & Dining': require('../assets/images/categories/expense/expense_dining_restaurant.png'),
+    'Groceries & Vegetables': require('../assets/images/categories/expense/expense_groceries_cart.png'),
     'Transportation': require('../assets/images/categories/expense/expense_transportation_car.png'),
     'Shopping': require('../assets/images/categories/expense/expense_shopping_bags.png'),
     'Entertainment': require('../assets/images/categories/expense/expense_entertainment_movies.png'),
@@ -314,6 +315,7 @@ const getCategoryImage = (categoryName: string, transactionType: 'income' | 'exp
     'Gifts & Donations': require('../assets/images/categories/expense/expense_gifts_donations.png'),
     'Gas/Fuel': require('../assets/images/categories/expense/expense_gas_fuel.png'),
     'EMI/Loan Payment': require('../assets/images/categories/expense/expense_emi_loan_payment.png'),
+    'Others': require('../assets/images/categories/expense/expense_groceries_cart.png'), // Using groceries cart as placeholder - can be replaced with dedicated image
     
     // Legacy mappings for backward compatibility
     'Groceries': require('../assets/images/categories/expense/expense_groceries_cart.png'),
