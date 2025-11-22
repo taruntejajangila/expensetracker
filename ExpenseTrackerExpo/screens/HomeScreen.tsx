@@ -2235,9 +2235,9 @@ const HomeScreen: React.FC = () => {
 
         {/* AdMob Banner Ad - Middle */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
 
         {/* Quick Action Buttons */}

@@ -494,9 +494,9 @@ const AccountsScreen: React.FC = () => {
 
         {/* Banner Ad above Cash Wallet */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
 
         {/* Cash Wallet Component */}
@@ -513,9 +513,9 @@ const AccountsScreen: React.FC = () => {
 
         {/* Banner Ad above Smart Insights */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
 
         {/* Spending Analytics Component */}
@@ -525,9 +525,9 @@ const AccountsScreen: React.FC = () => {
 
         {/* Banner Ad below Spending Analytics */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
 
         {/* Recent Activity Component */}

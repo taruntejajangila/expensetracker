@@ -1948,9 +1948,9 @@ const RemindersScreen: React.FC = () => {
         
         {/* Banner Ad at the bottom of the screen */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
       </ScrollView>
 
