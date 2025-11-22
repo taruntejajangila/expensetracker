@@ -411,6 +411,20 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       });
     }
 
+    // Validate that admin user exists in database
+    const adminCheck = await client.query(
+      'SELECT id FROM users WHERE id = $1',
+      [adminId]
+    );
+
+    if (adminCheck.rows.length === 0) {
+      console.error(`❌ Admin user not found in database: ${adminId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Admin user not found. Please log in again.'
+      });
+    }
+
     // Add message (admin replies go to support_ticket_messages table)
     const result = await client.query(
       `INSERT INTO support_ticket_messages (ticket_id, admin_id, message)
