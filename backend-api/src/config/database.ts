@@ -707,6 +707,30 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
     )
   `);
 
+  // App settings table (for contact information and other app-wide settings)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      setting_key VARCHAR(100) UNIQUE NOT NULL,
+      setting_value TEXT,
+      setting_type VARCHAR(50) DEFAULT 'text',
+      description TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  // Insert default contact information if not exists
+  await client.query(`
+    INSERT INTO app_settings (setting_key, setting_value, setting_type, description) VALUES
+      ('contact_email', 'support@mypaisa.com', 'text', 'Support email address'),
+      ('contact_phone', '+91 98765 43210', 'text', 'Support phone number'),
+      ('contact_hours', 'Mon-Fri 9AM-6PM', 'text', 'Support hours'),
+      ('legal_email', 'legal@mypaisa.com', 'text', 'Legal inquiries email'),
+      ('privacy_email', 'privacy@mypaisa.com', 'text', 'Privacy inquiries email')
+    ON CONFLICT (setting_key) DO NOTHING
+  `);
+
   // Banner categories table
   await client.query(`
     CREATE TABLE IF NOT EXISTS banner_categories (
@@ -758,7 +782,7 @@ const createDatabaseSchema = async (client: any): Promise<void> => {
   `);
 
   // Create triggers
-  const tables = ['users', 'categories', 'credit_cards', 'bank_accounts', 'transactions', 'budgets', 'goals', 'loans', 'notification_tokens', 'reminders', 'support_tickets', 'banner_categories', 'banners'];
+  const tables = ['users', 'categories', 'credit_cards', 'bank_accounts', 'transactions', 'budgets', 'goals', 'loans', 'notification_tokens', 'reminders', 'support_tickets', 'banner_categories', 'banners', 'app_settings'];
   for (const table of tables) {
     await client.query(`
       DROP TRIGGER IF EXISTS trigger_${table}_updated_at ON ${table};

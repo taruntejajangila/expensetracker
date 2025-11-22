@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { API_BASE_URL } from '../config/api.config';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -22,6 +23,14 @@ const HelpSupportScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const navigation = useNavigation();
+  
+  // Contact information state
+  const [contactInfo, setContactInfo] = useState({
+    email: 'support@mypaisa.com',
+    phone: '+91 98765 43210',
+    hours: 'Mon-Fri 9AM-6PM',
+  });
+  const [isLoadingContact, setIsLoadingContact] = useState(false);
 
   // FAQ Data
   const faqData = [
@@ -110,6 +119,33 @@ const HelpSupportScreen: React.FC = () => {
       ]
     }
   ];
+
+  // Fetch contact information from API
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      setIsLoadingContact(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/app-settings/contact`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setContactInfo({
+              email: data.data.email || 'support@mypaisa.com',
+              phone: data.data.phone || '+91 98765 43210',
+              hours: data.data.hours || 'Mon-Fri 9AM-6PM',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching contact information:', error);
+        // Keep default values on error
+      } finally {
+        setIsLoadingContact(false);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
 
   const supportOptions = [
     {
@@ -565,31 +601,33 @@ const HelpSupportScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.contactItem}
           activeOpacity={0.7}
+          onPress={() => Linking.openURL(`mailto:${contactInfo.email}`)}
           onLongPress={async () => {
-            Clipboard.setString('support@mypaisa.com');
+            Clipboard.setString(contactInfo.email);
             Alert.alert('Copied', 'Email address copied to clipboard.');
           }}
         >
           <Ionicons name="mail" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Email</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>support@mypaisa.com</Text>
+          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.email}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.contactItem}
           activeOpacity={0.7}
+          onPress={() => Linking.openURL(`tel:${contactInfo.phone.replace(/\s/g, '')}`)}
           onLongPress={async () => {
-            Clipboard.setString('+91 98765 43210');
+            Clipboard.setString(contactInfo.phone);
             Alert.alert('Copied', 'Phone number copied to clipboard.');
           }}
         >
           <Ionicons name="call" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Phone</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>+91 98765 43210</Text>
+          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.phone}</Text>
         </TouchableOpacity>
         <View style={styles.contactItem}>
           <Ionicons name="time" size={16} color={theme.colors.primary} style={styles.contactIcon} />
           <Text style={styles.contactText} allowFontScaling={false}>Hours</Text>
-          <Text style={styles.contactValue} allowFontScaling={false}>Mon-Fri 9AM-6PM</Text>
+          <Text style={styles.contactValue} allowFontScaling={false}>{contactInfo.hours}</Text>
         </View>
       </View>
     </ScrollView>

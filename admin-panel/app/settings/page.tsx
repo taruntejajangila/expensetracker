@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Settings, Save, AlertCircle, CheckCircle } from 'lucide-react'
 import adminAPI from '../services/api'
+import { API_BASE_URL } from '../../config/api.config'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -14,8 +15,17 @@ export default function SettingsPage() {
     maxUsers: 1000,
     apiRateLimit: 1000
   })
+
+  const [contactInfo, setContactInfo] = useState({
+    email: 'support@mypaisa.com',
+    phone: '+91 98765 43210',
+    hours: 'Mon-Fri 9AM-6PM',
+    legalEmail: 'legal@mypaisa.com',
+    privacyEmail: 'privacy@mypaisa.com'
+  })
   
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingContact, setIsLoadingContact] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('')
 
@@ -48,6 +58,79 @@ export default function SettingsPage() {
       ...prev,
       [key]: value
     }))
+  }
+
+  const handleContactInfoChange = (key: string, value: string) => {
+    setContactInfo(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  // Fetch contact information on component mount
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const token = localStorage.getItem('adminToken')
+        const response = await fetch(`${API_BASE_URL}/app-settings/contact`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data) {
+            setContactInfo(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching contact information:', error)
+      }
+    }
+
+    fetchContactInfo()
+  }, [])
+
+  const handleSaveContactInfo = async () => {
+    setIsLoadingContact(true)
+    setMessage('')
+    
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await fetch(`${API_BASE_URL}/app-settings/contact`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contactInfo)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update contact information')
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        setMessage('Contact information saved successfully!')
+        setMessageType('success')
+        setTimeout(() => {
+          setMessage('')
+          setMessageType('')
+        }, 3000)
+      }
+    } catch (error) {
+      setMessage('Failed to save contact information. Please try again.')
+      setMessageType('error')
+      setTimeout(() => {
+        setMessage('')
+        setMessageType('')
+      }, 3000)
+    } finally {
+      setIsLoadingContact(false)
+    }
   }
 
   return (
@@ -138,6 +221,105 @@ export default function SettingsPage() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Information Section */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+            Contact Information
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Manage contact information displayed in the mobile app's Help & Support section.
+          </p>
+          
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700">
+                Support Email
+              </label>
+              <input
+                type="email"
+                id="contactEmail"
+                value={contactInfo.email}
+                onChange={(e) => handleContactInfoChange('email', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="support@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">
+                Support Phone
+              </label>
+              <input
+                type="text"
+                id="contactPhone"
+                value={contactInfo.phone}
+                onChange={(e) => handleContactInfoChange('phone', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contactHours" className="block text-sm font-medium text-gray-700">
+                Support Hours
+              </label>
+              <input
+                type="text"
+                id="contactHours"
+                value={contactInfo.hours}
+                onChange={(e) => handleContactInfoChange('hours', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Mon-Fri 9AM-6PM"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="legalEmail" className="block text-sm font-medium text-gray-700">
+                Legal Email
+              </label>
+              <input
+                type="email"
+                id="legalEmail"
+                value={contactInfo.legalEmail}
+                onChange={(e) => handleContactInfoChange('legalEmail', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="legal@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="privacyEmail" className="block text-sm font-medium text-gray-700">
+                Privacy Email
+              </label>
+              <input
+                type="email"
+                id="privacyEmail"
+                value={contactInfo.privacyEmail}
+                onChange={(e) => handleContactInfoChange('privacyEmail', e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="privacy@example.com"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleSaveContactInfo}
+              disabled={isLoadingContact}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoadingContact ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {isLoadingContact ? 'Saving...' : 'Save Contact Info'}
+            </button>
           </div>
         </div>
       </div>
