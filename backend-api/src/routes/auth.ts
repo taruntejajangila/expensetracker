@@ -1071,7 +1071,7 @@ router.delete('/account',
       }
     } catch (error: any) {
       logger.error('Account deletion error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to delete account',
         error: process.env.NODE_ENV === 'development' ? error?.message : undefined
