@@ -337,7 +337,37 @@ router.patch('/:ticketId/assign', authenticateToken, isAdmin, async (req: Reques
     const currentAdminId = (req as any).user.id;
 
     // If no adminId provided, assign to self
-    const assignTo = adminId || currentAdminId;
+    const adminIdToUse = adminId || currentAdminId;
+
+    // Get the correct user_id for the admin
+    // Admin JWT contains admin_users.id, but support_tickets.assigned_to references users.id
+    // So we need to get the user_id from admin_users table
+    let assignTo = adminIdToUse;
+    
+    // First, check if this is an admin_users.id
+    const adminUserCheck = await client.query(
+      'SELECT user_id FROM admin_users WHERE id = $1',
+      [adminIdToUse]
+    );
+
+    if (adminUserCheck.rows.length > 0 && adminUserCheck.rows[0].user_id) {
+      // This is an admin_users.id, get the corresponding users.id
+      assignTo = adminUserCheck.rows[0].user_id;
+    } else {
+      // Check if it's already a users.id
+      const userCheck = await client.query(
+        'SELECT id FROM users WHERE id = $1',
+        [adminIdToUse]
+      );
+
+      if (userCheck.rows.length === 0) {
+        console.error(`❌ Admin user not found in database: ${adminIdToUse}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Admin user not found. Please log in again.'
+        });
+      }
+    }
 
     const result = await client.query(
       `UPDATE support_tickets 
@@ -411,18 +441,34 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       });
     }
 
-    // Validate that admin user exists in database
-    const adminCheck = await client.query(
-      'SELECT id FROM users WHERE id = $1',
+    // Get the correct user_id for the admin
+    // Admin JWT contains admin_users.id, but support_ticket_messages.admin_id references users.id
+    // So we need to get the user_id from admin_users table
+    let actualUserId = adminId;
+    
+    // First, check if this is an admin_users.id
+    const adminUserCheck = await client.query(
+      'SELECT user_id FROM admin_users WHERE id = $1',
       [adminId]
     );
 
-    if (adminCheck.rows.length === 0) {
-      console.error(`❌ Admin user not found in database: ${adminId}`);
-      return res.status(400).json({
-        success: false,
-        message: 'Admin user not found. Please log in again.'
-      });
+    if (adminUserCheck.rows.length > 0 && adminUserCheck.rows[0].user_id) {
+      // This is an admin_users.id, get the corresponding users.id
+      actualUserId = adminUserCheck.rows[0].user_id;
+    } else {
+      // Check if it's already a users.id
+      const userCheck = await client.query(
+        'SELECT id FROM users WHERE id = $1',
+        [adminId]
+      );
+
+      if (userCheck.rows.length === 0) {
+        console.error(`❌ Admin user not found in database: ${adminId}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Admin user not found. Please log in again.'
+        });
+      }
     }
 
     // Add message (admin replies go to support_ticket_messages table)
@@ -430,7 +476,7 @@ router.post('/:ticketId/reply', authenticateToken, isAdmin, upload.array('attach
       `INSERT INTO support_ticket_messages (ticket_id, admin_id, message)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [ticketId, adminId, message]
+      [ticketId, actualUserId, message]
     );
 
     // Save message attachments if any
