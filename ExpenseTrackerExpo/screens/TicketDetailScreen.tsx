@@ -551,6 +551,7 @@ const TicketDetailScreen: React.FC = () => {
       backgroundColor: theme.colors.surface,
       borderTopWidth: 1,
       borderTopColor: theme.colors.border,
+      // Bottom padding will be added dynamically based on safe area insets
     },
     inputContainer: {
       flexDirection: 'row',
@@ -951,7 +952,7 @@ const TicketDetailScreen: React.FC = () => {
 
       {/* Input */}
       {canReply && (
-        <View style={styles.inputSection}>
+        <View style={[styles.inputSection, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           {/* Reply Attachments Preview */}
           {replyAttachments.length > 0 && (
             <View style={styles.replyAttachmentsPreview}>
