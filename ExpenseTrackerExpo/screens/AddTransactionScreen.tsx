@@ -1491,7 +1491,7 @@ useEffect(() => {
             setPendingNavigation(null);
           }
         }}
-        duration={2000}
+        duration={1000}
         type="success"
       />
       </SafeAreaView>
