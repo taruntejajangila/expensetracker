@@ -191,6 +191,98 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/admin/fix-admin-user - Emergency endpoint to fix admin user setup
+// WARNING: This endpoint should be removed or secured after fixing the admin user
+router.post('/fix-admin-user', async (req, res) => {
+  try {
+    logger.warn('⚠️ Admin fix endpoint called - this should be secured or removed after use');
+    
+    const pool = getPool();
+    
+    // Find or create admin user
+    let adminUserId: string;
+    const userResult = await pool.query(
+      "SELECT id, password, is_active FROM users WHERE email = 'admin@expensetracker.com'"
+    );
+
+    if (userResult.rows.length === 0) {
+      // Create admin user with fresh password hash
+      const hashedPassword = await bcrypt.hash('admin123', 12);
+      const createResult = await pool.query(`
+        INSERT INTO users (email, password, first_name, last_name, is_verified, is_active)
+        VALUES ('admin@expensetracker.com', $1, 'Admin', 'User', true, true)
+        RETURNING id
+      `, [hashedPassword]);
+      adminUserId = createResult.rows[0].id;
+      logger.info('✅ Admin user created');
+    } else {
+      adminUserId = userResult.rows[0].id;
+      
+      // Always regenerate password hash to ensure it's correct
+      const hashedPassword = await bcrypt.hash('admin123', 12);
+      await pool.query('UPDATE users SET password = $1, is_active = true WHERE id = $2', [hashedPassword, adminUserId]);
+      logger.info('✅ Admin password reset and user activated');
+    }
+
+    // Check if admin_users entry exists
+    const adminUserCheck = await pool.query(
+      'SELECT id FROM admin_users WHERE user_id = $1',
+      [adminUserId]
+    );
+
+    if (adminUserCheck.rows.length === 0) {
+      // Create admin_users entry
+      await pool.query(`
+        INSERT INTO admin_users (user_id, role, created_at, updated_at)
+        VALUES ($1, 'admin', NOW(), NOW())
+      `, [adminUserId]);
+      logger.info('✅ Admin_users entry created');
+    } else {
+      // Ensure role is correct
+      await pool.query('UPDATE admin_users SET role = $1, updated_at = NOW() WHERE user_id = $2', ['admin', adminUserId]);
+      logger.info('✅ Admin_users entry verified');
+    }
+
+    // Verify the setup
+    const verifyResult = await pool.query(`
+      SELECT 
+        au.id as admin_id,
+        au.role,
+        u.id as user_id,
+        u.email,
+        u.is_active
+      FROM admin_users au
+      INNER JOIN users u ON au.user_id = u.id
+      WHERE u.email = 'admin@expensetracker.com'
+    `);
+
+    if (verifyResult.rows.length > 0) {
+      logger.info('✅ Admin user setup verified successfully');
+      return res.json({
+        success: true,
+        message: 'Admin user fixed successfully. You can now login with admin@expensetracker.com / admin123',
+        data: {
+          email: verifyResult.rows[0].email,
+          role: verifyResult.rows[0].role,
+          isActive: verifyResult.rows[0].is_active
+        }
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to verify admin user setup'
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error fixing admin user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fix admin user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // GET /api/admin/live-traffic - Get live mobile app user count
 router.get('/live-traffic', authenticateToken, requireAnyRole(['admin', 'super_admin']), async (req, res) => {
   try {
