@@ -383,7 +383,13 @@ export default function UserDetailsPage() {
                     {user.transactions.map((transaction: any) => (
                       <tr key={transaction.id} className="border-b border-gray-100">
                         <td className="py-2 px-4 text-sm text-gray-600">
-                          {new Date(transaction.created_at).toLocaleDateString()}
+                          {new Date(transaction.created_at).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </td>
                         <td className="py-2 px-4 text-sm text-gray-900">{transaction.description}</td>
                                                  <td className="py-2 px-4 text-sm text-gray-600">{transaction.category_name || 'Uncategorized'}</td>
