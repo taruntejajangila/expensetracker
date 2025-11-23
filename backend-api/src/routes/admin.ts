@@ -62,6 +62,44 @@ router.post('/login', async (req, res) => {
 
     const pool = getPool();
     
+    // First check if user exists at all
+    const userExistsResult = await pool.query(
+      'SELECT id, email, password, is_active FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (userExistsResult.rows.length === 0) {
+      logger.warn(`Admin login attempt with non-existent email: ${email}`);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+    
+    const userExists = userExistsResult.rows[0];
+    
+    // Check if admin_users entry exists
+    const adminUserCheck = await pool.query(
+      'SELECT id, role FROM admin_users WHERE user_id = $1',
+      [userExists.id]
+    );
+    
+    if (adminUserCheck.rows.length === 0) {
+      logger.warn(`Admin login attempt for user without admin_users entry: ${email}`);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials or insufficient privileges'
+      });
+    }
+    
+    if (!userExists.is_active) {
+      logger.warn(`Admin login attempt for inactive user: ${email}`);
+      return res.status(401).json({
+        success: false,
+        message: 'Account is inactive'
+      });
+    }
+    
     // Check if admin user exists - join admin_users with users table
     // admin_users has: id, user_id, role
     // users has: id, email, password, first_name, last_name
@@ -81,6 +119,7 @@ router.post('/login', async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
+      logger.warn(`Admin login failed: User exists but no matching admin_users entry or wrong role for: ${email}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials or insufficient privileges'
