@@ -82,7 +82,9 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Verify token
     const decoded = verifyAccessToken(token);
     if (!decoded) {
-      logger.error(`Token verification failed for token: ${token.substring(0, 20)}...`);
+      // Token verification failure is already logged in verifyToken (expired tokens as debug, invalid as warn)
+      // Only log here in debug mode to avoid redundant logs
+      logger.debug(`Token verification failed for token: ${token.substring(0, 20)}...`);
       res.status(401).json({
         success: false,
         message: 'Invalid or expired access token'

@@ -44,8 +44,15 @@ export const generateRefreshToken = (userId: string): string => {
 export const verifyToken = (token: string, secret: string): any => {
   try {
     return jwt.verify(token, secret, { clockTolerance: 10 });
-  } catch (error) {
-    logger.error('Token verification failed:', error);
+  } catch (error: any) {
+    // Expired tokens are expected behavior - log as debug/warn, not error
+    if (error.name === 'TokenExpiredError') {
+      // Only log in debug mode to reduce log noise
+      logger.debug('Token expired (expected):', { expiredAt: error.expiredAt });
+    } else {
+      // Actual errors (malformed tokens, invalid signature, etc.) should be logged
+      logger.warn('Token verification failed:', { error: error.name, message: error.message });
+    }
     return null;
   }
 };
