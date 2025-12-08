@@ -281,7 +281,7 @@ class NotificationService {
         logger.info(`📱 Sending custom notification: ${notificationData.customContent.id} of type ${notificationData.customContent.type}`);
       }
 
-      const message = {
+      const message: any = {
         to: token,
         title: notificationData.title,
         body: notificationData.body,
@@ -289,6 +289,11 @@ class NotificationService {
         sound: 'default',
         badge: 1,
       };
+
+      // Note: Icon is handled by app.json configuration in Expo
+      // For Android, Expo uses the icon from app.json automatically
+      // For iOS, the app icon is used automatically
+      // No need to specify icon in payload - it comes from native app configuration
 
       logger.info(`📤 Push notification message data:`, JSON.stringify(messageData, null, 2));
 
