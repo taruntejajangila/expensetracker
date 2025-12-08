@@ -26,13 +26,14 @@ export class TwoFactorService {
       // Remove + from phone number for 2Factor.in API
       const cleanPhone = phone.replace(/^\+/, '');
       
-      // Use 2Factor.in SMS endpoint
-      // Format: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
-      // IMPORTANT: 2Factor.in may fall back to voice calls if SMS fails
-      // To prevent this, you MUST disable voice fallback in 2Factor.in dashboard
-      const url = `/${TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}`;
+      // Use 2Factor.in SMS endpoint with approved template
+      // Format: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}/{TEMPLATE_NAME}
+      // Using approved template "OTP TEMPLATE" to ensure SMS delivery with proper template
+      // Template ensures consistent message format and may help prevent voice fallback
+      const templateName = 'OTP TEMPLATE'; // Approved template from 2Factor.in dashboard
+      const url = `/${TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}/${encodeURIComponent(templateName)}`;
       
-      logger.info(`Sending OTP via 2Factor.in SMS to ${phone}`);
+      logger.info(`Sending OTP via 2Factor.in SMS to ${phone} using template: ${templateName}`);
       logger.info(`2Factor.in API URL: ${TWO_FACTOR_BASE_URL}${url}`);
       
       const response = await axios.get<SendOTPResponse>(url, {
