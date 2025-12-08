@@ -27,8 +27,9 @@ export class TwoFactorService {
       const cleanPhone = phone.replace(/^\+/, '');
       
       // Use 2Factor.in SMS endpoint
-      // Correct format: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
-      // Note: API_KEY comes BEFORE /SMS/ in the URL path
+      // Format: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
+      // IMPORTANT: 2Factor.in may fall back to voice calls if SMS fails
+      // To prevent this, you MUST disable voice fallback in 2Factor.in dashboard
       const url = `/${TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}`;
       
       logger.info(`Sending OTP via 2Factor.in SMS to ${phone}`);
@@ -39,11 +40,16 @@ export class TwoFactorService {
         timeout: 10000, // 10 second timeout
       });
 
+      // Log full response to check delivery method
+      logger.info(`2Factor.in API response:`, JSON.stringify(response.data));
+
       if (response.data.Status === 'Success') {
-        logger.info(`OTP sent successfully via SMS to ${phone}`);
+        logger.info(`OTP sent successfully to ${phone}. Check response Details for delivery method.`);
+        // Note: If voice calls are still happening, check 2Factor.in dashboard settings
+        // The API doesn't provide a parameter to force SMS-only - it's a dashboard setting
         return true;
       } else {
-        logger.error(`Failed to send OTP via SMS: ${response.data.Details || JSON.stringify(response.data)}`);
+        logger.error(`Failed to send OTP: ${response.data.Details || JSON.stringify(response.data)}`);
         logger.error(`2Factor.in SMS response status: ${response.data.Status}`);
         return false;
       }
