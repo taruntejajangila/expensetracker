@@ -26,12 +26,14 @@ export class TwoFactorService {
       // Remove + from phone number for 2Factor.in API
       const cleanPhone = phone.replace(/^\+/, '');
       
-      // Use 2Factor.in Transactional SMS endpoint (TSMS) - guarantees SMS delivery, no voice call fallback
-      // Format: /ADDON_SERVICES/SEND/TSMS/{API_KEY}/{PHONE}/{OTP}
-      // This endpoint ensures SMS-only delivery and will NOT fall back to voice calls
-      const url = `/ADDON_SERVICES/SEND/TSMS/${TWO_FACTOR_API_KEY}/${cleanPhone}/${otp}`;
+      // Use 2Factor.in SMS endpoint
+      // Format: /SMS/{API_KEY}/{PHONE}/{OTP}
+      // Note: To prevent voice call fallback, check 2Factor.in dashboard settings:
+      // 1. Go to Dashboard > Settings > SMS Settings
+      // 2. Disable "Voice Call Fallback" or "Auto Voice Call" option
+      const url = `/SMS/${TWO_FACTOR_API_KEY}/${cleanPhone}/${otp}`;
       
-      logger.info(`Sending OTP via 2Factor.in Transactional SMS (TSMS) to ${phone}`);
+      logger.info(`Sending OTP via 2Factor.in SMS to ${phone}`);
       
       const response = await axios.get<SendOTPResponse>(url, {
         baseURL: TWO_FACTOR_BASE_URL,
@@ -39,25 +41,24 @@ export class TwoFactorService {
       });
 
       if (response.data.Status === 'Success') {
-        logger.info(`OTP sent successfully via Transactional SMS (TSMS) to ${phone}`);
+        logger.info(`OTP sent successfully via SMS to ${phone}`);
         return true;
       } else {
-        logger.error(`Failed to send OTP via TSMS: ${response.data.Details || response.data}`);
-        logger.error(`2Factor.in TSMS response status: ${response.data.Status}`);
+        logger.error(`Failed to send OTP via SMS: ${response.data.Details || JSON.stringify(response.data)}`);
+        logger.error(`2Factor.in SMS response status: ${response.data.Status}`);
         return false;
       }
     } catch (error: any) {
-      logger.error('2Factor.in TSMS API error:', error.message);
-      if (error.response) {
-        logger.error('2Factor.in TSMS API response status:', error.response.status);
-        logger.error('2Factor.in TSMS API response data:', error.response.data);
-      }
-      if (error.request) {
-        logger.error('2Factor.in TSMS API request details:', {
-          url: error.config?.url,
-          baseURL: error.config?.baseURL
-        });
-      }
+      logger.error('2Factor.in SMS API error:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullUrl: `${error.config?.baseURL}${error.config?.url}`
+      });
       return false;
     }
   }
