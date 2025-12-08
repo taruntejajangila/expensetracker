@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import ApiClient from '../utils/ApiClient';
@@ -274,16 +274,7 @@ const CreateTicketScreen: React.FC = () => {
         const data = await response.json();
         
         if (data.success) {
-          Alert.alert(
-            'Success',
-            `Your support ticket #${data.data.ticket_number} has been created successfully. Our team will respond soon.`,
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.goBack()
-              }
-            ]
-          );
+          const ticketNumber = data.data.ticket_number;
           
           // Clear form and attachments
           setFormData({
@@ -293,6 +284,29 @@ const CreateTicketScreen: React.FC = () => {
             priority: 'medium'
           });
           setAttachments([]);
+          
+          // Navigate immediately to prevent back navigation to this screen
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'MainTabs',
+                  params: {
+                    screen: 'Profile'
+                  }
+                }
+              ]
+            })
+          );
+          
+          // Show success alert after navigation
+          setTimeout(() => {
+            Alert.alert(
+              'Success',
+              `Your support ticket #${ticketNumber} has been created successfully. Our team will respond soon.`
+            );
+          }, 300);
         } else {
           Alert.alert('Error', data.message || 'Failed to create ticket');
         }
@@ -302,16 +316,7 @@ const CreateTicketScreen: React.FC = () => {
         const response = await apiClient.post(`${API_BASE_URL}/support-tickets`, formData);
 
         if (response.success) {
-          Alert.alert(
-            'Success',
-            `Your support ticket #${response.data.ticket_number} has been created successfully. Our team will respond soon.`,
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.goBack()
-              }
-            ]
-          );
+          const ticketNumber = response.data.ticket_number;
           
           // Clear form
           setFormData({
@@ -320,6 +325,29 @@ const CreateTicketScreen: React.FC = () => {
             category: '',
             priority: 'medium'
           });
+          
+          // Navigate immediately to prevent back navigation to this screen
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'MainTabs',
+                  params: {
+                    screen: 'Profile'
+                  }
+                }
+              ]
+            })
+          );
+          
+          // Show success alert after navigation
+          setTimeout(() => {
+            Alert.alert(
+              'Success',
+              `Your support ticket #${ticketNumber} has been created successfully. Our team will respond soon.`
+            );
+          }, 300);
         } else {
           Alert.alert('Error', response.message || 'Failed to create ticket');
         }

@@ -463,11 +463,15 @@ const EditLoanScreen: React.FC = () => {
 
             await LoanService.updateLoan(loanId, updateData);
             
-            // Navigate back with refresh flag
-            (navigation as any).navigate('LoanAccount', { 
+            // Pop the edit screen, then navigate to detail screen
+            // This prevents duplicate screens in the stack
+            navigation.goBack(); // Pop EditLoan screen
+            setTimeout(() => {
+              (navigation as any).navigate('LoanAccount', { 
                 loanId: loanId,
                 refresh: true 
-            });
+              });
+            }, 100);
         } catch (error) {
             console.error('Error updating loan:', error);
             Alert.alert('Error', 'Failed to update loan. Please try again.');

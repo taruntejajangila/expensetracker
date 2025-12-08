@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, useWindowDimensions, Alert, KeyboardAvoidingView } from 'react-native';
 import WheelDatePicker from '../components/WheelDatePicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { LoanService } from '../services/LoanService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -408,9 +408,20 @@ const AddLoanScreen: React.FC = () => {
             setEmiStartDate('');
             setEmiDate(null);
             
-            // Navigate back immediately after successful save
-            // The form will be cleared when screen comes into focus again (via useFocusEffect)
-            navigation.goBack();
+            // Navigate to Loans screen and prevent back navigation to this screen
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'MainTabs',
+                    params: {
+                      screen: 'Loans'
+                    }
+                  }
+                ]
+              })
+            );
         } catch (error) {
             console.error('Error adding loan:', error);
         }
@@ -654,7 +665,20 @@ const AddLoanScreen: React.FC = () => {
                     } else {
                         await LoanService.addLoan(payload);
                     }
-                    (navigation as any).goBack();
+                    // Navigate to Loans screen and prevent back navigation to this screen
+                    navigation.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [
+                          {
+                            name: 'MainTabs',
+                            params: {
+                              screen: 'Loans'
+                            }
+                          }
+                        ]
+                      })
+                    );
                 }} activeOpacity={0.8} disabled={!isValid}>
 					<LinearGradient
 						colors={['#667eea', '#764ba2']}

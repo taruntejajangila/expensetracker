@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -559,22 +559,36 @@ const AddAccountScreen: React.FC = () => {
         const updatedAccount = await AccountService.updateAccount(editingAccount.id, updateData);
         
         if (updatedAccount.success) {
-        Alert.alert('Success', 'Account updated successfully!', [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              // Navigate to BankAccountDetail with updated data instead of going back
-                if (updatedAccount.data) {
-                (navigation as any).navigate('BankAccountDetail', { 
-                  account: updatedAccount.data, // Use the actual account data from response
-                  refresh: true 
-                });
-              } else {
-                navigation.goBack();
-              }
-            }
+          // Pop the edit screen, then navigate to detail screen with updated data
+          // This prevents duplicate screens in the stack
+          if (updatedAccount.data) {
+            navigation.goBack(); // Pop AddAccount screen
+            setTimeout(() => {
+              (navigation as any).navigate('BankAccountDetail', { 
+                account: updatedAccount.data, // Use the actual account data from response
+                refresh: true 
+              });
+            }, 100);
+          } else {
+            // Fallback: navigate to Accounts screen
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'MainTabs',
+                    params: {
+                      screen: 'Accounts'
+                    }
+                  }
+                ]
+              })
+            );
           }
-        ]);
+          // Show success alert after navigation
+          setTimeout(() => {
+            Alert.alert('Success', 'Account updated successfully!');
+          }, 300);
       } else {
           // Show specific error message from backend
           Alert.alert('Error', updatedAccount.message || 'Failed to update account. Please try again.');
@@ -601,9 +615,26 @@ const AddAccountScreen: React.FC = () => {
           setBankSuggestion(null);
           
           await AsyncStorage.setItem('addTransactionNewAccountId', result.data.id);
-        Alert.alert('Success', 'Account added successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+          
+          // Navigate immediately to prevent back navigation to this screen
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'MainTabs',
+                  params: {
+                    screen: 'Accounts'
+                  }
+                }
+              ]
+            })
+          );
+          
+          // Show success alert after navigation
+          setTimeout(() => {
+            Alert.alert('Success', 'Account added successfully!');
+          }, 300);
         } else {
           // Show specific error message from backend
           Alert.alert('Error', result.message || 'Failed to add account. Please try again.');

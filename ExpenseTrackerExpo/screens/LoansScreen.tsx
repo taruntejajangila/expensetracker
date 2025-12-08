@@ -395,9 +395,9 @@ const LoansScreen: React.FC = () => {
 
         {/* Banner Ad above Payment Schedule */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
 
         {/* Payment Schedule */}
@@ -549,9 +549,9 @@ const LoansScreen: React.FC = () => {
 
         {/* Banner Ad at bottom of screen */}
         {!HIDE_ADS_FOR_SCREENSHOTS && (
-          <View style={styles.adContainer}>
-            <BannerAdComponent />
-          </View>
+        <View style={styles.adContainer}>
+          <BannerAdComponent />
+        </View>
         )}
       </ScrollView>
 

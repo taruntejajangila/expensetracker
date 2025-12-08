@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GoalService from '../services/GoalService';
 import { BannerAdComponent } from '../components/AdMobComponents';
 import { formatCurrency } from '../utils/currencyFormatter';
+import { CommonActions } from '@react-navigation/native';
 
 interface EditGoalScreenProps {
   route: {
@@ -132,9 +133,26 @@ const EditGoalScreen: React.FC<EditGoalScreenProps> = ({ route, navigation }) =>
       };
 
       await GoalService.updateGoal(goal.id, updatedGoal);
-      Alert.alert('Success', 'Goal updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      
+      // Navigate immediately to prevent back navigation to this screen
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              params: {
+                screen: 'SavingsGoals'
+              }
+            }
+          ]
+        })
+      );
+      
+      // Show success alert after navigation
+      setTimeout(() => {
+        Alert.alert('Success', 'Goal updated successfully!');
+      }, 300);
     } catch (error) {
       console.error('Error updating goal:', error);
       Alert.alert('Error', 'Failed to update goal. Please try again.');

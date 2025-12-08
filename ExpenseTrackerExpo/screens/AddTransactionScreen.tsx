@@ -23,7 +23,7 @@ import { BannerAdComponent } from '../components/AdMobComponents';
 import WheelDatePicker from '../components/WheelDatePicker';
 import AppOpenAdService from '../services/AppOpenAdService';
 
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -73,7 +73,6 @@ const AddTransactionScreen = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // For v1 release, only bank accounts are available (credit cards hidden)
   const getAllAccounts = () => {
@@ -757,14 +756,19 @@ useEffect(() => {
           // Show success toast
           const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
           setToastMessage(`${typeLabel} updated successfully!`);
-          
-          // Set navigation to execute after toast dismisses
-          setPendingNavigation(() => () => {
-            (navigation as any).navigate('TransactionDetail', { 
-              transactionId: editTransaction.id 
-            });
-          });
           setToastVisible(true);
+          
+          // Pop the edit screen, then navigate to detail screen
+          // This prevents duplicate screens in the stack
+          setTimeout(() => {
+            navigation.goBack(); // Pop AddTransaction screen
+            setTimeout(() => {
+              (navigation as any).navigate('TransactionDetail', { 
+                transactionId: editTransaction.id,
+                refresh: true 
+              });
+            }, 100);
+          }, 100);
         } else {
           // Save new transaction
           await TransactionService.saveTransaction(transactionData);
@@ -805,15 +809,26 @@ useEffect(() => {
             // Show success toast with transaction type
             const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
             setToastMessage(`${typeLabel} saved successfully!`);
-            
-            // Set navigation to execute after toast dismisses
-            setPendingNavigation(() => () => {
-              (navigation as any).navigate('MainTabs', { 
-                screen: 'Home',
-                params: { refresh: true }
-              });
-            });
             setToastVisible(true);
+            
+            // Navigate immediately after save to prevent back navigation to this screen
+            // Use reset to clear navigation stack and prevent going back
+            setTimeout(() => {
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'MainTabs',
+                      params: {
+                        screen: 'Home',
+                        params: { refresh: true }
+                      }
+                    }
+                  ]
+                })
+              );
+            }, 100); // Small delay to show toast briefly
           }
         }
       } catch (error) {
@@ -1485,11 +1500,6 @@ useEffect(() => {
         visible={toastVisible}
         onDismiss={() => {
           setToastVisible(false);
-          // Execute pending navigation after toast dismisses
-          if (pendingNavigation) {
-            pendingNavigation();
-            setPendingNavigation(null);
-          }
         }}
         duration={1000}
         type="success"

@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -120,16 +120,28 @@ const AddGoalScreen: React.FC<AddGoalScreenProps> = ({ navigation }) => {
         goalType: 'other' // Always use 'other' since goal type is not visible to users
       });
 
-      Alert.alert(
-        'Success!',
-        'Your savings goal has been created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
+      // Navigate immediately to prevent back navigation to this screen
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              params: {
+                screen: 'SavingsGoals'
+              }
+            }
+          ]
+        })
       );
+      
+      // Show success alert after navigation
+      setTimeout(() => {
+        Alert.alert(
+          'Success!',
+          'Your savings goal has been created successfully!'
+        );
+      }, 300);
     } catch (error) {
       Alert.alert(
         'Error',
