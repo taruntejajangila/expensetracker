@@ -27,13 +27,12 @@ export class TwoFactorService {
       const cleanPhone = phone.replace(/^\+/, '');
       
       // Use 2Factor.in SMS endpoint
-      // Format: /SMS/{API_KEY}/{PHONE}/{OTP}
-      // Note: To prevent voice call fallback, check 2Factor.in dashboard settings:
-      // 1. Go to Dashboard > Settings > SMS Settings
-      // 2. Disable "Voice Call Fallback" or "Auto Voice Call" option
-      const url = `/SMS/${TWO_FACTOR_API_KEY}/${cleanPhone}/${otp}`;
+      // Correct format: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
+      // Note: API_KEY comes BEFORE /SMS/ in the URL path
+      const url = `/${TWO_FACTOR_API_KEY}/SMS/${cleanPhone}/${otp}`;
       
       logger.info(`Sending OTP via 2Factor.in SMS to ${phone}`);
+      logger.info(`2Factor.in API URL: ${TWO_FACTOR_BASE_URL}${url}`);
       
       const response = await axios.get<SendOTPResponse>(url, {
         baseURL: TWO_FACTOR_BASE_URL,
