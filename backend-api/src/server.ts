@@ -141,15 +141,22 @@ app.use('/api/', rateLimit({
       
       if (token) {
         // Verify and decode token to get user ID
+        // Note: verifyAccessToken logs expired tokens as debug, which is expected behavior
+        // We silently handle expired tokens here to avoid log noise in rate limiter
         const decoded = verifyAccessToken(token);
         if (decoded && decoded.userId) {
           // Rate limit per user ID for authenticated requests
           return `user:${decoded.userId}`;
         }
+        // If token is expired/invalid, silently fall back to IP-based limiting
+        // This is expected behavior and doesn't need logging
       }
     } catch (error) {
       // If token extraction/verification fails, fall back to IP-based limiting
-      logger.debug('Rate limit: Could not extract user ID from token, using IP:', error);
+      // Only log actual errors, not expected expired tokens
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Rate limit: Could not extract user ID from token, using IP:', error);
+      }
     }
     
     // Fall back to IP-based rate limiting for unauthenticated requests
